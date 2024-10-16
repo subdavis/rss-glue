@@ -12,6 +12,7 @@ from typing import Any, Callable
 from urllib.request import urlretrieve
 
 from playwright.sync_api import Browser, Page, Playwright, sync_playwright
+from playwright_stealth import stealth_sync
 
 from rss_glue.cache import FileCache, JsonCache, SimpleCache
 from rss_glue.logger import logger

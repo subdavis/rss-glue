@@ -3,9 +3,6 @@ from typing import Protocol
 
 import anthropic
 
-from rss_glue.feeds import feed
-from rss_glue.logger import logger
-
 
 @dataclass
 class AiClientResponse:

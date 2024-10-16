@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
+from logging import LoggerAdapter
 from typing import Optional
 
 import pycron
 
 from rss_glue.logger import logger
 from rss_glue.resources import global_config, utc_now
+from rss_glue.utils import human_strftime
 
 
 @dataclass
@@ -70,10 +72,21 @@ class ReferenceFeedItem(FeedItem):
         return obj
 
 
+class NamespaceLogger(LoggerAdapter):
+
+    def process(self, msg, kwargs):
+        namespace = getattr(self.extra.get("source"), "namespace", "unknown")
+        return f' ns="{namespace}" {msg}', kwargs
+
+
 class BaseFeed(ABC):
     title: str
     author: str
     origin_url: str
+    logger: LoggerAdapter
+
+    def __init__(self):
+        self.logger = NamespaceLogger(logger, {"source": self})
 
     @abstractmethod
     def update(self, force: bool = False) -> int:
@@ -159,7 +172,7 @@ class ScheduleFeed(BaseFeed, ABC):
         if self.last_run > utc_now():
             return False
         _requires_update = pycron.has_been(self.schedule, self.last_run, utc_now())
-        logger.debug(
-            f" {self.namespace} last_run={self.last_run} requires_update={_requires_update}"
+        self.logger.debug(
+            f'last_run="{self.last_run.strftime('%m/%d/%y %H:%M')}" update={_requires_update}'
         )
         return _requires_update

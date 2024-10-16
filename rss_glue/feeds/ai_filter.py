@@ -4,7 +4,6 @@ from html.parser import HTMLParser
 from typing import Optional
 
 from rss_glue.feeds import ai_client, feed
-from rss_glue.logger import logger
 
 base_prompt = """
 Please take a look at the following bit of a content from an RSS feed:
@@ -46,8 +45,6 @@ class AiFilterFeed(feed.BaseFeed):
     """
     AiFilterFeed is a feed that filters out posts based
     on a given prompt.
-
-    The prompt should be a string with
     """
 
     source: feed.BaseFeed
@@ -60,6 +57,7 @@ class AiFilterFeed(feed.BaseFeed):
         source: feed.BaseFeed,
         client: ai_client.AiClient,
         prompt: str,
+        content_limit: int = 1000,
         limit: int = -1,
     ):
         self.source = source
@@ -69,6 +67,7 @@ class AiFilterFeed(feed.BaseFeed):
         self.title = f"Filter {source.title}"
         self.author = source.author
         self.origin_url = source.origin_url
+        self.content_limit = content_limit
         super().__init__()
 
     @property
@@ -88,7 +87,7 @@ class AiFilterFeed(feed.BaseFeed):
         return base_prompt.format(
             title=post.title,
             author=post.author,
-            content=f.text[:1000],
+            content=f.text[: self.content_limit],
             url=post.origin_url,
             prompt=self.prompt,
         )
@@ -106,7 +105,7 @@ class AiFilterFeed(feed.BaseFeed):
         """
         This feed only updates when the source feed updates
         """
-        logger.debug(f" updating {self.namespace}")
+        self.logger.debug(f" updating {self.namespace}")
         self.source.update(force)
         source_posts = self.source.posts()
         # Sort by posted_time
@@ -119,7 +118,7 @@ class AiFilterFeed(feed.BaseFeed):
         for source_post in source_posts:
             post = self.post(source_post.id)
             if post:
-                logger.debug(f" skipping filter check for {source_post.id}")
+                self.logger.debug(f" skipping filter check for {source_post.id}")
                 continue
 
             msg = self.client.get_response(self.format_prompt(source_post))
@@ -130,7 +129,7 @@ class AiFilterFeed(feed.BaseFeed):
             elif "no" in msg.response.lower():
                 include_post = False
             else:
-                logger.error(f"Invalid response: {msg.response}")
+                self.logger.error(f"Invalid response: {msg.response}")
 
             value = AiFilterPost(
                 version=0,
@@ -145,7 +144,7 @@ class AiFilterFeed(feed.BaseFeed):
                 token_cost=msg.tokens_used,
                 include_post=include_post,
             )
-            logger.info(
+            self.logger.info(
                 f" {self.namespace} post={source_post.id} include_post={include_post}"
             )
             self.cache_set(value.id, value.to_dict())

@@ -15,6 +15,7 @@ class RssOutput(Artifact):
         for source in self.sources:
 
             posts = source.posts()
+
             fg = FeedGenerator()
             feed_id = source.origin_url
 

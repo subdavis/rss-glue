@@ -5,7 +5,6 @@ from urllib.parse import urljoin
 from urllib.request import urlretrieve
 
 from rss_glue.feeds import feed
-from rss_glue.logger import logger
 from rss_glue.resources import global_config, utc_now
 
 latest_version = 3
@@ -50,7 +49,8 @@ class InstagramFeed(feed.ScheduleFeed):
     title_max_length = 80
     username: str
     limit: int
-    basePath = "https://www.piokok.com/profile/"
+    # basePath = "https://www.piokok.com/profile/"
+    basePath = "https://storynavigation.com/user-profile/"
     name = "piokok"
 
     def __init__(self, username: str, limit: int = 12, schedule: str = "0 * * * *"):
@@ -81,14 +81,18 @@ class InstagramFeed(feed.ScheduleFeed):
         page = global_config.page
         page.goto(self.origin_url)
         new_posts = []
+        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(1114)
+        page.screenshot(path="screenshot.png")
+        raise Exception("screenshot")
         posts = page.locator(".posts .items .item").element_handles()
-        logger.debug(f"   found {len(posts)} posts")
+        self.logger.debug(f"   found {len(posts)} posts")
         for post in posts[: self.limit]:
             post_link = post.query_selector("a.cover_link").get_attribute("href")
 
             value = self.post(post_link)
             if value:
-                logger.debug(f"   cache hit for {value.id}")
+                self.logger.debug(f"   cache hit for {value.id}")
                 continue
 
             post.scroll_into_view_if_needed()
@@ -144,14 +148,14 @@ class InstagramFeed(feed.ScheduleFeed):
                     value.posted_time = utc_now() - timedelta(minutes=units_ago)
                 else:
                     raise ValueError(f"Unknown time description: {time_description}")
-                logger.debug(
+                self.logger.debug(
                     f"   inferred time: {value.posted_time} from '{time_description}'"
                 )
             except:
-                logger.error(f"   could not parse time: {time_description}")
+                self.logger.error(f"   could not parse time: {time_description}")
                 pass
 
-            logger.debug(f"   cache miss for {post_link}")
+            self.logger.debug(f"   cache miss for {post_link}")
 
             if is_reel:
                 self._get_reel_details(post_link, value)

@@ -1,5 +1,6 @@
 import logging
 from datetime import timedelta
+from random import random
 from time import sleep
 from urllib.parse import urljoin
 
@@ -10,22 +11,25 @@ from rss_glue.outputs import artifact
 from rss_glue.resources import global_config, utc_now
 
 
-def _generate(artifacts: list["artifact.Artifact"]):
-    for artifact in artifacts:
-        for path in artifact.generate():
-            full_url = urljoin(global_config.base_url, path.as_posix())
-            logger.info(f" generated {full_url}")
+def _generate(artifact: "artifact.Artifact"):
+    for path in artifact.generate():
+        full_url = urljoin(global_config.base_url, path.as_posix())
+        logger.info(f" generated {full_url}")
 
 
 def _update(artifacts: list["artifact.Artifact"], force: bool):
     updated_namespaces_set = set()
     for artifact in artifacts:
+        artifact_updated = force or False
         for source in artifact.sources:
             if not source.namespace in updated_namespaces_set:
                 count = source.update(force)
                 updated_namespaces_set.add(source.namespace)
                 if count:
-                    sleep(1)
+                    artifact_updated = True
+                    sleep(2 + (random() * 2))
+        if artifact_updated:
+            _generate(artifact)
 
 
 @click.group()
@@ -46,7 +50,7 @@ def cli(config: str, log_level: str):
 def watch(interval: int):
     while True:
         _update(global_config.artifacts, force=False)
-        _generate(global_config.artifacts)
+
         global_config.close_browser()
         global_config.run_after_generate()
         next_run_time_local = (utc_now() + timedelta(minutes=interval)).astimezone()
@@ -60,7 +64,6 @@ def watch(interval: int):
 @click.option("--force", is_flag=True)
 def update(force: bool):
     _update(global_config.artifacts, force=force)
-    _generate(global_config.artifacts)
 
 
 @cli.command()
@@ -72,7 +75,6 @@ def debug():
     app = Flask(__name__, static_folder=static_root)
 
     _update(global_config.artifacts, force=False)
-    _generate(global_config.artifacts)
 
     app.run(debug=True)
 
@@ -81,4 +83,5 @@ def debug():
 def install():
     # Install playwright extensions
     # from https://github.com/uBlockOrigin/uBOL-home/releases/latest
+    global_config.install()
     global_config.install()

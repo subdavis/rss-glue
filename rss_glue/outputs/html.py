@@ -65,6 +65,8 @@ class HtmlOutput(artifact.Artifact):
         for source in self.sources:
 
             posts = source.posts()
+            posts = sorted(posts, key=lambda x: x.posted_time, reverse=True)
+
             html = ""
             for post in posts:
                 html += post_template.format(

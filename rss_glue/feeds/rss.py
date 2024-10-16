@@ -6,7 +6,6 @@ import feedparser
 import pytz
 
 from rss_glue.feeds import feed
-from rss_glue.logger import logger
 from rss_glue.resources import short_hash_string, utc_now
 
 
@@ -71,7 +70,7 @@ class RssFeed(feed.ScheduleFeed):
             "link": self.origin_url,
         }
 
-        logger.debug(f"   found {len(f.entries)} posts")
+        self.logger.debug(f"   found {len(f.entries)} posts")
         for entry in f.entries[: self.limit]:
             # The post ID might be an unsafe string, so we hash it
             # to make it safe for use as a filename
@@ -82,7 +81,7 @@ class RssFeed(feed.ScheduleFeed):
 
             # If the post is already in the cache, skip it
             if post:
-                logger.debug(f"   cache hit {post_id}")
+                self.logger.debug(f"   cache hit {post_id}")
                 continue
 
             try:
@@ -104,7 +103,7 @@ class RssFeed(feed.ScheduleFeed):
                 posted_time=published_at,
                 feedparser_parsed=entry,
             )
-            logger.info(f"   new post {post_id} {title}")
+            self.logger.info(f"   new post {post_id} {title}")
             self.cache_set(post_id, value.to_dict())
 
         self.set_last_run()
