@@ -1,6 +1,7 @@
 import html
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from urllib.parse import urljoin
 
 import requests
 
@@ -14,6 +15,7 @@ html_template = """
     <p>
         By <a href="https://reddit.com/u/{author}">u/{author}</a>
         <span style="padding: 1em">⬆️ {score}</span>
+        <span><a href="{comments_url}">[comments]</a></span>
     </p>
 </article>
 """
@@ -38,27 +40,30 @@ class RedditPost(feed.FeedItem):
             if self.post_data.get("post_hint") == "image":
                 html_content = f'<img src="{self.post_data.get("url_overridden_by_dest")}" style="max-width: 100%; height: auto;" />'
             elif self.post_data.get("post_hint") == "link":
-                html_content = f'<a href="{self.post_data.get("url")}">{self.post_data.get("url")}</a>'
-            elif self.post_data.get("post_hint") == "rich:video":
                 html_content = (
-                    f'<video src="{self.post_data.get("url")}" controls></video>'
+                    f'<a href="{self.post_data.get("url")}">{self.post_data.get("url")}</a>'
                 )
+            elif self.post_data.get("post_hint") == "rich:video":
+                html_content = f'<video src="{self.post_data.get("url")}" controls></video>'
+            elif self.post_data.get("post_hint") == "hosted:video":
+                html_content = html.unescape(self.post_data.get("selftext_html"))
             elif self.post_data.get("post_hint") == "self":
                 html_content = html.unescape(self.post_data.get("selftext_html"))
             else:
-                html_content = f'<a href="{self.post_data.get("url")}">{self.post_data.get("url")}</a>'
+                html_content = (
+                    f'<a href="{self.post_data.get("url")}">{self.post_data.get("url")}</a>'
+                )
         elif self.post_data.get("selftext_html"):
             html_content = html.unescape(self.post_data.get("selftext_html"))
         else:
-            html_content = (
-                f'<a href="{self.post_data.get("url")}">{self.post_data.get("url")}</a>'
-            )
-
+            html_content = f'<a href="{self.post_data.get("url")}">{self.post_data.get("url")}</a>'
+        comments_url = urljoin("https://www.reddit.com", self.post_data.get("permalink", ""))
         return html_template.format(
             author=self.author,
             posted_time=self.posted_time.strftime(utils.human_strftime),
             score=self.score(),
             content=html_content,
+            comments_url=comments_url,
         )
 
 
@@ -85,13 +90,12 @@ class RedditFeed(feed.ScheduleFeed):
         # TODO this needs to differentiate between top/hot/new/etc and time periods
         return f"reddit_{self.subreddit}"
 
-    def update(self, force: bool = False) -> int:
+    def update(self, force: bool = False):
         if not self.needs_update(force):
-            return 0
+            return
 
         # Fetch the posts from the Reddit API
         # and store them in the cache
-        new_posts = []
 
         response = requests.get(self.url)
         response.raise_for_status()
@@ -115,10 +119,10 @@ class RedditFeed(feed.ScheduleFeed):
                 discovered_time=utc_now(),
                 origin_url=post_data.get("url"),
             )
+            self.logger.info(f"Adding post {value.id}")
             self.cache_set(post_id, value.to_dict())
-            new_posts.append(value)
+
         self.set_last_run()
-        return len(new_posts)
 
     def posts(self) -> list[feed.FeedItem]:
         posts = super().posts()

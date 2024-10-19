@@ -1,9 +1,12 @@
+from datetime import datetime
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Tuple
 from urllib.parse import urljoin
 
+from rss_glue.feeds import feed
 from rss_glue.outputs import artifact
-from rss_glue.resources import global_config
+from rss_glue.resources import global_config, utc_now
+from rss_glue.utils import page_css
 
 page_template = """
 <!DOCTYPE html>
@@ -11,6 +14,9 @@ page_template = """
 <head>
     <title>RSS Glue Index</title>
     <meta http-equiv="Content-Type" content="text/html; charset="utf-8">
+    <style>
+        {css}
+    </style>
 </head>
 <body>
     <main>
@@ -28,36 +34,26 @@ page_template = """
 link_template = """
     <p>
         <a href="{url}">{url}</a>
+        <p style="font-size: 10px">
     </p>"""
 
 
-class HTMLIndexOutput(artifact.Artifact):
-    artifacts: list[artifact.Artifact]
+class HTMLIndexOutput(artifact.MetaArtifact):
 
-    def __init__(self, *artifacts: artifact.Artifact):
-
-        self.artifacts = list(artifacts)
-        sources = []
-        for artifact in artifacts:
-            sources.extend(artifact.sources)
-        super().__init__(*sources)
-
-    def generate(self) -> Iterable[Path]:
-        """
-        Generate a single HTML page referencing all the other artifacts
-        """
+    def generate(self) -> Iterable[Tuple[Path, datetime]]:
 
         html = ""
         for artifact in self.artifacts:
             html += f"<h2>{artifact.__class__.__name__}</h2>"
-            for relpath in artifact.generate():
+            for relpath, modified in artifact.generate():
                 actualPath = urljoin(global_config.base_url, relpath.as_posix())
                 html += link_template.format(
                     url=actualPath,
                 )
-                yield relpath
+                yield relpath, modified
         html = page_template.format(
             content=html,
+            css=page_css,
         )
 
-        yield global_config.file_cache.write("index", "html", html, "index")
+        yield global_config.file_cache.write("index", "html", html, "index"), utc_now()

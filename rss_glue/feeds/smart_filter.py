@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from html.parser import HTMLParser
-from typing import Optional
+from typing import Iterable, Optional, cast
 
 from rss_glue.feeds import ai_client, feed
 
@@ -11,6 +11,7 @@ Please take a look at the following bit of a content from an RSS feed:
 Title: {title}
 Author: {author}
 URL: {url}
+Posted time: {posted_time}
 Content: {content}
 
 Decide if the post above is relevent based on the criteria expressed below:
@@ -50,7 +51,7 @@ class AiFilterFeed(feed.BaseFeed):
     source: feed.BaseFeed
     limit: int
     client: ai_client.AiClient
-    name: str = "ai_filter"
+    name: str = "smart_filter"
 
     def __init__(
         self,
@@ -59,15 +60,20 @@ class AiFilterFeed(feed.BaseFeed):
         prompt: str,
         content_limit: int = 1000,
         limit: int = -1,
+        title: Optional[str] = None,
     ):
         self.source = source
         self.limit = limit
         self.prompt = prompt
         self.client = client
-        self.title = f"Filter {source.title}"
+
         self.author = source.author
         self.origin_url = source.origin_url
         self.content_limit = content_limit
+        if title:
+            self.title = title
+        else:
+            self.title = f"Filter {source.title}"
         super().__init__()
 
     @property
@@ -80,7 +86,7 @@ class AiFilterFeed(feed.BaseFeed):
             return None
         return AiFilterPost(**AiFilterPost.load(cached, self.source))
 
-    def format_prompt(self, post: feed.FeedItem):
+    def format_prompt(self, post: feed.FeedItem) -> str:
         f = HTMLFilter()
         f.feed(post.render())
 
@@ -89,24 +95,42 @@ class AiFilterFeed(feed.BaseFeed):
             author=post.author,
             content=f.text[: self.content_limit],
             url=post.origin_url,
+            posted_time=post.posted_time.strftime("%Y-%m-%d %H:%M %Z"),
             prompt=self.prompt,
         )
 
     def posts(self) -> list[feed.FeedItem]:
-        posts = super().posts()
+        source_posts = self.source.posts()
+        posts = [self.post(post.id) for post in source_posts]
+        return [post for post in posts if post and post.include_post]
 
-        return [
-            post
-            for post in posts
-            if isinstance(post, AiFilterPost) and post.include_post
-        ]
+    def cleanup(self) -> None:
+        cache_posts = cast(list[AiFilterPost], super().posts())
+        source_post_keys = set([post.id for post in self.source.posts()])
+        for post in cache_posts:
+            # Remove posts that reference a post that no longer exists
+            if not post.subpost:
+                self.logger.info(
+                    f"cleanup: removing {post.id} because it references a deleted post"
+                )
+                self.cache_delete(post.id)
+            # Remove posts that wouldn't be included anymore
+            if post.id not in source_post_keys:
+                self.logger.info(
+                    f"cleanup: removing {post.id} because it is no longer in the source"
+                )
+                self.cache_delete(post.id)
 
-    def update(self, force: bool = False) -> int:
+    def sources(self) -> Iterable[feed.BaseFeed]:
+        yield self.source
+        yield self
+
+    def update(self, force: bool = False):
         """
         This feed only updates when the source feed updates
         """
         self.logger.debug(f" updating {self.namespace}")
-        self.source.update(force)
+
         source_posts = self.source.posts()
         # Sort by posted_time
         source_posts.sort(key=lambda post: post.posted_time, reverse=True)
@@ -114,7 +138,7 @@ class AiFilterFeed(feed.BaseFeed):
         if self.limit != -1:
             source_posts = source_posts[: self.limit]
         # Figure out which ones we haven't tested yet
-        new_posts = []
+
         for source_post in source_posts:
             post = self.post(source_post.id)
             if post:
@@ -144,9 +168,5 @@ class AiFilterFeed(feed.BaseFeed):
                 token_cost=msg.tokens_used,
                 include_post=include_post,
             )
-            self.logger.info(
-                f" {self.namespace} post={source_post.id} include_post={include_post}"
-            )
+            self.logger.info(f" {self.namespace} post={source_post.id} include_post={include_post}")
             self.cache_set(value.id, value.to_dict())
-            new_posts.append(value)
-        return len(new_posts)

@@ -12,7 +12,6 @@ from typing import Any, Callable
 from urllib.request import urlretrieve
 
 from playwright.sync_api import Browser, Page, Playwright, sync_playwright
-from playwright_stealth import stealth_sync
 
 from rss_glue.cache import FileCache, JsonCache, SimpleCache
 from rss_glue.logger import logger
@@ -25,14 +24,29 @@ def utc_now():
     return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
-def cron_randomize(val: str) -> str:
-    return (
-        val.replace("m", str(rand.randint(0, 59)))
-        .replace("h", str(rand.randint(0, 23)))
-        .replace("d", str(rand.randint(1, 31)))
-        .replace("M", str(rand.randint(1, 12)))
-        .replace("w", str(rand.randint(0, 6)))
-    )
+def cron_randomize(val: str, seed: str) -> str:
+    """
+    predictably randomize a cron schedule
+    Useful for evenly spreading out the load of multiple expensive feeds.
+    """
+    state = rand.getstate()
+    rand.seed(seed)
+    parts = val.split(" ")
+    for i, part in enumerate(parts):
+        match i:
+            case 0:
+                parts[i] = part.replace("r", str(rand.randint(0, 59)))
+            case 1:
+                parts[i] = part.replace("r", str(rand.randint(0, 23)))
+            case 2:
+                parts[i] = part.replace("r", str(rand.randint(1, 31)))
+            case 3:
+                parts[i] = part.replace("r", str(rand.randint(1, 12)))
+            case 4:
+                parts[i] = part.replace("r", str(rand.randint(0, 6)))
+    sched = " ".join(parts)
+    rand.setstate(state)
+    return sched
 
 
 def short_hash_string(string):
@@ -69,11 +83,21 @@ class Config:
         playwright_root: Path = Path.cwd() / "playwright",
         run_after_generate: Callable[[], None] = lambda: None,
         log_level: int = logging.INFO,
+        headless: bool = True,
     ):
+        """
+        :param base_url: The base URL to use for the generated RSS feeds
+        :param static_root: The root directory to store static files
+        :param playwright_root: The root directory for the playwright installation
+        :param run_after_generate: A function to run after generating the feeds
+        :param log_level: The logging level to use
+        :param headless: Whether to run the browser in headless mode
+        """
         self.base_url = base_url
         self.static_root = static_root
         self.playwright_root = playwright_root
         self.run_after_generate = run_after_generate
+        self.headless = headless
         logger.setLevel(log_level)
 
         if not base_url.endswith("/"):
@@ -135,9 +159,7 @@ class Config:
         urlretrieve(ublock, download_path)
         # Unzip the file
         with zipfile.ZipFile(download_path, "r") as zip_ref:
-            zip_ref.extractall(
-                self.playwright_root / "extensions" / "uBOLite.chromium.mv3"
-            )
+            zip_ref.extractall(self.playwright_root / "extensions" / "uBOLite.chromium.mv3")
 
     def _make_browser(self):
         playwright_path = self.playwright_root
@@ -145,7 +167,7 @@ class Config:
         self._pl = sync_playwright().start()
         self._browser = self._pl.chromium.launch_persistent_context(
             str(playwright_path / "browser_data"),
-            headless=True,
+            headless=self.headless,
             args=[
                 f"--disable-extensions-except={path_to_extension}",
                 f"--load-extension={path_to_extension}",
@@ -157,6 +179,9 @@ class Config:
             self._page.close()
             self._browser.close()
             self._pl.stop()
+            self._page = None
+            self._browser = None
+            self._pl = None
 
 
 global_config = Config()

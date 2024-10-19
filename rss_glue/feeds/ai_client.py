@@ -20,9 +20,7 @@ class ClaudeClient(AiClient):
 
     client: anthropic.Client
 
-    def __init__(
-        self, api_key: str, model: str = "claude-3-5-sonnet-20240620", **kwargs
-    ):
+    def __init__(self, api_key: str, model: str = "claude-3-5-sonnet-20240620", **kwargs):
         self.model = model
         self.client = anthropic.Anthropic(api_key=api_key, **kwargs)
 

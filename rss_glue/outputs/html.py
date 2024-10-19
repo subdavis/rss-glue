@@ -1,24 +1,14 @@
+from datetime import datetime
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Tuple
+
+import pytz
 
 from rss_glue import utils
+from rss_glue.feeds import feed
 from rss_glue.logger import logger
 from rss_glue.outputs import artifact
-from rss_glue.resources import global_config
-
-# CSS should be a 500 pixel wide central column
-page_css = """
-body {
-    font-family: Arial, sans-serif;
-    margin: auto;
-    width: 600px;
-    max-width: 100%;
-    background-color: #f0f0f0;
-}
-main {
-    padding: 2em;
-}
-"""
+from rss_glue.resources import global_config, utc_now
 
 page_template = """
 <!DOCTYPE html>
@@ -58,11 +48,22 @@ post_template = """
 
 class HtmlOutput(artifact.Artifact):
 
-    def generate(self) -> Iterable[Path]:
+    def generate(self) -> Iterable[Tuple[Path, datetime]]:
         """
         Generate a single HTML page with all the posts from the sources
         """
         for source in self.sources:
+            file_to_generate = global_config.file_cache.getPath(source.namespace, "html", "html")
+            relpath = global_config.file_cache.getRelativePath(source.namespace, "html", "html")
+            # If the source has updated since the mtime of the file, regenerate
+            if file_to_generate.exists():
+                last_modified = datetime.fromtimestamp(
+                    file_to_generate.stat().st_mtime,
+                    tz=pytz.utc,
+                )
+                if last_modified >= source.last_updated:
+                    yield relpath, last_modified
+                    continue
 
             posts = source.posts()
             posts = sorted(posts, key=lambda x: x.posted_time, reverse=True)
@@ -80,6 +81,6 @@ class HtmlOutput(artifact.Artifact):
                 author=source.author,
                 origin_url=source.origin_url,
                 content=html,
-                css=page_css,
+                css=utils.page_css,
             )
-            yield global_config.file_cache.write(source.namespace, "html", html, "html")
+            yield global_config.file_cache.write(source.namespace, "html", html, "html"), utc_now()

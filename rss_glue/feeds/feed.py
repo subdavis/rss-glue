@@ -2,13 +2,13 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from logging import LoggerAdapter
-from typing import Optional
+from typing import Iterable, Optional
 
 import pycron
+from croniter import croniter
 
 from rss_glue.logger import logger
-from rss_glue.resources import global_config, utc_now
-from rss_glue.utils import human_strftime
+from rss_glue.resources import cron_randomize, global_config, utc_now
 
 
 @dataclass
@@ -23,6 +23,7 @@ class FeedItem:
     posted_time: datetime  # When the post was created according to the source
 
     def __post_init__(self):
+        self.logger = NamespaceLogger(logger, {"source": self})
         if type(self.discovered_time) is str:
             self.discovered_time = datetime.fromisoformat(self.discovered_time)
         if type(self.posted_time) is str:
@@ -30,6 +31,9 @@ class FeedItem:
 
     def render(self) -> str:
         raise NotImplementedError("FeedItem cannot be rendered")
+
+    def hashkey(self):
+        return hash(self.namespace + self.id)
 
     def score(self) -> float:
         """
@@ -66,9 +70,14 @@ class ReferenceFeedItem(FeedItem):
         d.update({"subpost": self.subpost.id})
         return d
 
+    def hashkey(self):
+        return self.subpost.hashkey()
+
     @staticmethod
     def load(obj: dict, source: "BaseFeed"):
         obj["subpost"] = source.post(obj["subpost"])
+        if not obj["subpost"]:
+            logger.error(f"missing reference ns={obj['namespace']} subpost={obj['id']}")
         return obj
 
 
@@ -88,12 +97,24 @@ class BaseFeed(ABC):
     def __init__(self):
         self.logger = NamespaceLogger(logger, {"source": self})
 
+    @property
     @abstractmethod
-    def update(self, force: bool = False) -> int:
+    def namespace(self):
+        """
+        A unique identifier for this feed
+        """
+        pass
+
+    @abstractmethod
+    def update(self, force: bool = False):
         """
         :param force: Force an update
-        :return: The number of new posts
+        yield the sources that were updated
         """
+        pass
+
+    @abstractmethod
+    def post(self, post_id: str) -> Optional[FeedItem]:
         pass
 
     def posts(self) -> list[FeedItem]:
@@ -110,9 +131,28 @@ class BaseFeed(ABC):
                 posts.append(post)
         return posts
 
-    @abstractmethod
-    def post(self, post_id: str) -> Optional[FeedItem]:
-        pass
+    def migrate(self):
+        """
+        Migrations of old data can only affect properties of feed items
+        that are not part of the compound key.
+
+        In other words, you can't change the namespace or id of a post
+        because another feed may reference it.
+        """
+        return True
+
+    def cleanup(self):
+        """
+        Clean up any old data
+        """
+        return True
+
+    def sources(self) -> Iterable["BaseFeed"]:
+        """
+        Get the sources. If the feed has sub-feeds, return them first
+        so that this method is naturally topo-sorted.
+        """
+        yield self
 
     @property
     def meta(self):
@@ -125,18 +165,30 @@ class BaseFeed(ABC):
         self.cache_set("meta", meta)
 
     @property
-    @abstractmethod
-    def namespace(self):
-        """
-        A unique identifier for this feed
-        """
-        pass
+    def last_updated(self):
+        last_updated_str = self.meta.get("last_updated", None)
+        if last_updated_str:
+            return datetime.fromisoformat(last_updated_str)
+        return datetime.fromtimestamp(0, tz=timezone.utc)
+
+    def set_last_updated(self, value: datetime = utc_now()):
+        self.meta = {"last_updated": value.isoformat()}
+
+    def __hash__(self):
+        return hash(self.namespace)
 
     def cache_get(self, key: str) -> Optional[dict]:
         return global_config.cache.get(key, self.namespace)
 
     def cache_set(self, key: str, value: dict):
+        if key != "meta":
+            self.set_last_updated()
         return global_config.cache.set(key, value, self.namespace)
+
+    def cache_delete(self, key: str):
+        if key != "meta":
+            self.set_last_updated()
+        return global_config.cache.delete(key, self.namespace)
 
     def cache_keys(self):
         return global_config.cache.keys(self.namespace)
@@ -150,7 +202,7 @@ class ScheduleFeed(BaseFeed, ABC):
     schedule: str
 
     def __init__(self, schedule: str, **kwargs):
-        self.schedule = schedule
+        self.schedule = cron_randomize(schedule, self.namespace)
         super().__init__(**kwargs)
 
     @property
@@ -160,11 +212,12 @@ class ScheduleFeed(BaseFeed, ABC):
             return datetime.fromisoformat(last_run_str)
         return datetime.fromtimestamp(0, tz=timezone.utc)
 
-    def set_last_run(self, value: datetime = utc_now()):
+    def set_last_run(self, value: Optional[datetime] = None):
         # Library has minute resolution, round up to the next whole minute
         # to avoid running the same minute twice
-        value = (value + timedelta(minutes=1)).replace(second=0, microsecond=0)
-        self.meta = {"last_run": value.isoformat()}
+        set_time = value or utc_now()
+        set_time = (set_time + timedelta(minutes=1)).replace(second=0, microsecond=0)
+        self.meta = {"last_run": set_time.isoformat()}
 
     def needs_update(self, force: bool) -> bool:
         if force:
@@ -172,7 +225,10 @@ class ScheduleFeed(BaseFeed, ABC):
         if self.last_run > utc_now():
             return False
         _requires_update = pycron.has_been(self.schedule, self.last_run, utc_now())
-        self.logger.debug(
-            f'last_run="{self.last_run.strftime('%m/%d/%y %H:%M')}" update={_requires_update}'
-        )
+        logfn = self.logger.info if _requires_update else self.logger.debug
+        itr = croniter(self.schedule, utc_now())
+        next_run_str = itr.next(datetime).strftime("%m-%d-%y %H:%M")
+
+        last_run_str = self.last_run.strftime("%m-%d-%y %H:%M")
+        logfn(f'last_run="{last_run_str}" next_run="{next_run_str}" update={_requires_update}')
         return _requires_update

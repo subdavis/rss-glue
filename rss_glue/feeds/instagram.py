@@ -1,13 +1,17 @@
+import os
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime
 from typing import Optional
 from urllib.parse import urljoin
-from urllib.request import urlretrieve
 
+import pytz
+import requests
+
+from rss_glue import utils
 from rss_glue.feeds import feed
 from rss_glue.resources import global_config, utc_now
 
-latest_version = 3
+latest_version = 5
 
 
 @dataclass
@@ -17,6 +21,8 @@ class InstagramPost(feed.FeedItem):
     """
 
     image_src: str
+    reel_src: Optional[str]
+    album_src_list: Optional[list[str]]
     is_reel: bool
     is_multi: bool
     post_text: str
@@ -27,9 +33,7 @@ class InstagramPost(feed.FeedItem):
         """
         public_src = urljoin(
             global_config.base_url,
-            global_config.file_cache.getRelativePath(
-                self.id, "jpg", self.namespace
-            ).as_posix(),
+            global_config.file_cache.getRelativePath(self.id, "jpg", self.namespace).as_posix(),
         )
         return f"""
         <div class="post">
@@ -39,6 +43,19 @@ class InstagramPost(feed.FeedItem):
             <p><b>{self.author}</b> {self.post_text}</p>
         </div>
         """
+
+    def hashkey(self):
+        return hash(self.id + self.title)
+
+
+def randomMouseMovement(page):
+    for _ in range(3):
+        page.mouse.move(
+            utils.rand_range(0, 500),
+            utils.rand_range(0, 500),
+            steps=utils.rand_range(5, 20),
+        )
+        page.wait_for_timeout(utils.rand_range(100, 500))
 
 
 class InstagramFeed(feed.ScheduleFeed):
@@ -51,9 +68,11 @@ class InstagramFeed(feed.ScheduleFeed):
     limit: int
     # basePath = "https://www.piokok.com/profile/"
     basePath = "https://storynavigation.com/user-profile/"
-    name = "piokok"
+    instaPath = "https://www.instagram.com/"
+    name = "storynavigation"
+    id_strftime_fmt = "%Y%m%d%H%M%S"
 
-    def __init__(self, username: str, limit: int = 12, schedule: str = "0 * * * *"):
+    def __init__(self, username: str, limit: int = 6, schedule: str = "0 * * * *"):
         self.username = username
         self.limit = limit
         self.title = f"Instagram @{username}"
@@ -69,111 +88,159 @@ class InstagramFeed(feed.ScheduleFeed):
         cached = self.cache_get(post_id)
         if not cached:
             return None
-        if cached.get("post_html", None) is not None:
-            del cached["post_html"]
-        cached["author"] = self.author
-        cached["title"] = cached["post_text"][: self.title_max_length] + "..."
         return InstagramPost(**cached)
 
-    def update(self, force=False) -> int:
+    def cleanup(self):
+        # Get a list of all the jpegs in the cache
+        for file in global_config.file_cache.nsFiles("jpg", self.namespace):
+            post_id = file.stem
+            post = self.post(post_id)
+            if not post:
+                self.logger.info(f"removing post not found in cache {post_id} ")
+                os.remove(file)
+
+    def update(self, force=False):
         if not self.needs_update(force):
-            return 0
+            return
+        error_filepath = global_config.file_cache.getPath("error-screenshot", "png", self.namespace)
         page = global_config.page
         page.goto(self.origin_url)
-        new_posts = []
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(1114)
-        page.screenshot(path="screenshot.png")
-        raise Exception("screenshot")
-        posts = page.locator(".posts .items .item").element_handles()
-        self.logger.debug(f"   found {len(posts)} posts")
-        for post in posts[: self.limit]:
-            post_link = post.query_selector("a.cover_link").get_attribute("href")
 
-            value = self.post(post_link)
-            if value:
-                self.logger.debug(f"   cache hit for {value.id}")
+        # Click the posts tab
+        try:
+            page.wait_for_load_state("networkidle", timeout=20000)
+
+            # Force the page to load the garbage popup and close it.
+            page.mouse.move(5, 5)
+            page.mouse.click(5, 5)
+            page.wait_for_timeout(utils.rand_range(200, 500))
+            for _page in page.context.pages:
+                if self.basePath not in _page.url:
+                    _page.close()
+
+            page.wait_for_timeout(utils.rand_range(1000, 2000))
+            tabs = page.locator(".tabs-wrapper")
+            tabs.wait_for(state="attached")
+            post_btn = tabs.locator(".profile-publications__btn").first
+            post_btn.scroll_into_view_if_needed()
+            post_btn.click(force=True)
+        except Exception as e:
+            self.logger.error(f"{self.origin_url} could not find posts tab: account may not exist")
+            page.screenshot(path=error_filepath)
+            return
+
+        page.wait_for_timeout(utils.rand_range(1000, 2000))
+        page.wait_for_load_state("networkidle", timeout=20000)
+
+        try:
+            page.wait_for_selector(".posts .post-wrapper")
+        except:
+            self.logger.error(f"{self.origin_url} could not find page: account may not exist.")
+            page.screenshot(path=error_filepath)
+            return
+
+        posts = page.locator(".posts .post-wrapper")
+        self.logger.debug(f"found {posts.count()} posts")
+        if posts.count() == 0:
+            self.logger.error(f"{self.origin_url} unexpected: no posts found after 30 seconds")
+            page.screenshot(path=error_filepath)
+            return
+
+        for i in range(min(self.limit, posts.count())):
+            post = page.locator(".posts .post-wrapper").nth(i)
+            post.scroll_into_view_if_needed()
+            image_loc = post.locator("img[lazy='loaded']")
+            image_loc.wait_for()
+            image_src = image_loc.get_attribute("src")
+
+            if image_src.startswith("data:image"):
+                self.logger.error(f"{self.origin_url} skipping data:image post")
+                page.screenshot(path=error_filepath)
                 continue
 
-            post.scroll_into_view_if_needed()
-            page.wait_for_timeout(500)
+            page.wait_for_timeout(utils.rand_range(500, 600))
             page.wait_for_load_state("networkidle")
-            image = post.query_selector("img.lazyloaded")
-            image_src = image.get_attribute("src")
-            is_reel = post.query_selector(".corner .icon_video") is not None
-            is_multi = post.query_selector(".corner .icon_multi") is not None
-            time_description = post.query_selector(".time .txt").inner_text()
-            post_text = image.get_attribute("alt")
-            urlretrieve(
-                image_src,
-                global_config.file_cache.getPath(post_link, "jpg", self.namespace),
-            )
 
+            handle = post.element_handle()
+            is_reel = handle.query_selector(".fa-video") is not None
+            is_multi = handle.query_selector(".fa-clone") is not None
+            # Time from first paragraph inside wrapper
+            paragraphs = handle.query_selector_all("p")
+            time_description = paragraphs[0].inner_text()
+            posted_time = None
+
+            try:
+                # Example time: "15 October 2024 15:10:03"
+                posted_time = datetime.strptime(time_description, "%d %B %Y %H:%M:%S")
+                # Set timezome to UTC
+                posted_time = posted_time.replace(tzinfo=pytz.utc)
+
+            except ValueError as e:
+                self.logger.error(
+                    f"{self.origin_url} could not parse time: {time_description}: {str(e)}"
+                )
+                raise e
+
+            post_short_id = posted_time.strftime(self.id_strftime_fmt)
+            value = self.post(post_short_id)
+            if value:
+                self.logger.debug(f"cache hit for {value.title} {value.posted_time}")
+                continue
+
+            filename = global_config.file_cache.getPath(post_short_id, "jpg", self.namespace)
+            try:
+                r = requests.get(image_src, allow_redirects=True)
+                r.raise_for_status()
+                open(filename, "wb").write(r.content)
+            except Exception as e:
+                self.logger.error(f"{self.origin_url} could not download image: {str(e)}")
+                page.screenshot(path=error_filepath)
+                continue
+
+            # Click the post to open the dialog
+            post.click()
+            post_text = page.locator(".modal-body .text-post p").nth(1).inner_text()
+            title = f"Post by {self.author} at {time_description}"
+            if post_text:
+                title = post_text.strip()[: self.title_max_length]
+                if len(post_text) > self.title_max_length:
+                    title += "..."
+                title = title.replace("\n", " ")
+
+            if is_reel:
+                try:
+                    video = page.locator(".modal-body video")
+                    video_src = video.first.get_attribute("src")
+                except:
+                    self.logger.error(f"{self.origin_url} could not find reel video src")
+                    video_src = None
+
+            # Close the modal by finding `aria-label="Close"`
+            page.click('button[aria-label="Close"]')
             value = InstagramPost(
                 **{
                     "version": latest_version,
                     "namespace": self.namespace,
-                    "id": post_link,
+                    "id": post_short_id,
                     "author": self.author,
-                    "origin_url": urljoin(self.origin_url, post_link),
-                    "title": post_text.strip()[: self.title_max_length] + "...",
+                    "origin_url": urljoin(self.instaPath, self.username),
+                    "title": title,
                     "post_text": post_text,
                     "discovered_time": utc_now(),
-                    "posted_time": utc_now(),  # override this below
+                    "posted_time": posted_time,  # override this below
                     "image_src": image_src,
+                    "reel_src": video_src if is_reel else None,
+                    "album_src_list": None,
                     "is_reel": is_reel,
                     "is_multi": is_multi,
                 }
             )
 
-            ## parse "N days/weeks/months ago" into a real date
-            try:
-                units_ago = int(time_description.split(" ")[0])
-                if "days ago" in time_description or "day ago" in time_description:
-                    value.posted_time = utc_now() - timedelta(days=units_ago)
-                elif "weeks ago" in time_description or "week ago" in time_description:
-                    value.posted_time = utc_now() - timedelta(weeks=units_ago)
-                elif (
-                    "months ago" in time_description or "month ago" in time_description
-                ):
-                    value.posted_time = utc_now() - timedelta(days=units_ago * 30)
-                elif "hours ago" in time_description or "hour ago" in time_description:
-                    value.posted_time = utc_now() - timedelta(hours=units_ago)
-                elif "years ago" in time_description or "year ago" in time_description:
-                    value.posted_time = utc_now() - timedelta(days=units_ago * 365)
-                elif (
-                    "minutes ago" in time_description
-                    or "minute ago" in time_description
-                ):
-                    value.posted_time = utc_now() - timedelta(minutes=units_ago)
-                else:
-                    raise ValueError(f"Unknown time description: {time_description}")
-                self.logger.debug(
-                    f"   inferred time: {value.posted_time} from '{time_description}'"
-                )
-            except:
-                self.logger.error(f"   could not parse time: {time_description}")
-                pass
+            randomMouseMovement(page)
 
-            self.logger.debug(f"   cache miss for {post_link}")
-
-            if is_reel:
-                self._get_reel_details(post_link, value)
-            elif is_multi:
-                self._get_album_details(post_link, value)
+            self.logger.info(
+                f'discovered reel={is_reel} multi={is_multi} id={post_short_id} time="{posted_time}" title="{title}"'
+            )
 
             self.cache_set(value.id, value.to_dict())
-            new_posts.append(value)
-
         self.set_last_run()
-        return len(new_posts)
-
-    def _get_album_details(self, post_url: str, post: InstagramPost):
-        """ """
-        pass
-
-    def _get_reel_details(self, post_url: str, post: InstagramPost):
-        """
-        For album posts and reel posts
-        """
-        pass

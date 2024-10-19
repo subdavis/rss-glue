@@ -1,18 +1,18 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Iterable, Optional
 
 from croniter import croniter
 
 from rss_glue import utils
 from rss_glue.feeds import feed
-from rss_glue.resources import utc_now
+from rss_glue.resources import cron_randomize, utc_now
 
 latest_version = 0
 
 digetst_post_template = """
 <section>
-    <a href="{origin_url}"><h3>{title}</h3></a>
+    <h2>{title}</h2>
     <time>{posted_time}</time>
     <div>{content}</div>
     <hr>
@@ -32,7 +32,7 @@ class DigestPost(feed.FeedItem):
     subposts: list[feed.FeedItem]
 
     def render(self):
-        html = "<p>"
+        html = ""
         for post in self.subposts:
             html += digetst_post_template.format(
                 title=post.title,
@@ -50,6 +50,7 @@ class DigestPost(feed.FeedItem):
     @staticmethod
     def load(obj: dict, source: feed.BaseFeed):
         obj["subposts"] = [source.post(subpost_id) for subpost_id in obj["subposts"]]
+        obj["subposts"] = [post for post in obj["subposts"] if post]
         return DigestPost(**obj)
 
 
@@ -73,7 +74,7 @@ class DigestFeed(feed.BaseFeed):
     ):
         self.limit = limit
         self.source = source
-        self.schedule = schedule
+        self.schedule = cron_randomize(schedule, self.namespace)
         self.title = f"Digest of {source.title}"
         self.author = source.author
         self.origin_url = source.origin_url
@@ -87,17 +88,18 @@ class DigestFeed(feed.BaseFeed):
     def namespace(self):
         return f"{self.name}_{self.source.namespace}"
 
-    def update(self, force: bool = False) -> int:
+    def sources(self) -> Iterable[feed.BaseFeed]:
+        yield self.source
+        yield self
+
+    def update(self, force: bool = False):
         """
         An update shall be needed if the last full period has passed
         and a digest post has not been created for it.
         """
-        self.source.update(force)
-
         # Get the last full periodical interval
         itr = croniter(self.schedule, utc_now())
         period_start: datetime = itr.get_prev(datetime)
-        new_issues = 0
 
         for _ in range(self.back_issues):
             period_end = period_start
@@ -118,8 +120,7 @@ class DigestFeed(feed.BaseFeed):
             source_posts = self.source.posts()
             posts_in_last_period = list(
                 filter(
-                    lambda post: post.posted_time >= period_start
-                    and post.posted_time < period_end,
+                    lambda post: post.posted_time >= period_start and post.posted_time < period_end,
                     source_posts,
                 )
             )
@@ -142,9 +143,8 @@ class DigestFeed(feed.BaseFeed):
                 posted_time=period_end,
                 subposts=posts_in_last_period,
             )
+            self.logger.info(f"Adding digest post {value.id} for {period_end}")
             self.cache_set(value.id, value.to_dict())
-            new_issues += 1
-        return new_issues
 
     def post(self, post_id: str) -> Optional[feed.FeedItem]:
         cached = self.cache_get(post_id)
@@ -154,8 +154,4 @@ class DigestFeed(feed.BaseFeed):
 
     def posts(self) -> list[feed.FeedItem]:
         posts = super().posts()
-        return [
-            post
-            for post in posts
-            if isinstance(post, DigestPost) and len(post.subposts)
-        ]
+        return [post for post in posts if isinstance(post, DigestPost) and len(post.subposts)]

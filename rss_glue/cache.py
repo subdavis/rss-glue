@@ -41,6 +41,9 @@ class FileCache:
             f.write(data)
         return self.getRelativePath(key, ext, namespace)
 
+    def nsFiles(self, ext: str, namespace: str) -> list[Path]:
+        return list(self._ensure_namespace(namespace).glob(f"*.{ext}"))
+
 
 class JsonCache(SimpleCache):
     def __init__(self, root: Path):

@@ -1,35 +1,57 @@
 import logging
+import random
+import random as rand
 from datetime import timedelta
-from random import random
 from time import sleep
+from typing import Set
 from urllib.parse import urljoin
 
 import click
 
+from rss_glue.feeds import feed
 from rss_glue.logger import logger
-from rss_glue.outputs import artifact
+from rss_glue.outputs import Artifact, artifact
 from rss_glue.resources import global_config, utc_now
 
 
-def _generate(artifact: "artifact.Artifact"):
-    for path in artifact.generate():
-        full_url = urljoin(global_config.base_url, path.as_posix())
-        logger.info(f" generated {full_url}")
+def _collect_sources(artifacts: list["artifact.Artifact"]) -> list[feed.BaseFeed]:
+    sources: Set[feed.BaseFeed] = set()
+    sorted: list[feed.BaseFeed] = []
+    for artifact in artifacts:
+        if not issubclass(artifact.__class__, Artifact):
+            raise ValueError(
+                f"You put something in the artifacts list that is not an artifact: {artifact}"
+            )
+        for source in artifact.sources:
+            for subsource in source.sources():
+                if subsource not in sources:
+                    sources.add(subsource)
+                    sorted.append(subsource)
+    return sorted
+
+
+def _generate(artifact: "artifact.Artifact", force: bool = False):
+    now = utc_now()
+    for path, modified in artifact.generate():
+        if modified > now:
+            full_url = urljoin(global_config.base_url, path.as_posix())
+            logger.info(f" generated {full_url}")
 
 
 def _update(artifacts: list["artifact.Artifact"], force: bool):
-    updated_namespaces_set = set()
+    sources = _collect_sources(artifacts)
+    logger.info(f" discovered {len(sources)} sources")
+    now = utc_now()
+
+    for source in sources:
+        source.update(force)
+        if source.last_updated > now:
+            sleep(rand.randint(2, 4))
+
     for artifact in artifacts:
-        artifact_updated = force or False
-        for source in artifact.sources:
-            if not source.namespace in updated_namespaces_set:
-                count = source.update(force)
-                updated_namespaces_set.add(source.namespace)
-                if count:
-                    artifact_updated = True
-                    sleep(2 + (random() * 2))
-        if artifact_updated:
-            _generate(artifact)
+        _generate(artifact)
+
+    global_config.close_browser()
 
 
 @click.group()
@@ -39,10 +61,23 @@ def _update(artifacts: list["artifact.Artifact"], force: bool):
     help="Path to config python script",
     type=click.Path(exists=True),
 )
-@click.option("--log-level", default="INFO", help="Log level")
-def cli(config: str, log_level: str):
-    logger.setLevel(logging.getLevelName(log_level))
+@click.option("--debug", is_flag=True)
+def cli(config: str, debug: bool):
     global_config.load(config)
+    if debug:
+        logger.setLevel(logging.DEBUG)
+
+
+@cli.command()
+def migrate():
+    for source in _collect_sources(global_config.artifacts):
+        source.migrate()
+
+
+@cli.command()
+def cleanup():
+    for source in _collect_sources(global_config.artifacts):
+        source.cleanup()
 
 
 @cli.command()
@@ -51,13 +86,12 @@ def watch(interval: int):
     while True:
         _update(global_config.artifacts, force=False)
 
-        global_config.close_browser()
         global_config.run_after_generate()
         next_run_time_local = (utc_now() + timedelta(minutes=interval)).astimezone()
         logger.info(
             f" watch: sleeping for {interval} minutes until {next_run_time_local.strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        sleep(60 * 60)
+        sleep(60 * interval)
 
 
 @cli.command()
@@ -83,5 +117,4 @@ def debug():
 def install():
     # Install playwright extensions
     # from https://github.com/uBlockOrigin/uBOL-home/releases/latest
-    global_config.install()
     global_config.install()

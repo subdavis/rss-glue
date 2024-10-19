@@ -56,9 +56,9 @@ class RssFeed(feed.ScheduleFeed):
     def namespace(self):
         return f"{self.name}_{self.id}"
 
-    def update(self, force: bool = False) -> int:
+    def update(self, force: bool = False):
         if not self.needs_update(force):
-            return 0
+            return
 
         f = feedparser.parse(self.url)
         self.title = getattr(f.feed, "title", "RSS Feed")
@@ -107,7 +107,6 @@ class RssFeed(feed.ScheduleFeed):
             self.cache_set(post_id, value.to_dict())
 
         self.set_last_run()
-        return 1
 
     def post(self, post_id: str) -> Optional[feed.FeedItem]:
         cached = self.cache_get(post_id)
