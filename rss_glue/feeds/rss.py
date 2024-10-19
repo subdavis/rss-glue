@@ -41,6 +41,7 @@ class RssFeed(feed.ScheduleFeed):
     limit: int
     name = "rss"
     url: str
+    post_cls: type[RssPost] = RssPost
 
     def __init__(self, id: str, url: str, limit: int = 12, schedule: str = "0 * * * *"):
         self.url = url
@@ -92,7 +93,7 @@ class RssFeed(feed.ScheduleFeed):
                     published_at = datetime(*published_at_tuple[:6], tzinfo=pytz.utc)  # type: ignore
 
             title = getattr(entry, "title", "RSS Post")
-            value = RssPost(
+            value = self.post_cls(
                 version=1,
                 namespace=self.namespace,
                 id=post_id,
@@ -112,4 +113,4 @@ class RssFeed(feed.ScheduleFeed):
         cached = self.cache_get(post_id)
         if not cached:
             return None
-        return RssPost(**cached)
+        return self.post_cls(**cached)

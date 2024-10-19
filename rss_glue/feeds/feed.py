@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from logging import LoggerAdapter
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Protocol
 
 import pycron
 from croniter import croniter
@@ -93,6 +93,7 @@ class BaseFeed(ABC):
     author: str
     origin_url: str
     logger: LoggerAdapter
+    post_cls: type[FeedItem] = FeedItem
 
     def __init__(self):
         self.logger = NamespaceLogger(logger, {"source": self})

@@ -2,8 +2,6 @@
 
 RSS Glue is a highly extensible, filesystem-based RSS/Atom feed generator and manipulator. Build digests, merge feeds, and use AI tools to make your RSS feed work for you!
 
-<!-- ![RSS Glue Stupid Logo](./docs/images/glue.webp) -->
-
 <img src='./docs/images/glue.webp' width=300 style='border-radius: 10px' />
 
 ## Inspiration

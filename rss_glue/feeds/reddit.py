@@ -74,6 +74,8 @@ class RedditFeed(feed.ScheduleFeed):
 
     subreddit: str
     url: str
+    post_cls: type[RedditPost] = RedditPost
+    name: str = "reddit"
 
     def __init__(self, url: str, schedule: str = "0 * * * *"):
         if not ".json" in url:
@@ -108,7 +110,7 @@ class RedditFeed(feed.ScheduleFeed):
 
             created_time_epoch = post_data.get("created_utc")
             created_time = datetime.fromtimestamp(created_time_epoch, tz=timezone.utc)
-            value = RedditPost(
+            value = self.post_cls(
                 version=0,
                 namespace=self.namespace,
                 id=post_id,
@@ -132,4 +134,4 @@ class RedditFeed(feed.ScheduleFeed):
         cached = self.cache_get(post_id)
         if not cached:
             return None
-        return RedditPost(**cached)
+        return self.post_cls(**cached)

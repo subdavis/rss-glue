@@ -51,7 +51,7 @@ class DigestPost(feed.FeedItem):
     def load(obj: dict, source: feed.BaseFeed):
         obj["subposts"] = [source.post(subpost_id) for subpost_id in obj["subposts"]]
         obj["subposts"] = [post for post in obj["subposts"] if post]
-        return DigestPost(**obj)
+        return obj
 
 
 class DigestFeed(feed.BaseFeed):
@@ -64,6 +64,7 @@ class DigestFeed(feed.BaseFeed):
     key_date_format = "%Y%m%d%H%M"
     schedule: str
     source: feed.BaseFeed
+    post_cls: type[DigestPost] = DigestPost
 
     def __init__(
         self,
@@ -132,7 +133,7 @@ class DigestFeed(feed.BaseFeed):
             posts_in_last_period = posts_in_last_period[: self.limit]
 
             title = f"Issue {period_end.strftime(utils.human_strftime)}"
-            value = DigestPost(
+            value = self.post_cls(
                 version=0,
                 namespace=self.namespace,
                 id=digest_id,
@@ -150,8 +151,8 @@ class DigestFeed(feed.BaseFeed):
         cached = self.cache_get(post_id)
         if not cached:
             return None
-        return DigestPost.load(cached, self.source)
+        return self.post_cls(**self.post_cls.load(cached, self.source))
 
     def posts(self) -> list[feed.FeedItem]:
         posts = super().posts()
-        return [post for post in posts if isinstance(post, DigestPost) and len(post.subposts)]
+        return [post for post in posts if isinstance(post, self.post_cls) and len(post.subposts)]

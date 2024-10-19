@@ -52,6 +52,7 @@ class AiFilterFeed(feed.BaseFeed):
     limit: int
     client: ai_client.AiClient
     name: str = "smart_filter"
+    post_cls: type[AiFilterPost] = AiFilterPost
 
     def __init__(
         self,
@@ -84,7 +85,7 @@ class AiFilterFeed(feed.BaseFeed):
         cached = self.cache_get(post_id)
         if not cached:
             return None
-        return AiFilterPost(**AiFilterPost.load(cached, self.source))
+        return self.post_cls(**self.post_cls.load(cached, self.source))
 
     def format_prompt(self, post: feed.FeedItem) -> str:
         f = HTMLFilter()
@@ -155,7 +156,7 @@ class AiFilterFeed(feed.BaseFeed):
             else:
                 self.logger.error(f"Invalid response: {msg.response}")
 
-            value = AiFilterPost(
+            value = self.post_cls(
                 version=0,
                 namespace=self.namespace,
                 id=source_post.id,

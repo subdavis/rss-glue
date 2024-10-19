@@ -71,6 +71,7 @@ class InstagramFeed(feed.ScheduleFeed):
     instaPath = "https://www.instagram.com/"
     name = "storynavigation"
     id_strftime_fmt = "%Y%m%d%H%M%S"
+    post_cls: type[InstagramPost] = InstagramPost
 
     def __init__(self, username: str, limit: int = 6, schedule: str = "0 * * * *"):
         self.username = username
@@ -88,7 +89,7 @@ class InstagramFeed(feed.ScheduleFeed):
         cached = self.cache_get(post_id)
         if not cached:
             return None
-        return InstagramPost(**cached)
+        return self.post_cls(**cached)
 
     def cleanup(self):
         # Get a list of all the jpegs in the cache
@@ -217,7 +218,7 @@ class InstagramFeed(feed.ScheduleFeed):
 
             # Close the modal by finding `aria-label="Close"`
             page.click('button[aria-label="Close"]')
-            value = InstagramPost(
+            value = self.post_cls(
                 **{
                     "version": latest_version,
                     "namespace": self.namespace,
