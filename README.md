@@ -16,6 +16,7 @@ External Data Sources
 
 * `RssFeed` is a data source using an external RSS Feed.
 * `InstagramFeed` is a data source using an instagram profile via Piokok.
+* `RedditFeed` because the standard Reddit RSS feed leaves out too much content and you can get more from the JSON api.
 
 Meta Data Sources
 
@@ -28,6 +29,7 @@ Outputs
 * `RssOutput` is an output RSS feed.
 * `HTMLOutput` is a very basic single page web feed output.
 * `HTMLIndexOutput` is a meta-output HTML page with a link to all its child outputs. Handy for quick reference and adding feeds to your RSS reader.
+* `OpmlOutput` is a meta-output OPML file with links to all the RSS outputs for quick import into RSS readers.
 
 ## Quick Start
 
@@ -83,16 +85,18 @@ cron_weekly_on_sunday = "0 5 * * 0"
 
 # Finally, declare your artifacts
 artifacts = [
-    RssOutput(
-        # A simple feed of NASA instagram posts
-        InstagramFeed("nasa", schedule=cron_daily_6_am),
-        # A weekly digest of the F1 subreddit
-        DigestFeed(
-            RssFeed(
-                "r_formula1_top_week",
-                "https://www.reddit.com/r/formula1/top.rss?t=week",
-                limit=20,
-                schedule=cron_weekly_on_sunday,
+    OpmlOutput(
+        RssOutput(
+            # A simple feed of NASA instagram posts
+            InstagramFeed("nasa", schedule=cron_daily_6_am),
+            # A weekly digest of the F1 subreddit
+            DigestFeed(
+                RssFeed(
+                    "r_formula1_top_week", # A unique name for this feed.
+                    "https://www.reddit.com/r/formula1/top.rss?t=week",
+                    limit=20,
+                    schedule=cron_weekly_on_sunday,
+                )
             )
         )
     )
