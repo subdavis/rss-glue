@@ -38,9 +38,14 @@ def _generate(artifact: "artifact.Artifact", force: bool = False):
             logger.info(f" generated {full_url}")
 
 
-def _update(artifacts: list["artifact.Artifact"], force: bool):
+def _update(artifacts: list["artifact.Artifact"], force: bool, limit: list[str] = []):
     sources = _collect_sources(artifacts)
-    logger.info(f" discovered {len(sources)} sources")
+    if len(limit):
+        logger.info(f" updating {len(limit)} sources")
+        sources = [source for source in sources if source.namespace in limit]
+    else:
+        logger.info(f" discovered {len(sources)} sources")
+
     now = utc_now()
 
     for source in sources:
@@ -96,8 +101,9 @@ def watch(interval: int):
 
 @cli.command()
 @click.option("--force", is_flag=True)
-def update(force: bool):
-    _update(global_config.artifacts, force=force)
+@click.option("--feed", multiple=True, help="Specify feeds to update", type=str)
+def update(force: bool, feed: list[str]):
+    _update(global_config.artifacts, limit=feed, force=force)
 
 
 @cli.command()

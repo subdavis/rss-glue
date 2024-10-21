@@ -169,5 +169,5 @@ class AiFilterFeed(feed.BaseFeed):
                 token_cost=msg.tokens_used,
                 include_post=include_post,
             )
-            self.logger.info(f" {self.namespace} post={source_post.id} include_post={include_post}")
+            self.logger.info(f"post={source_post.id} include_post={include_post}")
             self.cache_set(value.id, value.to_dict())

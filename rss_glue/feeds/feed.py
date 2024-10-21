@@ -172,7 +172,8 @@ class BaseFeed(ABC):
             return datetime.fromisoformat(last_updated_str)
         return datetime.fromtimestamp(0, tz=timezone.utc)
 
-    def set_last_updated(self, value: datetime = utc_now()):
+    def set_last_updated(self, value: Optional[datetime] = None):
+        value = value or utc_now()
         self.meta = {"last_updated": value.isoformat()}
 
     def __hash__(self):
