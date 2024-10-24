@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+
+  # rssglue service generates the static files into the rssglue_static volume
+  rssglue:
+    image: rssglue:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rssglue
+    restart: unless-stopped
+    volumes:
+      - rssglue_static:/opt/rssglue/src/static
+      - ./samples/docker-config.py:/opt/rssglue/config.py
+    command: --config /opt/rssglue/config.py watch
+
+  # Nginx service serves the static files from the rssglue_static volume
+  nginx:
+    image: nginx:alpine
+    container_name: rssglue_nginx
+    restart: unless-stopped
+    volumes:
+      - rssglue_static:/usr/share/nginx/html
+    ports:
+      - "5000:80"
+
+volumes:
+  rssglue_static:

@@ -31,12 +31,11 @@ class RssOutput(Artifact):
             posts = source.posts()
 
             fg = FeedGenerator()
-            feed_id = source.origin_url
 
-            fg.id(feed_id)
+            fg.id(f"rssglue:{source.namespace}")
             fg.title(source.title)
             fg.author({"name": source.author})
-            fg.link(href=feed_id, rel="alternate")
+            fg.link(href=source.origin_url, rel="alternate")
             fg.language("en")
 
             for post in posts:

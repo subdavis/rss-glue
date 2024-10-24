@@ -138,7 +138,7 @@ class DigestFeed(feed.BaseFeed):
                 namespace=self.namespace,
                 id=digest_id,
                 author="RSS Glue",
-                origin_url="https://rssglue.com",
+                origin_url=self.origin_url,
                 title=title,
                 discovered_time=period_end,
                 posted_time=period_end,

@@ -33,13 +33,15 @@ Outputs
 
 ## Quick Start
 
+### Local Install (pip)
+
 ```bash
 # Install RSS Glue
 pip install rss-glue
 
-# Install the static dependencies like the playwright browser
-playwright install
-rss-glue install
+# You can skip both of these lines if you don't intend to use Playwright-dependent feeds.
+playwright install # Install playwright browser
+rss-glue install # For some websites, playwright needs an ad blocker to function.
 
 # Create your configuration file and edit it
 touch config.py
@@ -51,6 +53,25 @@ rss-glue --config config.py watch
 # Or start the debug web server
 rss-glue --config config.py debug
 ```
+
+### Docker
+
+RssGlue can be run with docker, and requires that its static files be served with a regular web server such as nginx or caddy.
+
+```bash
+# You can build the container yourself
+docker buildx build -t rssglue .
+```
+
+There's a sample docker-compose to do this in [./docker-compose.yml](./docker-compose.yml).
+
+```bash
+docker compose up -d
+```
+
+### Deploying with GitHub Pages
+
+Because this is more like a static site generator than a web service, you can deploy it without any of your own infrastructure using a continuous integration job that runs on a timer and push the files to any static server like S3, Google Cloud Buckets, Netlify, or GH Pages.
 
 ## Configuration
 
@@ -83,22 +104,25 @@ cron_m_w_f = "0 5 * * 1,3,5"
 cron_daily_6_am = "0 5 * * *"
 cron_weekly_on_sunday = "0 5 * * 0"
 
+_outputs = [
+    # A simple feed of NASA instagram posts
+    InstagramFeed("nasa", schedule=cron_daily_6_am),
+    # A weekly digest of the F1 subreddit
+    DigestFeed(
+        RssFeed(
+            "r_formula1_top_week", # A unique name for this feed.
+            "https://www.reddit.com/r/formula1/top.rss?t=week",
+            limit=20,
+            schedule=cron_weekly_on_sunday,
+        )
+    )
+]
+
 # Finally, declare your artifacts
 artifacts = [
-    OpmlOutput(
-        RssOutput(
-            # A simple feed of NASA instagram posts
-            InstagramFeed("nasa", schedule=cron_daily_6_am),
-            # A weekly digest of the F1 subreddit
-            DigestFeed(
-                RssFeed(
-                    "r_formula1_top_week", # A unique name for this feed.
-                    "https://www.reddit.com/r/formula1/top.rss?t=week",
-                    limit=20,
-                    schedule=cron_weekly_on_sunday,
-                )
-            )
-        )
+    HTMLIndexOutput(
+        OpmlOutput(RssOutput(*_outputs)),
+        HTMLOutput(*_outputs),
     )
 ]
 ```
@@ -118,4 +142,3 @@ You can use RSS Glue and RSSHub together though!
 **Compared with Zapier**
 
 Zapier suffers from trying to be all things to all people, and the configuration hell that such an endeavor always leads to.  It's kinda good at a lot of stuff.
-
