@@ -1,6 +1,6 @@
 import logging
-import random
 import random as rand
+import traceback
 from datetime import timedelta
 from time import sleep
 from typing import Set
@@ -49,12 +49,20 @@ def _update(artifacts: list["artifact.Artifact"], force: bool, limit: list[str] 
     now = utc_now()
 
     for source in sources:
-        source.update(force)
-        if source.last_updated > now:
-            sleep(rand.randint(2, 4))
+        try:
+            source.update(force)
+            if source.last_updated > now:
+                sleep(rand.randint(2, 4))
+        except Exception as e:
+            logger.critical(f" Source {source.namespace} failed to update: {e}")
+            logger.critical(traceback.format_exc())
 
     for artifact in artifacts:
-        _generate(artifact)
+        try:
+            _generate(artifact)
+        except Exception as e:
+            logger.critical(f" Artifact failed to generate: {e}")
+            logger.critical(traceback.format_exc())
 
     global_config.close_browser()
 
