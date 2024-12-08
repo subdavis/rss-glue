@@ -125,10 +125,3 @@ def debug():
     _update(global_config.artifacts, force=False)
 
     app.run(debug=True)
-
-
-@cli.command()
-def install():
-    # Install playwright extensions
-    # from https://github.com/uBlockOrigin/uBOL-home/releases/latest
-    global_config.install()

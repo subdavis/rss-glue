@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import timedelta
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -49,17 +49,7 @@ class InstagramPost(feed.FeedItem):
         return hash(self.id + self.title)
 
 
-def randomMouseMovement(page):
-    for _ in range(3):
-        page.mouse.move(
-            utils.rand_range(0, 500),
-            utils.rand_range(0, 500),
-            steps=utils.rand_range(5, 20),
-        )
-        page.wait_for_timeout(utils.rand_range(100, 500))
-
-
-class InstagramFeed(feed.ScheduleFeed):
+class InstagramFeed(feed.ThrottleFeed):
     """
     InstagramFeed turns an instagram user's feed into an RSS-able feed.
     """
@@ -73,7 +63,11 @@ class InstagramFeed(feed.ScheduleFeed):
     post_cls: type[InstagramPost] = InstagramPost
 
     def __init__(
-        self, username: str, limit: int = 6, schedule: str = "0 * * * *", client: Client = None
+        self,
+        username: str,
+        limit: int = 6,
+        interval: timedelta = timedelta(days=1),
+        client: Client = None,
     ):
         self.username = username
         self.limit = limit
@@ -81,7 +75,7 @@ class InstagramFeed(feed.ScheduleFeed):
         self.author = f"@{username}"
         self.origin_url = urljoin(self.instaPath, self.username)
         self.cl = client
-        super().__init__(schedule=schedule)
+        super().__init__(interval=interval)
 
     @property
     def namespace(self):
@@ -106,7 +100,9 @@ class InstagramFeed(feed.ScheduleFeed):
         if not self.needs_update(force):
             return
 
-        user_id = self.meta.get("user_id", self.cl.user_info_by_username(self.username).pk)
+        user_id = self.meta.get("user_id", None)
+        if not user_id:
+            user_id = self.cl.user_id_from_username(self.username)
         self.meta = {"user_id": user_id}
         self.logger.debug(f"found user_id {user_id}")
         posts = self.cl.user_medias(user_id, self.limit)

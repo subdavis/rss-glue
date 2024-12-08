@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import feedparser
@@ -32,7 +32,7 @@ class RssPost(feed.FeedItem):
         return html_content
 
 
-class RssFeed(feed.ScheduleFeed):
+class RssFeed(feed.ThrottleFeed):
     """
     RSS Feed source
     """
@@ -43,11 +43,11 @@ class RssFeed(feed.ScheduleFeed):
     url: str
     post_cls: type[RssPost] = RssPost
 
-    def __init__(self, id: str, url: str, limit: int = 12, schedule: str = "0 * * * *"):
+    def __init__(self, id: str, url: str, limit: int = 12, interval: timedelta = timedelta(days=1)):
         self.url = url
         self.limit = limit
         self.id = id
-        super().__init__(schedule=schedule)
+        super().__init__(interval=interval)
         meta = self.meta
         self.title = meta.get("title", "RSS Feed")
         self.author = meta.get("author", "RSS Glue")

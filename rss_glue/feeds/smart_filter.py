@@ -130,8 +130,6 @@ class AiFilterFeed(feed.BaseFeed):
         """
         This feed only updates when the source feed updates
         """
-        self.logger.debug(f" updating {self.namespace}")
-
         source_posts = self.source.posts()
         # Sort by posted_time
         source_posts.sort(key=lambda post: post.posted_time, reverse=True)

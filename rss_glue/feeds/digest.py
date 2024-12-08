@@ -6,7 +6,7 @@ from croniter import croniter
 
 from rss_glue import utils
 from rss_glue.feeds import feed
-from rss_glue.resources import cron_randomize, utc_now
+from rss_glue.resources import utc_now
 
 latest_version = 0
 
@@ -70,12 +70,12 @@ class DigestFeed(feed.BaseFeed):
         self,
         source: feed.BaseFeed,
         limit: int = 12,
-        schedule: str = "0 * * * *",
+        schedule: str = "0 0 * * *",
         back_issues: int = 2,
     ):
         self.limit = limit
         self.source = source
-        self.schedule = cron_randomize(schedule, self.namespace)
+        self.schedule = schedule
         self.title = f"Digest of {source.title}"
         self.author = source.author
         self.origin_url = source.origin_url

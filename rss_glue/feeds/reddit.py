@@ -1,6 +1,6 @@
 import html
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
 
 import requests
@@ -73,7 +73,7 @@ class RedditPost(feed.FeedItem):
         )
 
 
-class RedditFeed(feed.ScheduleFeed):
+class RedditFeed(feed.ThrottleFeed):
     """
     A Reddit feed is a feed of posts via the Reddit JSON API
     """
@@ -83,7 +83,7 @@ class RedditFeed(feed.ScheduleFeed):
     post_cls: type[RedditPost] = RedditPost
     name: str = "reddit"
 
-    def __init__(self, url: str, schedule: str = "0 * * * *"):
+    def __init__(self, url: str, interval: timedelta = timedelta(days=1)):
         if not ".json" in url:
             raise ValueError("JSON endpoint expected")
         self.subreddit = url.split("/")[4]
@@ -91,7 +91,7 @@ class RedditFeed(feed.ScheduleFeed):
         self.title = f"r/{self.subreddit}"
         self.author = "Redditors"
         self.origin_url = f"https://www.reddit.com/r/{self.subreddit}"
-        super().__init__(schedule=schedule)
+        super().__init__(interval=interval)
 
     @property
     def namespace(self):

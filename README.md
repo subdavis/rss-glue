@@ -39,10 +39,6 @@ Outputs
 # Install RSS Glue
 pip install rss-glue
 
-# You can skip both of these lines if you don't intend to use Playwright-dependent feeds.
-playwright install # Install playwright browser
-rss-glue install # For some websites, playwright needs an ad blocker to function.
-
 # Create your configuration file and edit it
 touch config.py
 
@@ -91,8 +87,6 @@ from rss_glue.resources import global_config
 global_config.configure(
     # A root directory for the files RSS Glue will generate
     static_root="/etc/rssglue/static",
-    # A root directory for the place Playwright (chrome) will keep its user directory
-    playwright_root="/etc/rssglue/playwright",
     # The base public URL to use for building reference links
     base_url="http://localhost:5000/static/",
     # (Optional) a function to run when files change
@@ -100,21 +94,19 @@ global_config.configure(
 )
 
 # All times and schedules are in UTC
-cron_m_w_f = "0 5 * * 1,3,5"
-cron_daily_6_am = "0 5 * * *"
 cron_weekly_on_sunday = "0 5 * * 0"
 
 _outputs = [
     # A simple feed of NASA instagram posts
-    InstagramFeed("nasa", schedule=cron_daily_6_am),
+    InstagramFeed("nasa"),
     # A weekly digest of the F1 subreddit
     DigestFeed(
         RssFeed(
             "r_formula1_top_week", # A unique name for this feed.
             "https://www.reddit.com/r/formula1/top.rss?t=week",
             limit=20,
-            schedule=cron_weekly_on_sunday,
         )
+        schedule=cron_weekly_on_sunday,
     )
 ]
 

@@ -2,13 +2,10 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from logging import LoggerAdapter
-from typing import Iterable, Optional, Protocol
-
-import pycron
-from croniter import croniter
+from typing import Iterable, Optional
 
 from rss_glue.logger import logger
-from rss_glue.resources import cron_randomize, global_config, utc_now
+from rss_glue.resources import global_config, utc_now
 
 
 @dataclass
@@ -196,15 +193,15 @@ class BaseFeed(ABC):
         return global_config.cache.keys(self.namespace)
 
 
-class ScheduleFeed(BaseFeed, ABC):
+class ThrottleFeed(BaseFeed, ABC):
     """
-    A feed that is expensive to update, so it can be throttled to update on a certain schedule.
+    A feed that is expensive to update, so it can be throttled to only update every interval.
     """
 
-    schedule: str
+    interval: timedelta
 
-    def __init__(self, schedule: str, **kwargs):
-        self.schedule = cron_randomize(schedule, self.namespace)
+    def __init__(self, interval: timedelta, **kwargs):
+        self.interval = interval
         super().__init__(**kwargs)
 
     @property
@@ -226,11 +223,9 @@ class ScheduleFeed(BaseFeed, ABC):
             return True
         if self.last_run > utc_now():
             return False
-        _requires_update = pycron.has_been(self.schedule, self.last_run, utc_now())
+        _requires_update = (self.last_run + self.interval) < utc_now()
         logfn = self.logger.info if _requires_update else self.logger.debug
-        itr = croniter(self.schedule, utc_now())
-        next_run_str = itr.next(datetime).strftime("%m-%d-%y %H:%M")
-
+        next_run_str = (self.last_run + self.interval).strftime("%m-%d-%y %H:%M")
         last_run_str = self.last_run.strftime("%m-%d-%y %H:%M")
         logfn(f'last_run="{last_run_str}" next_run="{next_run_str}" update={_requires_update}')
         return _requires_update

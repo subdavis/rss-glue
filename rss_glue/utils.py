@@ -15,7 +15,3 @@ main {
     padding: 2em;
 }
 """
-
-
-def rand_range(low: int, high: int):
-    return low + (random.random() * (high - low))
