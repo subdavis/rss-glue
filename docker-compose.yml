@@ -16,11 +16,11 @@ services:
 
   # Nginx service serves the static files from the rssglue_static volume
   nginx:
-    image: nginx:alpine
+    image: dceoy/nginx-autoindex
     container_name: rssglue_nginx
     restart: unless-stopped
     volumes:
-      - rssglue_static:/usr/share/nginx/html
+      - rssglue_static:/var/lib/nginx/html:ro
     ports:
       - "5000:80"
 

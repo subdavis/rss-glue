@@ -10,11 +10,11 @@ import click
 
 from rss_glue.feeds import feed
 from rss_glue.logger import logger
-from rss_glue.outputs import Artifact, artifact
+from rss_glue.outputs import Artifact
 from rss_glue.resources import global_config, utc_now
 
 
-def _collect_sources(artifacts: list["artifact.Artifact"]) -> list[feed.BaseFeed]:
+def _collect_sources(artifacts: list[Artifact]) -> list[feed.BaseFeed]:
     sources: Set[feed.BaseFeed] = set()
     sorted: list[feed.BaseFeed] = []
     for artifact in artifacts:
@@ -30,7 +30,7 @@ def _collect_sources(artifacts: list["artifact.Artifact"]) -> list[feed.BaseFeed
     return sorted
 
 
-def _generate(artifact: "artifact.Artifact", force: bool = False):
+def _generate(artifact: Artifact, force: bool = False):
     now = utc_now()
     for path, modified in artifact.generate():
         if modified > now:
@@ -38,7 +38,7 @@ def _generate(artifact: "artifact.Artifact", force: bool = False):
             logger.info(f" generated {full_url}")
 
 
-def _update(artifacts: list["artifact.Artifact"], force: bool, limit: list[str] = []):
+def _update(artifacts: list[Artifact], force: bool, limit: list[str] = []):
     sources = _collect_sources(artifacts)
     if len(limit):
         logger.info(f" updating {len(limit)} sources")
@@ -124,4 +124,4 @@ def debug():
 
     _update(global_config.artifacts, force=False)
 
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)

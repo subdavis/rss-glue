@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from datetime import datetime
 from html.parser import HTMLParser
 from typing import Iterable, Optional, cast
 

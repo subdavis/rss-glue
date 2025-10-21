@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
 
-import requests
-
 from rss_glue import utils
 from rss_glue.feeds import feed
 from rss_glue.resources import utc_now
@@ -105,7 +103,8 @@ class RedditFeed(feed.ThrottleFeed):
         # Fetch the posts from the Reddit API
         # and store them in the cache
 
-        response = requests.get(self.url)
+        session = utils.make_browser_session()
+        response = session.get(self.url)
         response.raise_for_status()
         posts = response.json().get("data", {}).get("children", [])
         for post in posts:

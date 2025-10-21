@@ -90,7 +90,11 @@ class DigestFeed(feed.BaseFeed):
         return f"{self.name}_{self.source.namespace}"
 
     def sources(self) -> Iterable[feed.BaseFeed]:
-        yield self.source
+        """
+        Special case: Hide the source from normal source collection
+        since this class will take responsibility for updating it.
+        """
+        # yield self.source # skip this part, it's not a bug -- it's intentional
         yield self
 
     def update(self, force: bool = False):
@@ -102,7 +106,7 @@ class DigestFeed(feed.BaseFeed):
         itr = croniter(self.schedule, utc_now())
         period_start: datetime = itr.get_prev(datetime)
 
-        for _ in range(self.back_issues):
+        for index in range(self.back_issues):
             period_end = period_start
             period_start = itr.get_prev(datetime)
             period_end_str = period_end.strftime(self.key_date_format)
@@ -116,6 +120,12 @@ class DigestFeed(feed.BaseFeed):
             self.logger.debug(
                 f" {self.namespace} requires_update for {digest_id} range {period_start} to {period_end}"
             )
+
+            if index == 0:
+                # Force the source to update, but only for the latest period, not back issues
+                # WARNING: if a source is used in multiple DigestFeeds, this could cause redundant updates
+                # But digests are expected to be rare enough that this should be acceptable
+                self.source.update(True)
 
             # Get all the source posts within the period
             source_posts = self.source.posts()
@@ -156,3 +166,11 @@ class DigestFeed(feed.BaseFeed):
     def posts(self) -> list[feed.FeedItem]:
         posts = super().posts()
         return [post for post in posts if isinstance(post, self.post_cls) and len(post.subposts)]
+
+    def migrate(self):
+        """
+        Account for any necessary migrations from older versions in the source since
+        it's possibly hidden from source collection.
+        """
+        self.source.migrate()
+        return super().migrate()

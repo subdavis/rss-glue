@@ -15,7 +15,6 @@ RSS Glue is a highly extensible, filesystem-based RSS/Atom feed generator and ma
 External Data Sources
 
 * `RssFeed` is a data source using an external RSS Feed.
-* `InstagramFeed` is a data source using an instagram profile via Piokok.
 * `RedditFeed` because the standard Reddit RSS feed leaves out too much content and you can get more from the JSON api.
 
 Meta Data Sources
@@ -74,7 +73,7 @@ Because this is more like a static site generator than a web service, you can de
 RSS Glue is configured entirely with Python. Here's an example.
 
 ```python
-from rss_glue.feeds import DigestFeed, InstagramFeed, MergeFeed, RssFeed
+from rss_glue.feeds import DigestFeed, MergeFeed, RssFeed
 from rss_glue.outputs import HTMLIndexOutput, HtmlOutput, RssOutput
 from rss_glue.resources import global_config
 
@@ -97,8 +96,6 @@ global_config.configure(
 cron_weekly_on_sunday = "0 5 * * 0"
 
 _outputs = [
-    # A simple feed of NASA instagram posts
-    InstagramFeed("nasa"),
     # A weekly digest of the F1 subreddit
     DigestFeed(
         RssFeed(

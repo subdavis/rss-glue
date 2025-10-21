@@ -12,7 +12,6 @@ COPY . .
 RUN poetry env use system
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-dev
-RUN poetry run rss-glue --config /opt/rssglue/src/samples/docker-config.py install
 
 # Distributable Stage
 FROM python:3.12

@@ -26,7 +26,9 @@ class MergeFeed(feed.BaseFeed):
         return f"{self.name}_{self.id}"
 
     def sources(self) -> Iterable[feed.BaseFeed]:
-        return self._sources
+        for s in self._sources:
+            yield s
+        yield self
 
     def update(self, force: bool = False):
         # Merge has updated if any of the sources have updated
