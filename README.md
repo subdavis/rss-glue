@@ -22,6 +22,7 @@ Meta Data Sources
 * `MergeFeed` is a simple chronological merge of multiple feeds.
 * `DigestFeed` is a periodical rollup of a feed, such as a daily digest.
 * `AiFilterFeed` is a feed filtered by a prompt to some AI backend.
+* `CacheFeed` is a wrapper that caches images from post content to avoid CORS issues and broken links.
 
 Outputs
 
@@ -73,7 +74,7 @@ Because this is more like a static site generator than a web service, you can de
 RSS Glue is configured entirely with Python. Here's an example.
 
 ```python
-from rss_glue.feeds import DigestFeed, MergeFeed, RssFeed
+from rss_glue.feeds import DigestFeed, MergeFeed, RssFeed, CacheFeed
 from rss_glue.outputs import HTMLIndexOutput, HtmlOutput, RssOutput
 from rss_glue.resources import global_config
 
@@ -104,7 +105,15 @@ _outputs = [
             limit=20,
         )
         schedule=cron_weekly_on_sunday,
-    )
+    ),
+    # Cache images from a feed to avoid CORS and broken links
+    CacheFeed(
+        RssFeed(
+            "my_feed",
+            "https://example.com/feed.xml",
+            limit=15,
+        )
+    ),
 ]
 
 # Finally, declare your artifacts

@@ -8,14 +8,14 @@ from rss_glue.feeds import feed
 from rss_glue.resources import utc_now
 
 html_template = """
-<article>
+<section>
     <div>{content}</div>
     <p>
         By <a href="https://reddit.com/u/{author}">u/{author}</a>
         <span style="padding: 1em">⬆️ {score}</span>
         <span><a href="{comments_url}">[comments]</a></span>
     </p>
-</article>
+</section>
 """
 
 

@@ -40,12 +40,14 @@ link_template = """
 
 class HTMLIndexOutput(artifact.MetaArtifact):
 
-    def generate(self) -> Iterable[Tuple[Path, datetime]]:
+    namespace = "index"
+
+    def generate(self, limit=None) -> Iterable[Tuple[Path, datetime]]:
 
         html = ""
         for artifact in self.artifacts:
             html += f"<h2>{artifact.__class__.__name__}</h2>"
-            for relpath, modified in artifact.generate():
+            for relpath, modified in artifact.generate(limit=limit):
                 actualPath = urljoin(global_config.base_url, relpath.as_posix())
                 html += link_template.format(
                     url=actualPath,
@@ -56,4 +58,4 @@ class HTMLIndexOutput(artifact.MetaArtifact):
             css=page_css,
         )
 
-        yield global_config.file_cache.write("index", "html", html, "index"), utc_now()
+        yield global_config.file_cache.write("index", "html", html, self.namespace), utc_now()

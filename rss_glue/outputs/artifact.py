@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Iterable, Optional, Tuple
 
 from rss_glue.feeds.feed import BaseFeed
 
@@ -12,13 +12,22 @@ class Artifact(ABC):
     """
 
     sources: list[BaseFeed]
+    namespace: str
 
     def __init__(self, *sources: BaseFeed):
         self.sources = list(sources)
 
     @abstractmethod
-    def generate(self) -> Iterable[Tuple[Path, datetime]]:
+    def generate(self, limit: Optional[list[str]]) -> Iterable[Tuple[Path, datetime]]:
         pass
+
+    def sourcesFor(self, namespaces: Optional[list[str]]) -> list[BaseFeed]:
+        """
+        Get the sources that match the given namespaces
+        """
+        if namespaces is None or len(namespaces) == 0:
+            return self.sources
+        return [source for source in self.sources if source.namespace in namespaces]
 
 
 class MetaArtifact(Artifact, ABC):

@@ -6,15 +6,14 @@ from rss_glue.feeds import feed
 from rss_glue.resources import utc_now
 
 html_template = """
-<article>
-    <div><a href="{url}">{title}</a></div>
+<section>
     <p>
         By <a href="https://news.ycombinator.com/user?id={author}">{author}</a>
-        <span style="padding: 1em">⬆️ {score}</span>
-        <span style="padding: 1em">💬 {descendants}</span>
+        <span>⬆️ {score}</span>
+        <span>💬 {descendants}</span>
         <span><a href="{comments_url}">[comments]</a></span>
     </p>
-</article>
+</section>
 """
 
 

@@ -9,14 +9,63 @@ human_strftime = "%a, %b %d %I:%M %p"
 # CSS should be a 500 pixel wide central column
 page_css = """
 body {
-    font-family: Arial, sans-serif;
-    margin: auto;
-    width: 600px;
-    max-width: 100%;
-    background-color: #f0f0f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 1rem;
+    background: #1a1a1a;
+    color: #e0e0e0;
 }
 main {
-    padding: 2em;
+    padding: 2rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+header {
+    max-width: 600px;
+    margin-bottom: 2rem;
+    margin: 0 auto;
+}
+header h1 {
+    margin: 0;
+    color: #fff;
+}
+header a {
+    color: inherit;
+    text-decoration: none;
+}
+header a:hover h1 {
+    color: #60a5fa;
+}
+header p {
+    margin: 0.5rem 0 0;
+    color: #888;
+}
+article {
+    background: #252525;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+}
+article h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+}
+article a {
+    color: #60a5fa;
+    text-decoration: none;
+}
+article a:hover {
+    text-decoration: underline;
+}
+section:not(:last-child) {
+    margin-bottom: 3rem;
+}
+time, .post-author {
+    color: #888;
+    font-size: 0.875rem;
+}
+hr {
+    display: none;
 }
 """
 

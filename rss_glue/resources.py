@@ -98,7 +98,15 @@ class Config:
 
     @property
     def artifacts(self) -> list["Artifact"]:
-        return self._config.artifacts
+        collected: list["Artifact"] = []
+
+        def collect(artifacts: list["Artifact"]):
+            for artifact in artifacts:
+                collected.append(artifact)
+                collect(getattr(artifact, "artifacts", []))
+
+        collect(self._config.artifacts)
+        return collected
 
     @property
     def loaded(self):

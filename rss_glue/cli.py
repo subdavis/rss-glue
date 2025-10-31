@@ -3,7 +3,7 @@ import random as rand
 import traceback
 from datetime import timedelta
 from time import sleep
-from typing import Set
+from typing import Optional, Set
 from urllib.parse import urljoin
 
 import click
@@ -30,9 +30,9 @@ def _collect_sources(artifacts: list[Artifact]) -> list[feed.BaseFeed]:
     return sorted
 
 
-def _generate(artifact: Artifact, force: bool = False):
+def _generate(artifact: Artifact, limit: Optional[list[str]] = None):
     now = utc_now()
-    for path, modified in artifact.generate():
+    for path, modified in artifact.generate(limit=limit):
         if modified > now:
             full_url = urljoin(global_config.base_url, path.as_posix())
             logger.info(f" generated {full_url}")
@@ -116,12 +116,61 @@ def update(force: bool, feed: list[str]):
 
 @cli.command()
 def debug():
-    from flask import Flask
+    from pathlib import Path
 
-    global_config.base_url = "http://localhost:5000/static/"
-    static_root = global_config.static_root
-    app = Flask(__name__, static_folder=static_root)
+    from flask import Flask, abort, send_from_directory
 
+    global_config.base_url = "http://localhost:5000/"
+    app = Flask(__name__)
+
+    # Intercept static file requests so we can generate artifacts on-demand
+    @app.route("/<path:filename>")
+    def _static_proxy(filename: str):
+        try:
+            logger.info(f" static request: {filename}")
+            req_path = Path(filename)
+
+            # If the request is namespaced like "html/<artifact>.html" try to
+            # discover the corresponding source by artifact namespace (the
+            # file stem) and regenerate any artifacts that include it.
+            if len(req_path.parts) >= 2:
+                artifact_ns_dir = req_path.parts[0]
+                requested_stem = req_path.stem
+
+                # Find the source feed that matches the requested stem
+                sources = _collect_sources(global_config.artifacts)
+                match = next((s for s in sources if s.namespace == requested_stem), None)
+
+                if match:
+                    # Regenerate any artifacts that include this source
+                    for artifact in global_config.artifacts:
+                        try:
+                            if (
+                                any(
+                                    s.namespace == match.namespace
+                                    for s in getattr(artifact, "sources", [])
+                                )
+                                and artifact.namespace == artifact_ns_dir
+                            ):
+                                logger.info(
+                                    f" on-demand: generating artifact for source {match.namespace} {artifact.__class__.__name__}"
+                                )
+                                _generate(artifact, limit=[match.namespace])
+                        except Exception as e:
+                            logger.critical(f" on-demand artifact generation failed: {e}")
+                            logger.critical(traceback.format_exc())
+
+        except Exception as e:
+            logger.critical(f" static proxy error: {e}")
+            logger.critical(traceback.format_exc())
+
+        # Serve the static file normally (may 404 if generation didn't produce it)
+        try:
+            return send_from_directory(global_config.static_root, filename)
+        except Exception:
+            abort(404)
+
+    # Run a full update once at startup so things exist for first requests
     _update(global_config.artifacts, force=False)
 
     app.run(debug=True, host="0.0.0.0", port=5000)

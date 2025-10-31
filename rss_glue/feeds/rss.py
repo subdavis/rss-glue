@@ -15,19 +15,18 @@ class RssPost(feed.FeedItem):
 
     def render(self) -> str:
         entry = self.feedparser_parsed
-        content = entry.get("content", [])
+        content = entry.get("summary_detail", {})
         html_content = ""
 
-        for c in content:
-            content_type = c.get("type", "text/plain")
-            if content_type == "text/plain":
-                html_content += f"<p>{c.get('value')}</p>"
-            else:
-                html_content += c.get("value")
+        content_type = content.get("type", "text/plain")
+        if content_type == "text/plain":
+            html_content += f"<p>{content.get('value')}</p>"
+        else:
+            html_content += content.get("value")
 
-        # For some reason, reddit likes to structure posts with <tables>
-        # so we need to strip them out
-        html_content = html_content.replace("<table>", "").replace("</table>", "")
+        # # For some reason, reddit likes to structure posts with <tables>
+        # # so we need to strip them out
+        # html_content = html_content.replace("<table>", "").replace("</table>", "")
 
         return html_content
 

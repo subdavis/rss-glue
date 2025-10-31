@@ -21,42 +21,50 @@ page_template = """
     </style>
 </head>
 <body>
+    <header>
+        <a href="{origin_url}">
+            <h1>{title}</h1>
+        </a>
+        <p>by {author}</p>
+    </header>
     <main>
-        <header>
-            <a href="{origin_url}">
-                <h1>{title}</h1>
-            </a>
-            <p>by {author}</p>
-        </header>
-        <article>
-            {content}
-        </article>
+       {content}
     </main>
 </body>
 </html>
 """
 
 post_template = """
-            <section>
+            <article>
                 <a href="{origin_url}"><h2>{title}</h2></a>
-                <time>{posted_time}</time>
+                <div style="display: flex; justify-content: space-between;">
+                    <span class="post-author">{author}</span>
+                    <time>{posted_time}</time>
+                </div>
                 <div style="padding: 1em 0" >{content}</div>
                 <hr>
-            </section>
+            </article>
 """
 
 
 class HtmlOutput(artifact.Artifact):
 
-    def generate(self) -> Iterable[Tuple[Path, datetime]]:
+    namespace = "html"
+
+    def generate(self, limit=None) -> Iterable[Tuple[Path, datetime]]:
         """
         Generate a single HTML page with all the posts from the sources
         """
-        for source in self.sources:
-            file_to_generate = global_config.file_cache.getPath(source.namespace, "html", "html")
-            relpath = global_config.file_cache.getRelativePath(source.namespace, "html", "html")
+        force = limit is not None
+        for source in self.sourcesFor(limit):
+            file_to_generate = global_config.file_cache.getPath(
+                source.namespace, "html", self.namespace
+            )
+            relpath = global_config.file_cache.getRelativePath(
+                source.namespace, "html", self.namespace
+            )
             # If the source has updated since the mtime of the file, regenerate
-            if file_to_generate.exists():
+            if file_to_generate.exists() and not force:
                 last_modified = datetime.fromtimestamp(
                     file_to_generate.stat().st_mtime,
                     tz=pytz.utc,
@@ -73,6 +81,7 @@ class HtmlOutput(artifact.Artifact):
                 html += post_template.format(
                     title=post.title,
                     content=post.render(),
+                    author=post.author,
                     posted_time=post.posted_time.strftime(utils.human_strftime),
                     origin_url=post.origin_url,
                 )

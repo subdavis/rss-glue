@@ -11,16 +11,22 @@ from rss_glue.resources import global_config, utc_now
 
 class RssOutput(Artifact):
     title_max_length = 80
+    namespace = "rss"
 
-    def generate(self) -> Iterable[Tuple[Path, datetime]]:
+    def generate(self, limit=None) -> Iterable[Tuple[Path, datetime]]:
         """
         Generate a single HTML page with all the posts from the sources
         """
-        for source in self.sources:
-            file_to_generate = global_config.file_cache.getPath(source.namespace, "xml", "rss")
-            relpath = global_config.file_cache.getRelativePath(source.namespace, "xml", "rss")
+        force = limit is not None
+        for source in self.sourcesFor(limit):
+            file_to_generate = global_config.file_cache.getPath(
+                source.namespace, "xml", self.namespace
+            )
+            relpath = global_config.file_cache.getRelativePath(
+                source.namespace, "xml", self.namespace
+            )
             # If the source has updated since the mtime of the file, regenerate
-            if file_to_generate.exists():
+            if file_to_generate.exists() and not force:
                 last_modified = datetime.fromtimestamp(
                     file_to_generate.stat().st_mtime, tz=pytz.utc
                 )
@@ -54,4 +60,6 @@ class RssOutput(Artifact):
                     fe.author({"name": post.author})
 
             decoded = fg.atom_str(pretty=True).decode("utf-8")
-            yield global_config.file_cache.write(source.namespace, "xml", decoded, "rss"), utc_now()
+            yield global_config.file_cache.write(
+                source.namespace, "xml", decoded, self.namespace
+            ), utc_now()

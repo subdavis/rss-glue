@@ -229,3 +229,56 @@ class ThrottleFeed(BaseFeed, ABC):
         last_run_str = self.last_run.strftime("%m-%d-%y %H:%M")
         logfn(f'last_run="{last_run_str}" next_run="{next_run_str}" update={_requires_update}')
         return _requires_update
+
+
+class ReferenceFeed(BaseFeed, ABC):
+    """
+    A feed that references another feed.
+    Its purpose is to modify only the render side, not the update side.
+    """
+
+    source: BaseFeed
+    post_cls: type[ReferenceFeedItem] = ReferenceFeedItem
+
+    def __init__(self, source: BaseFeed):
+        self.source = source
+        self.title = source.title
+        self.author = source.author
+        self.origin_url = source.origin_url
+        super().__init__()
+
+    @property
+    def namespace(self):
+        return self.source.namespace
+
+    def sources(self) -> Iterable[BaseFeed]:
+        """
+        Return the source feed first, then this feed.
+        """
+        # yield self.source # Hide the source from normal source collection
+        yield self
+
+    @property
+    def last_updated(self):
+        """
+        The CacheFeed's last_updated is the source feed's last_updated.
+        """
+        return self.source.last_updated
+
+    def update(self, force: bool = False):
+        self.source.update(force=force)
+
+    def post(self, post_id: str) -> Optional[FeedItem]:
+        """
+        Get a specific cached post by ID.
+        """
+        cached = self.cache_get(post_id)
+        if not cached:
+            return None
+
+        # Load the cached post
+        loaded = self.post_cls.load(cached, self)
+        if not loaded:
+            return None
+
+        return self.post_cls(**loaded)

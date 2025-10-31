@@ -1,4 +1,5 @@
 from .ai_client import ClaudeClient
+from .cache import CacheFeed
 from .digest import DigestFeed
 from .hackernews import HackerNewsFeed
 from .merge import MergeFeed

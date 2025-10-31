@@ -27,11 +27,13 @@ outline_template = """
 
 class OpmlOutput(MetaArtifact):
 
-    def generate(self) -> Iterable[Tuple[Path, datetime]]:
+    namespace = "opml"
+
+    def generate(self, limit=None) -> Iterable[Tuple[Path, datetime]]:
 
         outlines = []
         for artifact in self.artifacts:
-            for relpath, modified in artifact.generate():
+            for relpath, modified in artifact.generate(limit=limit):
                 actualPath = urljoin(global_config.base_url, relpath.as_posix())
                 outlines.append(
                     outline_template.format(
@@ -45,4 +47,4 @@ class OpmlOutput(MetaArtifact):
             title="RSS Glue Feeds",
             date_created=utc_now().isoformat(),
         )
-        yield global_config.file_cache.write("opml", "xml", xml, "opml"), utc_now()
+        yield global_config.file_cache.write("opml", "xml", xml, self.namespace), utc_now()
