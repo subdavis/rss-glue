@@ -6,6 +6,7 @@ from typing import Iterable, Optional
 
 from rss_glue.logger import logger
 from rss_glue.resources import global_config, utc_now
+from rss_glue.utils import from_dict
 
 
 @dataclass
@@ -54,7 +55,8 @@ class FeedItem:
 @dataclass
 class ReferenceFeedItem(FeedItem):
     """
-    A ReferenceFeedItem is a reference to another feed item.
+    A ReferenceFeedItem contains a reference to another feed item.
+    It is only useful if your feed needs to store ADDITIONAL data to the post.
     """
 
     subpost: FeedItem
@@ -72,6 +74,11 @@ class ReferenceFeedItem(FeedItem):
 
     @staticmethod
     def load(obj: dict, source: "BaseFeed"):
+        """
+        A reference feed has a load function which should take the contents of the
+        raw JSON object kept in the cache and return a fully "hydrated" FeedItem
+        which probably references other feed item(s).
+        """
         obj["subpost"] = source.post(obj["subpost"])
         if not obj["subpost"]:
             logger.error(f"missing reference ns={obj['namespace']} subpost={obj['id']}")
@@ -276,9 +283,7 @@ class ReferenceFeed(BaseFeed, ABC):
         if not cached:
             return None
 
-        # Load the cached post
-        loaded = self.post_cls.load(cached, self)
-        if not loaded:
-            return None
+        cached["subpost"] = cached["id"]
+        loaded = self.post_cls.load(cached, self.source)
 
-        return self.post_cls(**loaded)
+        return from_dict(self.post_cls, loaded)

@@ -1,4 +1,5 @@
-from typing import Iterable, Optional
+from typing import Iterable, Optional, TypeVar
+import inspect
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -144,3 +145,10 @@ def make_browser_session(
     session.mount("https://", adapter)
 
     return session
+
+
+T = TypeVar("T")
+
+
+def from_dict(cls: type[T], obj: dict) -> T:
+    return cls(**{k: v for k, v in obj.items() if k in inspect.signature(cls).parameters})

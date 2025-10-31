@@ -1,27 +1,3 @@
-"""
-CacheFeed - A composable feed wrapper that caches images from post content.
-
-This module provides a CacheFeed class that wraps another feed and automatically
-downloads and caches images referenced in post HTML content. This helps avoid:
-- CORS issues when displaying images from external sources
-- Broken links from expired or unstable image URLs
-
-Usage example:
-    from rss_glue.feeds import RssFeed, CacheFeed
-
-    # Create a source feed
-    source = RssFeed("example", "https://example.com/feed.xml")
-
-    # Wrap it with CacheFeed to cache images
-    cached = CacheFeed(source)
-
-    # Use cached feed in your artifacts
-    artifacts = [HtmlOutput(cached)]
-
-The CacheFeed stores images in the file cache under an "images/" namespace
-and rewrites <img> tags to point to the locally cached versions.
-"""
-
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -122,17 +98,6 @@ class CachedFeedItem(feed.ReferenceFeedItem):
         except Exception as e:
             self.logger.error(f"Failed to download image {url}: {e}")
             return None
-
-    @staticmethod
-    def load(obj: dict, source: "CacheFeed"):
-        """
-        Override ReferenceFeedItem.load() to get the subpost from source.source
-        instead of directly from source.
-        """
-        obj["subpost"] = source.source.post(obj["subpost"])
-        if not obj["subpost"]:
-            source.logger.error(f"missing reference ns={obj['namespace']} subpost={obj['id']}")
-        return obj
 
 
 class CacheFeed(feed.ReferenceFeed):
