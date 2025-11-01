@@ -205,10 +205,13 @@ class ThrottleFeed(BaseFeed, ABC):
     A feed that is expensive to update, so it can be throttled to only update every interval.
     """
 
-    interval: timedelta
+    interval: Optional[timedelta]
 
-    def __init__(self, interval: timedelta, **kwargs):
-        self.interval = interval
+    def __init__(self, interval: Optional[timedelta], **kwargs):
+        """
+        :param interval: The minimum time between updates. If None, never auto-updates.
+        """
+        self.interval: Optional[timedelta] = interval
         super().__init__(**kwargs)
 
     @property
@@ -230,6 +233,8 @@ class ThrottleFeed(BaseFeed, ABC):
             return True
         if self.last_run > utc_now():
             return False
+        if not self.interval:
+            return False
         _requires_update = (self.last_run + self.interval) < utc_now()
         logfn = self.logger.info if _requires_update else self.logger.debug
         next_run_str = (self.last_run + self.interval).strftime("%m-%d-%y %H:%M")
@@ -238,9 +243,9 @@ class ThrottleFeed(BaseFeed, ABC):
         return _requires_update
 
 
-class ReferenceFeed(BaseFeed, ABC):
+class AliasFeed(BaseFeed, ABC):
     """
-    A feed that references another feed.
+    A feed that merely aliases another feed.
     Its purpose is to modify only the render side, not the update side.
     """
 
@@ -262,7 +267,7 @@ class ReferenceFeed(BaseFeed, ABC):
         """
         Return the source feed first, then this feed.
         """
-        # yield self.source # Hide the source from normal source collection
+        yield self.source
         yield self
 
     @property
@@ -275,15 +280,20 @@ class ReferenceFeed(BaseFeed, ABC):
     def update(self, force: bool = False):
         self.source.update(force=force)
 
+    def posts(self) -> list[FeedItem]:
+        posts = [self.post(post.id) for post in self.source.posts()]
+        return [post for post in posts if post is not None]
+
     def post(self, post_id: str) -> Optional[FeedItem]:
         """
         Get a specific cached post by ID.
         """
-        cached = self.cache_get(post_id)
+        cached = self.source.post(post_id)
         if not cached:
             return None
 
-        cached["subpost"] = cached["id"]
-        loaded = self.post_cls.load(cached, self.source)
+        post_dict = cached.to_dict()
+        post_dict["subpost"] = post_id
+        loaded = self.post_cls.load(post_dict, self.source)
 
         return from_dict(self.post_cls, loaded)

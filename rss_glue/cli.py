@@ -14,8 +14,18 @@ from rss_glue.outputs import Artifact
 from rss_glue.resources import global_config, utc_now
 
 
+def _collect_subsources(
+    source: feed.BaseFeed, sourceSet: Set[feed.BaseFeed], sorted: list[feed.BaseFeed]
+):
+    for subsource in source.sources():
+        if subsource not in sourceSet:
+            sourceSet.add(subsource)
+            sorted.append(subsource)
+            _collect_subsources(subsource, sourceSet, sorted)
+
+
 def _collect_sources(artifacts: list[Artifact]) -> list[feed.BaseFeed]:
-    sources: Set[feed.BaseFeed] = set()
+    source_set: Set[feed.BaseFeed] = set()
     sorted: list[feed.BaseFeed] = []
     for artifact in artifacts:
         if not issubclass(artifact.__class__, Artifact):
@@ -23,10 +33,8 @@ def _collect_sources(artifacts: list[Artifact]) -> list[feed.BaseFeed]:
                 f"You put something in the artifacts list that is not an artifact: {artifact}"
             )
         for source in artifact.sources:
-            for subsource in source.sources():
-                if subsource not in sources:
-                    sources.add(subsource)
-                    sorted.append(subsource)
+            _collect_subsources(source, source_set, sorted)
+    print(f"Collected {len(source_set)} unique sources from artifacts")
     return sorted
 
 
@@ -122,6 +130,7 @@ def debug():
 
     global_config.base_url = "http://localhost:5000/"
     app = Flask(__name__)
+    sources = _collect_sources(global_config.artifacts)
 
     # Intercept static file requests so we can generate artifacts on-demand
     @app.route("/<path:filename>")
@@ -138,7 +147,6 @@ def debug():
                 requested_stem = req_path.stem
 
                 # Find the source feed that matches the requested stem
-                sources = _collect_sources(global_config.artifacts)
                 match = next((s for s in sources if s.namespace == requested_stem), None)
 
                 if match:

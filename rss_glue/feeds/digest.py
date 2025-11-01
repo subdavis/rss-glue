@@ -94,7 +94,7 @@ class DigestFeed(feed.BaseFeed):
         Special case: Hide the source from normal source collection
         since this class will take responsibility for updating it.
         """
-        # yield self.source # skip this part, it's not a bug -- it's intentional
+        yield self.source
         yield self
 
     def update(self, force: bool = False):

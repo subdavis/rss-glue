@@ -3,3 +3,18 @@ python = "3.12"
 
 [env]
 _.python.venv = ".venv"
+
+[tasks.format]
+description = "Format code using black and isort"
+run = [
+    "black .",
+    "isort ."
+]
+
+[tasks.typecheck]
+description = "Run mypy type checker"
+run = "mypy ."
+
+[tasks.validate]
+description = "Validate code"
+depends = ["format", "typecheck"]

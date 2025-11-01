@@ -1,5 +1,5 @@
-from typing import Iterable, Optional, TypeVar
 import inspect
+from typing import Collection, Optional, TypeVar
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -91,7 +91,7 @@ def make_browser_session(
     *,
     retries: int = 3,
     backoff_factor: float = 0.3,
-    status_forcelist: Iterable[int] = (500, 502, 503, 504),
+    status_forcelist: Collection[int] = (500, 502, 503, 504),
     timeout: float = 10.0,
     extra_headers: Optional[dict] = None,
 ) -> requests.Session:
