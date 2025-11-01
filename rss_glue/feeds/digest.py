@@ -12,7 +12,9 @@ latest_version = 0
 
 digetst_post_template = """
 <section>
-    <h2>{title}</h2>
+    <a href="{origin_url}">
+      <h2>{title}</h2>
+    </a>
     <time>{posted_time}</time>
     <div>{content}</div>
     <hr>
