@@ -1,22 +1,14 @@
 import html
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import urljoin
 
 from rss_glue import utils
 from rss_glue.feeds import feed
 from rss_glue.resources import utc_now
 
-html_template = """
-<section>
-    <div>{content}</div>
-    <p>
-        By <a href="https://reddit.com/u/{author}">u/{author}</a>
-        <span style="padding: 1em">⬆️ {score}</span>
-        <span><a href="{comments_url}">[comments]</a></span>
-    </p>
-</section>
-"""
+html_template = utils.load_template("reddit_post.html.jinja")
 
 
 @dataclass
@@ -31,43 +23,34 @@ class RedditPost(feed.FeedItem):
         return self.post_data.get("score", 1)
 
     def render(self):
-        # There are a few different types of reddit posts, signified by the "post_hint" field
-        # self, link, image, video, rich:video, and hosted:video
-        url = self.post_data.get("url")
-        selftext_html = self.post_data.get("selftext_html", None)
-        comments_url = urljoin("https://www.reddit.com", self.post_data.get("permalink", ""))
-        html_content = f'<a href="{url}">{url}</a>'
+        # Extract data from post_data
+        post_hint = self.post_data.get("post_hint")
 
-        if selftext_html:
-            html_content = html.unescape(selftext_html)
+        # Get oembed data for rich videos
+        oembed = None
+        if post_hint == "rich:video":
+            oembed = self.post_data.get("media", {}).get("oembed")
 
-        if self.post_data.get("post_hint", None):
-            if self.post_data.get("post_hint") == "image":
-                html_content = f'<img src="{self.post_data.get("url_overridden_by_dest")}" style="max-width: 100%; height: auto;" />'
-            elif self.post_data.get("post_hint") == "rich:video":
-                oembed = self.post_data.get("media", {}).get("oembed", None)
-                if oembed:
-                    channel = oembed.get("author_name", "")
-                    thumbnail = oembed.get("thumbnail_url", "")
-                    html_content = f"""<a href="{url}">
-                        <img src="{thumbnail}" />
-                        <p>Watch on {channel}</p>
-                    </a>"""
-            elif self.post_data.get("post_hint") == "hosted:video":
-                fallback_url = (
-                    self.post_data.get("media", {})
-                    .get("reddit_video", {})
-                    .get("fallback_url", None)
-                )
-                if fallback_url:
-                    html_content = f'<video src="{fallback_url}" controls></video>'
+        # Get fallback URL for hosted videos
+        fallback_url = None
+        if post_hint == "hosted:video":
+            fallback_url = (
+                self.post_data.get("media", {}).get("reddit_video", {}).get("fallback_url")
+            )
 
-        return html_template.format(
+        return html_template.render(
             author=self.author,
-            posted_time=self.posted_time.strftime(utils.human_strftime),
             score=self.score(),
-            content=html_content,
-            comments_url=comments_url,
+            url=self.post_data.get("url"),
+            selftext_html=(
+                html.unescape(self.post_data.get("selftext_html", ""))
+                if self.post_data.get("selftext_html")
+                else None
+            ),
+            post_hint=post_hint,
+            url_overridden_by_dest=self.post_data.get("url_overridden_by_dest"),
+            oembed=oembed,
+            fallback_url=fallback_url,
         )
 
 
@@ -96,13 +79,9 @@ class RedditFeed(feed.ThrottleFeed):
         # TODO this needs to differentiate between top/hot/new/etc and time periods
         return f"reddit_{self.subreddit}"
 
-    def update(self, force: bool = False):
-        if not self.needs_update(force):
-            return
-
+    def update(self):
         # Fetch the posts from the Reddit API
         # and store them in the cache
-
         session = utils.make_browser_session()
         response = session.get(self.url)
         response.raise_for_status()
@@ -126,18 +105,9 @@ class RedditFeed(feed.ThrottleFeed):
                 posted_time=created_time,
                 discovered_time=utc_now(),
                 origin_url=permalink,
+                enclosure=None,
             )
             self.logger.info(f"Adding post {value.id}")
             self.cache_set(post_id, value.to_dict())
 
         self.set_last_run()
-
-    def posts(self) -> list[feed.FeedItem]:
-        posts = super().posts()
-        return posts
-
-    def post(self, post_id: str):
-        cached = self.cache_get(post_id)
-        if not cached:
-            return None
-        return self.post_cls(**cached)

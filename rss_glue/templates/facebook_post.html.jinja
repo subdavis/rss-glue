@@ -1,0 +1,30 @@
+<section>
+    <div>
+        {# Text content #}
+        {% if text %}
+            <p>{{ text }}</p>
+        {% endif %}
+        
+        {# Handle images #}
+        {% if images %}
+            {% for img_url in images %}
+                <img src="{{ img_url }}" style="max-width: 100%; height: auto; margin: 5px;" loading="lazy" />
+            {% endfor %}
+        {% elif image %}
+            <img src="{{ image }}" style="max-width: 100%; height: auto;" loading="lazy" />
+        {% endif %}
+        
+        {# Handle video #}
+        {% if video_details %}
+            <p><em>[Video content available at source]</em></p>
+        {% endif %}
+    </div>
+    <p>
+        By <a href="{{ author_url }}">{{ author }}</a>
+        <span style="padding: 1em">❤️ {{ reactions }}</span>
+        <span style="padding: 1em">💬 {{ comments }}</span>
+        {% if video_views %}
+        <span style="padding: 1em">👁️ {{ video_views }}</span>
+        {% endif %}
+    </p>
+</section>

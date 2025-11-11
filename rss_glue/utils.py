@@ -1,11 +1,35 @@
 import inspect
+import typing
+from pathlib import Path
 from typing import Collection, Optional, TypeVar
 
 import requests
+from jinja2 import Environment, FileSystemLoader, Template
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+if typing.TYPE_CHECKING:
+    from rss_glue.feeds.feed import FeedItem
+
 human_strftime = "%a, %b %d %I:%M %p"
+
+# Jinja2 environment for loading templates
+_template_dir = Path(__file__).parent / "templates"
+_jinja_env = Environment(loader=FileSystemLoader(_template_dir))
+
+
+def load_template(template_name: str) -> Template:
+    """
+    Load a Jinja2 template from the templates directory.
+
+    Args:
+        template_name: Name of the template file (e.g., "instagram_post.html.jinja")
+
+    Returns:
+        Jinja2 Template object
+    """
+    return _jinja_env.get_template(template_name)
+
 
 # CSS should be a 500 pixel wide central column
 page_css = """
@@ -78,7 +102,7 @@ class _TimeoutSession(requests.Session):
     callers to override the timeout per-call.
     """
 
-    def __init__(self, timeout: float = 10.0):
+    def __init__(self, timeout: float = 20.0):
         super().__init__()
         self._default_timeout = timeout
 
@@ -148,7 +172,17 @@ def make_browser_session(
 
 
 T = TypeVar("T")
+P = TypeVar("P", bound="FeedItem")
+R = TypeVar("R", bound="FeedItem")
 
 
 def from_dict(cls: type[T], obj: dict) -> T:
     return cls(**{k: v for k, v in obj.items() if k in inspect.signature(cls).parameters})
+
+
+def from_subpost(cls: type[R], subpost: P, **kwargs) -> R:
+    new_dict = {}
+    new_dict.update(subpost.to_dict())
+    new_dict.update(kwargs)
+    new_dict["subpost"] = subpost
+    return cls(**{k: v for k, v in new_dict.items() if k in inspect.signature(cls).parameters})

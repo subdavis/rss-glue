@@ -1,21 +1,27 @@
 # RSS Glue
 
-RSS Glue is a highly extensible, filesystem-based RSS/Atom feed generator and manipulator. Build digests, merge feeds, and use AI tools to make your RSS feed work for you!
+RSS Glue is a highly extensible, filesystem-based RSS/Atom feed generator and manipulator.
+
+* Compose, merge, digest, and filter feeds.
+* Take action on feed content (limited, this isnt an automation platform).
+* Make your own feed pipelines with a little bit of Python.
 
 <img src='./docs/images/glue.webp' width=300 style='border-radius: 10px' />
 
-## Inspiration
+RSS Glue functions as either a static generator and an on-demand feed server.
 
-* [Kill the newsletter](https://kill-the-newsletter.com/)
-* [Rsshub](https://docs.rsshub.app/)
-* [Zapier](https://zapier.com/)
+* `rss-glue watch` - **Static generator mode.** Watches your configuration and regenerates feeds on a schedule.
+* `rss-glue debug` - **On-demand server mode.** Serves feeds and generates them on-demand when requested.
 
-## Features
+## Inputs and Outputs
 
 External Data Sources
 
-* `RssFeed` is a data source using an external RSS Feed.
+* `RssFeed` an external RSS Feed.
 * `RedditFeed` because the standard Reddit RSS feed leaves out too much content and you can get more from the JSON api.
+* `HackerNewsFeed` Hacker News stories (top, new, or best).
+* `InstagramFeed` public Instagram profiles using ScrapeCreator.
+* `FacebookFeed` public Facebook groups and pages using ScrapeCreator.
 
 Meta Data Sources
 
@@ -25,6 +31,8 @@ Meta Data Sources
 * `CacheFeed` is a wrapper that caches images from post content to avoid CORS issues and broken links.
 
 Outputs
+
+Your feeds generate the following outputs. Each source feed in the configuration file will generate a fixed set of output artifacts.
 
 * `RssOutput` is an output RSS feed.
 * `HTMLOutput` is a very basic single page web feed output.
@@ -42,12 +50,22 @@ pip install rss-glue
 # Create your configuration file and edit it
 touch config.py
 
-# Then generate your feed
+# Populate your feed
 rss-glue --config config.py update
-# Or start a long-running process
+
+# Start a watcher process to regenerate files on schedule
 rss-glue --config config.py watch
-# Or start the debug web server
+
+# Start a debug web server
 rss-glue --config config.py debug
+
+# Force regeneration of all files
+rss-glue --config config.py generate --force
+
+# Repair the timestamps on the disk database
+# Rss glue depends on manipulating file modification times for caching.
+# Editing files outside of rss-glue can break this.
+rss-glue --config config.py repair
 ```
 
 ### Docker
@@ -96,7 +114,7 @@ global_config.configure(
 # All times and schedules are in UTC
 cron_weekly_on_sunday = "0 5 * * 0"
 
-_outputs = [
+sources = [
     # A weekly digest of the F1 subreddit
     DigestFeed(
         RssFeed(
@@ -115,28 +133,40 @@ _outputs = [
         )
     ),
 ]
+```
 
-# Finally, declare your artifacts
-artifacts = [
-    HTMLIndexOutput(
-        OpmlOutput(RssOutput(*_outputs)),
-        HTMLOutput(*_outputs),
-    )
-]
+### Building your own feeds
+
+This project is intended to be quite extensible. To build a new data source or feed transformer, just fork this project and write a new feed class.
+
+```python
+from rss_glue.feeds.base_feed import BaseFeed
+
+class MyCustomFeed(BaseFeed):
+    def __init__(self, namespace: str, some_parameter: str):
+        super().__init__(namespace)
+        self.some_parameter = some_parameter
+
+    def update(self):
+        for post in []:
+            post_id = 'id'
+            self.cache_set(post_id, value.to_dict())
+        self.set_last_run()
 ```
 
 ## Design philosophy
 
 RSS Glue is a simple python tool to manage feed generation and outputs exclusively to the local filesystem. The files it generates could be exposed with a web server, pushed up to an S3 bucket, or built into a netlify deployment. You don't need to operate a server or have some kind of docker host to run it.
 
-It is not intended to scale beyond a few hundred feeds because, well, you're a human and you can't read all that anyway! It isn't intended to deploy as a multi-user app on the web. It will not get a frontend or a configuation language.
+It is not intended to scale beyond a few hundred feeds because, well, you're a human and you can't read all that anyway! It isn't intended to deploy as a multi-user app on the web. It will get a SPA app or a configuration language.
+
+This project is a little like a tiny, feed-oriented version of [dagster](https://dagster.io/). Your feed definition will be a list of DAGs.  Each root feed will generate a predefined set of outputs.
 
 **Compared with RSSHub**
 
-RSSHub is cool, but has several problems that RSS Glue tries to solve. The integrations I care about are either broken or don't work very well. Features like merge and digest are impossible under its stateless architecture.
+RSSHub does not work very well. If it's meeting your needs, you probably don't need RSS Glue.
 
-You can use RSS Glue and RSSHub together though!
+**Event-driven vs Polling**
 
-**Compared with Zapier**
-
-Zapier suffers from trying to be all things to all people, and the configuration hell that such an endeavor always leads to.  It's kinda good at a lot of stuff.
+RSS Glue is a polling-based system. It wakes up on a schedule, fetches feeds, generates outputs, and goes back to sleep. 
+This is because some feeds can be expensive to fetch and process, and it's better to do that work outside the request thread of the downstream RSS consumer. It also makes it easier to trace problems because artifacts are statically generated.

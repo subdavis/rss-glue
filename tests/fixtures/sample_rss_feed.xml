@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Sample RSS Feed</title>
+    <link>https://example.com</link>
+    <description>A sample RSS feed for testing</description>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 13 Nov 2024 12:00:00 GMT</lastBuildDate>
+    <atom:link href="https://example.com/feed.xml" rel="self" type="application/rss+xml"/>
+    
+    <item>
+      <title>First Post Title</title>
+      <link>https://example.com/posts/first-post</link>
+      <guid isPermaLink="true">https://example.com/posts/first-post</guid>
+      <pubDate>Wed, 13 Nov 2024 10:00:00 GMT</pubDate>
+      <author>John Doe</author>
+      <description>This is the first post content with some HTML &lt;strong&gt;bold text&lt;/strong&gt;.</description>
+    </item>
+    
+    <item>
+      <title>Second Post Title</title>
+      <link>https://example.com/posts/second-post</link>
+      <guid isPermaLink="true">https://example.com/posts/second-post</guid>
+      <pubDate>Wed, 13 Nov 2024 09:00:00 GMT</pubDate>
+      <author>Jane Smith</author>
+      <description>This is the second post content.</description>
+      <enclosure url="https://example.com/images/post2.jpg" length="12345" type="image/jpeg"/>
+    </item>
+    
+    <item>
+      <title>Third Post Title</title>
+      <link>https://example.com/posts/third-post</link>
+      <guid isPermaLink="true">https://example.com/posts/third-post</guid>
+      <pubDate>Wed, 13 Nov 2024 08:00:00 GMT</pubDate>
+      <author>Bob Johnson</author>
+      <description>This is the third post content with a &lt;a href="https://example.com"&gt;link&lt;/a&gt;.</description>
+    </item>
+  </channel>
+</rss>

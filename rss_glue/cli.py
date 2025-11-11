@@ -1,76 +1,52 @@
 import logging
-import random as rand
 import traceback
-from datetime import timedelta
+from datetime import datetime, timedelta
 from time import sleep
-from typing import Optional, Set
 from urllib.parse import urljoin
 
 import click
 
-from rss_glue.feeds import feed
 from rss_glue.logger import logger
-from rss_glue.outputs import Artifact
+from rss_glue.outputs import filter_sources, generate_outputs
 from rss_glue.resources import global_config, utc_now
 
 
-def _collect_subsources(
-    source: feed.BaseFeed, sourceSet: Set[feed.BaseFeed], sorted: list[feed.BaseFeed]
-):
-    for subsource in source.sources():
-        if subsource not in sourceSet:
-            sourceSet.add(subsource)
-            sorted.append(subsource)
-            _collect_subsources(subsource, sourceSet, sorted)
-
-
-def _collect_sources(artifacts: list[Artifact]) -> list[feed.BaseFeed]:
-    source_set: Set[feed.BaseFeed] = set()
-    sorted: list[feed.BaseFeed] = []
-    for artifact in artifacts:
-        if not issubclass(artifact.__class__, Artifact):
-            raise ValueError(
-                f"You put something in the artifacts list that is not an artifact: {artifact}"
-            )
-        for source in artifact.sources:
-            _collect_subsources(source, source_set, sorted)
-    print(f"Collected {len(source_set)} unique sources from artifacts")
-    return sorted
-
-
-def _generate(artifact: Artifact, limit: Optional[list[str]] = None):
+def _generate(source_keys: list[str] = [], force: bool = False):
+    """Generate all outputs for the given sources"""
     now = utc_now()
-    for path, modified in artifact.generate(limit=limit):
+    sources = filter_sources(global_config.root_sources, source_keys)
+    for path, modified in generate_outputs(
+        sources=sources, force=force, output_limit=global_config.output_limit
+    ):
         if modified > now:
             full_url = urljoin(global_config.base_url, path.as_posix())
             logger.info(f" generated {full_url}")
 
 
-def _update(artifacts: list[Artifact], force: bool, limit: list[str] = []):
-    sources = _collect_sources(artifacts)
-    if len(limit):
-        logger.info(f" updating {len(limit)} sources")
-        sources = [source for source in sources if source.namespace in limit]
-    else:
-        logger.info(f" discovered {len(sources)} sources")
-
+def _update(source_keys: list[str] = [], force: bool = False):
+    """Update sources and generate outputs"""
     now = utc_now()
+    sources = filter_sources(global_config.sources, source_keys)
 
     for source in sources:
         try:
-            source.update(force)
+            _, needs_update = source.next_update(force)
+            if needs_update:
+                source.update()
             if source.last_updated > now:
-                sleep(rand.randint(2, 4))
+                global_config.sleep()
+
         except Exception as e:
             logger.critical(f" Source {source.namespace} failed to update: {e}")
             logger.critical(traceback.format_exc())
+            logger.critical(f" Locking source {source.namespace} due to failures")
+            source.lock()
 
-    for artifact in artifacts:
-        try:
-            _generate(artifact)
-        except Exception as e:
-            logger.critical(f" Artifact failed to generate: {e}")
-            logger.critical(traceback.format_exc())
+    try:
+        _generate(source_keys)
+    except Exception as e:
+        logger.critical(f" Generation failed: {e}")
+        logger.critical(traceback.format_exc())
 
     global_config.close_browser()
 
@@ -90,36 +66,81 @@ def cli(config: str, debug: bool):
 
 
 @cli.command()
-def migrate():
-    for source in _collect_sources(global_config.artifacts):
+def repair():
+    for source in global_config.sources:
         source.migrate()
 
 
 @cli.command()
 def cleanup():
-    for source in _collect_sources(global_config.artifacts):
+    for source in global_config.sources:
         source.cleanup()
 
 
 @cli.command()
-@click.option("--interval", default=60, help="Interval in minutes")
-def watch(interval: int):
+def watch() -> None:
     while True:
-        _update(global_config.artifacts, force=False)
-
-        global_config.run_after_generate()
-        next_run_time_local = (utc_now() + timedelta(minutes=interval)).astimezone()
+        _update()
+        update_times = [source.next_update(False)[0] for source in global_config.sources]
+        next_update_time = min([x for x in update_times if x is not None])
+        time_to_sleep = next_update_time - utc_now()
         logger.info(
-            f" watch: sleeping for {interval} minutes until {next_run_time_local.strftime('%Y-%m-%d %H:%M:%S')}"
+            f" watch: sleeping for {time_to_sleep.total_seconds() // 60} minutes until {next_update_time.strftime('%Y-%m-%d %H:%M:%S')}"
         )
-        sleep(60 * interval)
+        sleep(time_to_sleep.total_seconds())
 
 
 @cli.command()
 @click.option("--force", is_flag=True)
 @click.option("--feed", multiple=True, help="Specify feeds to update", type=str)
 def update(force: bool, feed: list[str]):
-    _update(global_config.artifacts, limit=feed, force=force)
+    _update(force=force, source_keys=feed)
+
+
+@cli.command()
+@click.option("--force", is_flag=True)
+def generate(force: bool):
+    _generate(force=force)
+
+
+@cli.command()
+def sources():
+    sources = global_config.sources
+    for source in sources:
+        post_count = str(len(source.posts(limit=0))).ljust(4)
+        lock_status = "🔒" if source.locked else "--"
+
+        logger.info(
+            f" updated @ {source.last_updated} {lock_status} {post_count} {source.__class__.__name__}#{source.namespace} -- {source.title}"
+        )
+
+
+@cli.command()
+@click.argument("namespace", type=str)
+def lock(namespace: str):
+    """Lock a feed to prevent updates"""
+    sources = global_config.sources
+    source = next((s for s in sources if s.namespace == namespace), None)
+    if not source:
+        logger.error(f" Feed not found: {namespace}")
+        return
+    source.lock()
+
+
+@cli.command()
+@click.argument("namespace", type=str, default="")
+def unlock(namespace: str | None):
+    """Unlock a feed to allow updates"""
+    sources = global_config.sources
+    if namespace == "":
+        for _source in sources:
+            _source.unlock()
+    else:
+        src = next((s for s in sources if s.namespace == namespace), None)
+        if not src:
+            logger.error(f" Feed not found: {namespace}")
+            return
+        src.unlock()
 
 
 @cli.command()
@@ -128,45 +149,34 @@ def debug():
 
     from flask import Flask, abort, send_from_directory
 
+    sources = global_config.sources
+    # Reverse the order so that root sources are discovered first
+    sources.reverse()
+    _update()
     global_config.base_url = "http://localhost:5000/"
     app = Flask(__name__)
-    sources = _collect_sources(global_config.artifacts)
 
-    # Intercept static file requests so we can generate artifacts on-demand
+    # Intercept static file requests so we can generate outputs on-demand
     @app.route("/<path:filename>")
     def _static_proxy(filename: str):
         try:
             logger.info(f" static request: {filename}")
             req_path = Path(filename)
 
-            # If the request is namespaced like "html/<artifact>.html" try to
-            # discover the corresponding source by artifact namespace (the
-            # file stem) and regenerate any artifacts that include it.
+            # If the request is namespaced like "html/<source>.html" try to
+            # discover the corresponding source by namespace (the file stem)
+            # and regenerate the outputs that include it.
             if len(req_path.parts) >= 2:
-                artifact_ns_dir = req_path.parts[0]
                 requested_stem = req_path.stem
 
                 # Find the source feed that matches the requested stem
                 match = next((s for s in sources if s.namespace == requested_stem), None)
 
                 if match:
-                    # Regenerate any artifacts that include this source
-                    for artifact in global_config.artifacts:
-                        try:
-                            if (
-                                any(
-                                    s.namespace == match.namespace
-                                    for s in getattr(artifact, "sources", [])
-                                )
-                                and artifact.namespace == artifact_ns_dir
-                            ):
-                                logger.info(
-                                    f" on-demand: generating artifact for source {match.namespace} {artifact.__class__.__name__}"
-                                )
-                                _generate(artifact, limit=[match.namespace])
-                        except Exception as e:
-                            logger.critical(f" on-demand artifact generation failed: {e}")
-                            logger.critical(traceback.format_exc())
+                    for output in generate_outputs(
+                        sources=[match], force=True, output_limit=global_config.output_limit
+                    ):
+                        logger.info(f"    generated output: {output}")
 
         except Exception as e:
             logger.critical(f" static proxy error: {e}")
@@ -177,8 +187,5 @@ def debug():
             return send_from_directory(global_config.static_root, filename)
         except Exception:
             abort(404)
-
-    # Run a full update once at startup so things exist for first requests
-    _update(global_config.artifacts, force=False)
 
     app.run(debug=True, host="0.0.0.0", port=5000)

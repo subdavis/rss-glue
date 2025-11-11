@@ -1,10 +1,12 @@
 from dataclasses import dataclass
+from datetime import datetime
 from html.parser import HTMLParser
 from typing import Iterable, Optional, cast
 
 from rss_glue.feeds import ai_client, feed
+from rss_glue.utils import from_subpost
 
-base_prompt = """
+_base_prompt = """
 Please take a look at the following bit of a content from an RSS feed:
 
 Title: {title}
@@ -41,17 +43,16 @@ class AiFilterPost(feed.ReferenceFeedItem):
     include_post: bool
 
 
-class AiFilterFeed(feed.BaseFeed):
+class AiFilterFeed(feed.AugmentFeed):
     """
     AiFilterFeed is a feed that filters out posts based
     on a given prompt.
     """
 
-    source: feed.BaseFeed
-    limit: int
     client: ai_client.AiClient
     name: str = "smart_filter"
     post_cls: type[AiFilterPost] = AiFilterPost
+
 
     def __init__(
         self,
@@ -62,35 +63,29 @@ class AiFilterFeed(feed.BaseFeed):
         limit: int = -1,
         title: Optional[str] = None,
     ):
-        self.source = source
-        self.limit = limit
         self.prompt = prompt
         self.client = client
-
-        self.author = source.author
-        self.origin_url = source.origin_url
         self.content_limit = content_limit
+
+        super().__init__(source=source, limit=limit)
+
         if title:
             self.title = title
         else:
             self.title = f"Filter {source.title}"
-        super().__init__()
 
-    @property
-    def namespace(self):
-        return f"{self.name}_{self.source.namespace}"
+    def posts(
+        self, limit: int = 50, start: Optional[datetime] = None, end: Optional[datetime] = None
+    ) -> list[feed.FeedItem]:
+        source_posts = self.source.posts(limit=limit, start=start, end=end)
+        posts = [cast(AiFilterPost, self.post(post.id)) for post in source_posts]
+        return [post for post in posts if post and post.include_post]
 
-    def post(self, post_id) -> Optional[AiFilterPost]:
-        cached = self.cache_get(post_id)
-        if not cached:
-            return None
-        return self.post_cls(**self.post_cls.load(cached, self.source))
-
-    def format_prompt(self, post: feed.FeedItem) -> str:
+    def _format_prompt(self, post: feed.FeedItem) -> str:
         f = HTMLFilter()
         f.feed(post.render())
 
-        return base_prompt.format(
+        return _base_prompt.format(
             title=post.title,
             author=post.author,
             content=f.text[: self.content_limit],
@@ -99,51 +94,14 @@ class AiFilterFeed(feed.BaseFeed):
             prompt=self.prompt,
         )
 
-    def posts(self) -> list[feed.FeedItem]:
-        source_posts = self.source.posts()
-        posts = [self.post(post.id) for post in source_posts]
-        return [post for post in posts if post and post.include_post]
-
-    def cleanup(self) -> None:
-        cache_posts = cast(list[AiFilterPost], super().posts())
-        source_post_keys = set([post.id for post in self.source.posts()])
-        for post in cache_posts:
-            # Remove posts that reference a post that no longer exists
-            if not post.subpost:
-                self.logger.info(
-                    f"cleanup: removing {post.id} because it references a deleted post"
-                )
-                self.cache_delete(post.id)
-            # Remove posts that wouldn't be included anymore
-            if post.id not in source_post_keys:
-                self.logger.info(
-                    f"cleanup: removing {post.id} because it is no longer in the source"
-                )
-                self.cache_delete(post.id)
-
-    def sources(self) -> Iterable[feed.BaseFeed]:
-        yield self.source
-        yield self
-
-    def update(self, force: bool = False):
-        """
-        This feed only updates when the source feed updates
-        """
-        source_posts = self.source.posts()
-        # Sort by posted_time
-        source_posts.sort(key=lambda post: post.posted_time, reverse=True)
-        # Limit to the user specified limit
-        if self.limit != -1:
-            source_posts = source_posts[: self.limit]
-        # Figure out which ones we haven't tested yet
-
-        for source_post in source_posts:
+    def update(self) -> None:
+        for source_post in self.source.posts(limit=self.limit):
             post = self.post(source_post.id)
             if post:
                 self.logger.debug(f" skipping filter check for {source_post.id}")
                 continue
 
-            msg = self.client.get_response(self.format_prompt(source_post))
+            msg = self.client.get_response(self._format_prompt(source_post))
 
             include_post = False
             if "yes" in msg.response.lower():
@@ -153,16 +111,10 @@ class AiFilterFeed(feed.BaseFeed):
             else:
                 self.logger.error(f"Invalid response: {msg.response}")
 
-            value = self.post_cls(
-                version=0,
+            value = from_subpost(
+                self.post_cls,
+                source_post,
                 namespace=self.namespace,
-                id=source_post.id,
-                author=source_post.author,
-                origin_url=source_post.origin_url,
-                title=source_post.title,
-                discovered_time=source_post.discovered_time,
-                posted_time=source_post.posted_time,
-                subpost=source_post,
                 token_cost=msg.tokens_used,
                 include_post=include_post,
             )

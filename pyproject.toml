@@ -18,6 +18,8 @@ types-pytz = "^2024.2.0.20241003"
 anthropic = "^0.36.0"
 requests = "^2.32.3"
 types-requests = "^2.32.0.20240914"
+pymongo = "^4.15.4"
+jinja2 = "^3.1.4"
 
 [tool.poetry.scripts]
 rss-glue = "rss_glue.cli:cli"
@@ -26,6 +28,12 @@ rss-glue = "rss_glue.cli:cli"
 isort = "^5.13.2"
 black = "^24.10.0"
 mypy = "^1.11.2"
+pytest = "^8.3.0"
+pyfakefs = "^5.7.0"
+httpretty = "^1.1.0"
+pytest-cov = "^7.0.0"
+freezegun = "^1.5.5"
+pytest-freezegun = "^0.4.2"
 
 [tool.mypy]
 ignore_missing_imports = true

@@ -1,6 +1,19 @@
 version: '3.8'
 services:
 
+  # MongoDB service for caching
+  mongo:
+    image: mongo:7
+    container_name: rssglue_mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: rssglue
+      MONGO_INITDB_ROOT_PASSWORD: changeme
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
   # rssglue service generates the static files into the rssglue_static volume
   rssglue:
     image: rssglue:latest
@@ -9,10 +22,14 @@ services:
       dockerfile: Dockerfile
     container_name: rssglue
     restart: unless-stopped
+    environment:
+      MONGO_CONNECTION_STRING: mongodb://rssglue:changeme@mongo:27017/
     volumes:
       - rssglue_static:/opt/rssglue/src/static
       - ./samples/docker-config.py:/opt/rssglue/config.py
     command: --config /opt/rssglue/config.py watch
+    depends_on:
+      - mongo
 
   # Nginx service serves the static files from the rssglue_static volume
   nginx:
@@ -26,3 +43,4 @@ services:
 
 volumes:
   rssglue_static:
+  mongo_data:

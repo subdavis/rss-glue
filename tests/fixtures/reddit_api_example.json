@@ -1,0 +1,40 @@
+{
+  "kind": "Listing",
+  "data": {
+    "children": [
+      {
+        "kind": "t3",
+        "data": {
+          "id": "1abc123",
+          "title": "Check out my new gadget!",
+          "author": "techfan99",
+          "score": 42,
+          "created_utc": 1727808000.0,
+          "permalink": "/r/technology/comments/1abc123/check_out_my_new_gadget/",
+          "url": "https://i.redd.it/example-image.jpg",
+          "post_hint": "image",
+          "selftext": "Just got this beauty!",
+          "selftext_html": "&lt;div class=\"md\"&gt;&lt;p&gt;Just got this beauty!&lt;/p&gt;\n&lt;/div&gt;",
+          "url_overridden_by_dest": "https://i.redd.it/example-image.jpg",
+          "subreddit": "technology"
+        }
+      },
+      {
+        "kind": "t3",
+        "data": {
+          "id": "2def456",
+          "title": "Great article today!",
+          "author": "techtester42",
+          "score": 87,
+          "created_utc": 1727722000.0,
+          "permalink": "/r/technology/comments/2def456/great_article_today/",
+          "url": "https://www.reddit.com/r/technology/comments/2def456/great_article_today/",
+          "post_hint": "self",
+          "selftext": "Read an amazing article about new developments. Very informative!",
+          "selftext_html": "&lt;div class=\"md\"&gt;&lt;p&gt;Read an amazing article about new developments. Very informative!&lt;/p&gt;\n&lt;/div&gt;",
+          "subreddit": "technology"
+        }
+      }
+    ]
+  }
+}

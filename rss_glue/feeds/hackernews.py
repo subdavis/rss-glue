@@ -1,20 +1,12 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from rss_glue import utils
 from rss_glue.feeds import feed
 from rss_glue.resources import utc_now
 
-html_template = """
-<section>
-    <p>
-        By <a href="https://news.ycombinator.com/user?id={author}">{author}</a>
-        <span>⬆️ {score}</span>
-        <span>💬 {descendants}</span>
-        <span><a href="{comments_url}">[comments]</a></span>
-    </p>
-</section>
-"""
+html_template = utils.load_template("hackernews_post.html.jinja")
 
 
 @dataclass
@@ -30,10 +22,6 @@ class HackerNewsPost(feed.FeedItem):
 
     def render(self):
         url = self.story_data.get("url", "")
-        title = self.story_data.get("title", "")
-        author = self.story_data.get("by", "unknown")
-        score = self.story_data.get("score", 0)
-        descendants = self.story_data.get("descendants", 0)
         story_id = self.story_data.get("id")
         comments_url = f"https://news.ycombinator.com/item?id={story_id}"
 
@@ -41,13 +29,14 @@ class HackerNewsPost(feed.FeedItem):
         if not url:
             url = comments_url
 
-        return html_template.format(
+        return html_template.render(
             url=url,
-            title=title,
-            author=author,
-            score=score,
-            descendants=descendants,
+            title=self.story_data.get("title", ""),
+            author=self.story_data.get("by", "unknown"),
+            score=self.story_data.get("score", 0),
+            descendants=self.story_data.get("descendants", 0),
             comments_url=comments_url,
+            top_comment=self.story_data.get("top_comment"),
         )
 
 
@@ -77,10 +66,7 @@ class HackerNewsFeed(feed.ThrottleFeed):
     def namespace(self):
         return f"hackernews_{self.feed_type}"
 
-    def update(self, force: bool = False):
-        if not self.needs_update(force):
-            return
-
+    def update(self):
         # Fetch the story IDs from the Hacker News API
         session = utils.make_browser_session()
         response = session.get(self.url)
@@ -109,6 +95,32 @@ class HackerNewsFeed(feed.ThrottleFeed):
             if story_data.get("type") != "story":
                 continue
 
+            # Fetch the first comment if available
+            top_comment = None
+            kids = story_data.get("kids", [])
+            if kids:
+                # Fetch the first comment
+                top_comment_id = kids[0]
+                comment_url = f"https://hacker-news.firebaseio.com/v0/item/{top_comment_id}.json"
+                try:
+                    comment_response = session.get(comment_url)
+                    comment_response.raise_for_status()
+                    comment_data = comment_response.json()
+
+                    # Only include if it's not deleted/dead and has text
+                    if (
+                        not comment_data.get("deleted")
+                        and not comment_data.get("dead")
+                        and comment_data.get("text")
+                    ):
+                        top_comment = comment_data
+                except Exception as e:
+                    self.logger.warning(f"Failed to fetch comment for story {story_id}: {e}")
+
+            # Add top comment to story data
+            if top_comment:
+                story_data["top_comment"] = top_comment
+
             created_time_epoch = story_data.get("time")
             created_time = datetime.fromtimestamp(created_time_epoch, tz=timezone.utc)
 
@@ -124,18 +136,9 @@ class HackerNewsFeed(feed.ThrottleFeed):
                 origin_url=story_data.get(
                     "url", f"https://news.ycombinator.com/item?id={story_id}"
                 ),
+                enclosure=None,
             )
             self.logger.info(f"Adding story {value.id}: {value.title}")
             self.cache_set(str(story_id), value.to_dict())
 
         self.set_last_run()
-
-    def posts(self) -> list[feed.FeedItem]:
-        posts = super().posts()
-        return posts
-
-    def post(self, post_id: str):
-        cached = self.cache_get(post_id)
-        if not cached:
-            return None
-        return self.post_cls(**cached)

@@ -1,0 +1,17 @@
+<section>
+    <p>{{ url }}</p>
+    <p>
+        By <a href="https://news.ycombinator.com/user?id={{ author }}">{{ author }}</a>
+        <span>⬆️ {{ score }}</span>
+        <span>💬 {{ descendants }}</span>
+        <span><a href="{{ comments_url }}">[comments]</a></span>
+    </p>
+    {% if top_comment %}
+    <blockquote style="margin: 10px 0; padding: 0 10px; border-left: 3px solid #ccc;">
+        <p style="margin: 0 0 5px 0;"><strong>Top comment by <a
+                    href="https://news.ycombinator.com/user?id={{ top_comment.by }}">{{ top_comment.by }}</a>:</strong>
+        </p>
+        <div>{{ top_comment.text }}</div>
+    </blockquote>
+    {% endif %}
+</section>

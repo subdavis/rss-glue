@@ -3,59 +3,64 @@ from pathlib import Path
 from typing import Iterable, Tuple
 from urllib.parse import urljoin
 
-from rss_glue.feeds import feed
-from rss_glue.outputs import artifact
+from rss_glue import utils
+from rss_glue.feeds.feed import BaseFeed
+from rss_glue.outputs.html import generate_html
+from rss_glue.outputs.opml import generate_opml
+from rss_glue.outputs.rss import generate_rss
 from rss_glue.resources import global_config, utc_now
 from rss_glue.utils import page_css
 
-page_template = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>RSS Glue Index</title>
-    <meta http-equiv="Content-Type" content="text/html; charset="utf-8">
-    <style>
-        {css}
-    </style>
-</head>
-<body>
-    <main>
-        <header>
-            <h1>RSS Glue Index</h1>
-        </header>
-        <article>
-            {content}
-        </article>
-    </main>
-</body>
-</html>
-"""
-
-link_template = """
-    <p>
-        <a href="{url}">{url}</a>
-        <p style="font-size: 10px">
-    </p>"""
+page_template = utils.load_template("index_page.html.jinja")
+link_template = utils.load_template("index_link.html.jinja")
 
 
-class HTMLIndexOutput(artifact.MetaArtifact):
+def generate_index(
+    html_outputs: list[Tuple[BaseFeed, Path, datetime]],
+    rss_outputs: list[Tuple[BaseFeed, Path, datetime]],
+    opml_outputs: list[Tuple[Path, datetime]],
+) -> Iterable[Tuple[Path, datetime]]:
+    """
+    Generate a single index.html file linking to all generated outputs.
 
-    namespace = "index"
+    Args:
+        html_outputs: List of (source, relpath, modified_time) tuples from HTML generation
+        rss_outputs: List of (source, relpath, modified_time) tuples from RSS generation
+        opml_outputs: List of (relpath, modified_time) tuples from OPML generation
 
-    def generate(self, limit=None) -> Iterable[Tuple[Path, datetime]]:
+    Yields:
+        Tuples of (relative_path, modified_time) for the index file
+    """
+    html = ""
 
-        html = ""
-        for artifact in self.artifacts:
-            html += f"<h2>{artifact.__class__.__name__}</h2>"
-            for relpath, modified in artifact.generate(limit=limit):
-                actualPath = urljoin(global_config.base_url, relpath.as_posix())
-                html += link_template.format(
-                    url=actualPath,
-                )
-                yield relpath, modified
-        html = page_template.format(
-            content=html,
-            css=page_css,
-        )
+    # Add HTML outputs
+    html += "<h2>HTML Feeds</h2>"
+    for source, relpath, modified in html_outputs:
+        actualPath = urljoin(global_config.base_url, relpath.as_posix())
+        modified_local = modified.astimezone()
+        modified_str = modified_local.strftime("%a, %b %-d %I:%M %p")
+        html += link_template.render(url=actualPath, title=source.title, modified=modified_str)
 
-        yield global_config.file_cache.write("index", "html", html, self.namespace), utc_now()
+    # Add RSS & OPML outputs
+    html += "<h2>RSS Feeds</h2>"
+    for source, relpath, modified in rss_outputs:
+        actualPath = urljoin(global_config.base_url, relpath.as_posix())
+        modified_local = modified.astimezone()
+        modified_str = modified_local.strftime("%a, %b %-d %I:%M %p")
+        html += link_template.render(url=actualPath, title=source.title, modified=modified_str)
+
+    html += "<h2>OPML Document</h2>"
+
+    for relpath, modified in opml_outputs:
+        actualPath = urljoin(global_config.base_url, relpath.as_posix())
+        modified_local = modified.astimezone()
+        modified_str = modified_local.strftime("%a, %b %-d %I:%M %p")
+        html += link_template.render(url=actualPath, title="OPML Feed", modified=modified_str)
+
+    # Create the index page
+    html = page_template.render(
+        content=html,
+        css=page_css,
+    )
+
+    yield global_config.file_cache.write("index", "html", html, "index"), utc_now()

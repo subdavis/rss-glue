@@ -1,0 +1,14 @@
+<article>
+    <a href="{{ origin_url }}">
+        <h2>{{ title }}</h2>
+    </a>
+    <div style="display: flex; justify-content: space-between;">
+        <span class="post-author">{{ author }}</span>
+        <time>{{ posted_time }}</time>
+    </div>
+    {% if enclosure %}
+    <div>{{ enclosure }}</div>
+    {% endif %}
+    <div>{{ content }}</div>
+    <hr>
+</article>

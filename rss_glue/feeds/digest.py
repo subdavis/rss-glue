@@ -1,25 +1,17 @@
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Iterable, Optional
 
 from croniter import croniter
 
 from rss_glue import utils
 from rss_glue.feeds import feed
-from rss_glue.resources import utc_now
+from rss_glue.resources import global_config, utc_now
 
 latest_version = 0
 
-digetst_post_template = """
-<section>
-    <a href="{origin_url}">
-      <h2>{title}</h2>
-    </a>
-    <time>{posted_time}</time>
-    <div>{content}</div>
-    <hr>
-</section>
-"""
+digetst_post_template = utils.load_template("digest_post.html.jinja")
 
 
 @dataclass
@@ -33,10 +25,23 @@ class DigestPost(feed.FeedItem):
 
     subposts: list[feed.FeedItem]
 
+    def __post_init__(self):
+        if len(self.subposts) > 0 and type(self.subposts[0]) is dict:
+            resolved_subposts = []
+            for subpost in self.subposts:
+                subpost_source = global_config.by_namespace(subpost.get("namespace"))
+                subpost_id = subpost.get("id")
+                if subpost_source and subpost_id:
+                    resolved_post = subpost_source.post(subpost_id)
+                    if resolved_post:
+                        resolved_subposts.append(resolved_post)
+            self.subposts = resolved_subposts
+        return super().__post_init__()
+
     def render(self):
         html = ""
         for post in self.subposts:
-            html += digetst_post_template.format(
+            html += digetst_post_template.render(
                 title=post.title,
                 content=post.render(),
                 posted_time=post.posted_time.strftime(utils.human_strftime),
@@ -46,14 +51,10 @@ class DigestPost(feed.FeedItem):
 
     def to_dict(self) -> dict:
         d = super().to_dict()
-        d.update({"subposts": [post.id for post in self.subposts]})
+        d.update(
+            {"subposts": [{"namespace": post.namespace, "id": post.id} for post in self.subposts]}
+        )
         return d
-
-    @staticmethod
-    def load(obj: dict, source: feed.BaseFeed):
-        obj["subposts"] = [source.post(subpost_id) for subpost_id in obj["subposts"]]
-        obj["subposts"] = [post for post in obj["subposts"] if post]
-        return obj
 
 
 class DigestFeed(feed.BaseFeed):
@@ -97,14 +98,14 @@ class DigestFeed(feed.BaseFeed):
         since this class will take responsibility for updating it.
         """
         yield self.source
-        yield self
 
-    def update(self, force: bool = False):
+    def missing_issues(self) -> list[tuple[datetime, datetime, str]]:
         """
-        An update shall be needed if the last full period has passed
-        and a digest post has not been created for it.
+        Get a list of missing digest issues that need to be created.
+        Returns a list of tuples: (period_start, period_end, digest_id)
+        The list is ordered from most recent to oldest, up to back_issues count.
         """
-        # Get the last full periodical interval
+        missing = []
         itr = croniter(self.schedule, utc_now())
         period_start: datetime = itr.get_prev(datetime)
 
@@ -116,9 +117,17 @@ class DigestFeed(feed.BaseFeed):
             digest_id = f"{period_start_str}_{period_end_str}_{self.namespace}"
 
             # Check if the digest post has already been created
-            if self.cache_get(digest_id):
-                continue
+            if not self.cache_get(digest_id):
+                missing.append((period_start, period_end, digest_id))
 
+        return missing
+
+    def update(self):
+        """
+        An update shall be needed if the last full period has passed
+        and a digest post has not been created for it.
+        """
+        for index, (period_start, period_end, digest_id) in enumerate(self.missing_issues()):
             self.logger.debug(
                 f" {self.namespace} requires_update for {digest_id} range {period_start} to {period_end}"
             )
@@ -127,16 +136,15 @@ class DigestFeed(feed.BaseFeed):
                 # Force the source to update, but only for the latest period, not back issues
                 # WARNING: if a source is used in multiple DigestFeeds, this could cause redundant updates
                 # But digests are expected to be rare enough that this should be acceptable
-                self.source.update(True)
+                self.source.update()
 
-            # Get all the source posts within the period
-            source_posts = self.source.posts()
-            posts_in_last_period = list(
-                filter(
-                    lambda post: post.posted_time >= period_start and post.posted_time < period_end,
-                    source_posts,
-                )
+            # Get all the source posts within the period using time range filtering
+            posts_in_last_period = self.source.posts(start=period_start, end=period_end)
+
+            self.logger.info(
+                f" Found {len(posts_in_last_period)} posts in period {period_start} to {period_end}"
             )
+
             if len(posts_in_last_period) > self.limit:
                 self.logger.debug(
                     f" {len(posts_in_last_period)} posts in range, truncating to {self.limit}"
@@ -155,24 +163,33 @@ class DigestFeed(feed.BaseFeed):
                 discovered_time=period_end,
                 posted_time=period_end,
                 subposts=posts_in_last_period,
+                enclosure=None,
             )
             self.logger.info(f"Adding digest post {value.id} for {period_end}")
             self.cache_set(value.id, value.to_dict())
 
-    def post(self, post_id: str) -> Optional[feed.FeedItem]:
-        cached = self.cache_get(post_id)
-        if not cached:
-            return None
-        return self.post_cls(**self.post_cls.load(cached, self.source))
-
-    def posts(self) -> list[feed.FeedItem]:
-        posts = super().posts()
+    def posts(
+        self, limit: int = 50, start: Optional[datetime] = None, end: Optional[datetime] = None
+    ) -> list[feed.FeedItem]:
+        posts = super().posts(limit=limit, start=start, end=end)
         return [post for post in posts if isinstance(post, self.post_cls) and len(post.subposts)]
 
-    def migrate(self):
+    def next_update(self, force: bool) -> tuple[Optional[datetime], bool]:
         """
-        Account for any necessary migrations from older versions in the source since
-        it's possibly hidden from source collection.
+        Return the next time this digest should be updated and whether it needs updating now.
+        Returns the end time of the oldest missing issue, or the next scheduled time if none are missing.
+        The returned time may be in the past if there are missing issues.
         """
-        self.source.migrate()
-        return super().migrate()
+        if self.locked and not force:
+            self.logger.warning("Feed is locked - skipping update (use force=True to override)")
+            return None, False
+
+        missing = self.missing_issues()
+        if len(missing) > 0:
+            oldest_missing = min([period_end for _, period_end, _ in missing])
+            return oldest_missing, True
+
+        # No missing issues, return the next scheduled time
+        itr = croniter(self.schedule, utc_now())
+        next_scheduled = itr.get_next(datetime)
+        return next_scheduled, False

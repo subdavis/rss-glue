@@ -1,0 +1,28 @@
+<section>
+    <div>
+        {# Handle different post types #}
+        {% if selftext_html %}
+            {# Self post with text #}
+            {{ selftext_html | safe }}
+        {% elif post_hint == "image" %}
+            {# Image post #}
+            <img src="{{ url_overridden_by_dest }}" style="max-width: 100%; height: auto;" loading="lazy" />
+        {% elif post_hint == "rich:video" and oembed %}
+            {# Rich video (YouTube, etc.) #}
+            <a href="{{ url }}">
+                <img src="{{ oembed.thumbnail_url }}" loading="lazy" />
+                <p>Watch on {{ oembed.author_name }}</p>
+            </a>
+        {% elif post_hint == "hosted:video" and fallback_url %}
+            {# Reddit hosted video #}
+            <video style="max-width: 100%; height: auto;" src="{{ fallback_url }}" controls></video>
+        {% else %}
+            {# Link post #}
+            <a href="{{ url }}">{{ url }}</a>
+        {% endif %}
+    </div>
+    <p>
+        By <a href="https://reddit.com/u/{{ author }}">u/{{ author }}</a>
+        <span style="padding: 1em">⬆️ {{ score }}</span>
+    </p>
+</section>

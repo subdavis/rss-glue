@@ -1,0 +1,1 @@
+"""RSS Glue test suite."""

@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "posts": [
+    {
+      "id": "fb_post_123",
+      "text": "Check out this amazing event coming up next week!\n\nJoin us for a group gathering.",
+      "publishTime": 1727808000,
+      "url": "https://www.facebook.com/groups/testgroup/posts/123456",
+      "author": {
+        "name": "John Smith",
+        "url": "https://www.facebook.com/johnsmith"
+      },
+      "reactionCount": 42,
+      "commentCount": 15,
+      "images": [
+        "https://example.com/facebook/image1.jpg",
+        "https://example.com/facebook/image2.jpg"
+      ]
+    },
+    {
+      "id": "fb_post_456",
+      "text": "Great day today! The weather was perfect.",
+      "publishTime": 1727722000,
+      "url": "https://www.facebook.com/groups/testgroup/posts/456789",
+      "author": {
+        "name": "Jane Doe"
+      },
+      "reactionCount": 87,
+      "commentCount": 8,
+      "image": "https://example.com/facebook/single-image.jpg"
+    }
+  ]
+}

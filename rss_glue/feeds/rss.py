@@ -47,28 +47,40 @@ class RssFeed(feed.ThrottleFeed):
         self.limit = limit
         self.id = id
         super().__init__(interval=interval)
-        meta = self.meta
-        self.title = meta.get("title", "RSS Feed")
-        self.author = meta.get("author", "RSS Glue")
-        self.origin_url = meta.get("link", "unknown")
 
     @property
     def namespace(self):
         return f"{self.name}_{self.id}"
 
-    def update(self, force: bool = False):
-        if not self.needs_update(force):
-            return
+    @property
+    def title(self) -> str:
+        return self.meta.get("title", "RSS Feed")
 
+    @title.setter
+    def title(self, value: str):
+        self.meta = {"title": value}
+
+    @property
+    def author(self) -> str:
+        return self.meta.get("author", "RSS Glue")
+
+    @author.setter
+    def author(self, value: str):
+        self.meta = {"author": value}
+
+    @property
+    def origin_url(self) -> str:
+        return self.meta.get("link", self.url)
+
+    @origin_url.setter
+    def origin_url(self, value: str):
+        self.meta = {"link": value}
+
+    def update(self) -> None:
         f = feedparser.parse(self.url)
         self.title = getattr(f.feed, "title", "RSS Feed")
         self.author = getattr(f.feed, "author", "RSS Glue")
         self.origin_url = getattr(f.feed, "link", self.url)
-        self.meta = {
-            "title": self.title,
-            "author": self.author,
-            "link": self.origin_url,
-        }
 
         self.logger.debug(f"   found {len(f.entries)} posts")
         for entry in f.entries[: self.limit]:
@@ -92,6 +104,19 @@ class RssFeed(feed.ThrottleFeed):
                     published_at = datetime(*published_at_tuple[:6], tzinfo=pytz.utc)  # type: ignore
 
             title = getattr(entry, "title", "RSS Post")
+
+            # Enclosure = links with rel="enclosure"
+            enclosure: Optional[feed.Enclosure] = None
+            links = getattr(entry, "links", [])
+            enclosures = [link for link in links if link.get("rel") == "enclosure"]
+            if enclosures:
+                enclosure_data = enclosures[0]
+                enclosure = feed.Enclosure(
+                    url=enclosure_data.get("href", ""),
+                    length=int(enclosure_data.get("length", 0)),
+                    type=enclosure_data.get("type", "application/octet-stream"),
+                )
+
             value = self.post_cls(
                 version=1,
                 namespace=self.namespace,
@@ -102,14 +127,9 @@ class RssFeed(feed.ThrottleFeed):
                 discovered_time=utc_now(),
                 posted_time=published_at,
                 feedparser_parsed=entry,
+                enclosure=enclosure,
             )
             self.logger.info(f"   new post {post_id} {title}")
             self.cache_set(post_id, value.to_dict())
 
         self.set_last_run()
-
-    def post(self, post_id: str) -> Optional[feed.FeedItem]:
-        cached = self.cache_get(post_id)
-        if not cached:
-            return None
-        return self.post_cls(**cached)

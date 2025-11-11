@@ -17,4 +17,15 @@ run = "mypy ."
 
 [tasks.validate]
 description = "Validate code"
-depends = ["format", "typecheck"]
+depends = ["format", "typecheck", "test"]
+
+[tasks.test]
+description = "Run tests with pytest"
+run = "pytest"
+
+[tasks.coverage]
+description = "Run tests with coverage reporting"
+run = [
+    "pytest --cov=rss_glue --cov-report=html --cov-report=term",
+    "open htmlcov/index.html"
+]

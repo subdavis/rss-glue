@@ -1,0 +1,41 @@
+<section>
+    <div>
+        {# Handle different media types #}
+        {% if media_type == 1 %}
+            {# Image #}
+            {% if image_versions %}
+                <img src="{{ image_versions[0].url }}" style="max-width: 100%; height: auto;" loading="lazy" />
+            {% endif %}
+        {% elif media_type == 2 %}
+            {# Video #}
+            {% if video_versions %}
+                <video src="{{ video_versions[0].url }}" controls style="max-width: 100%; height: auto;"></video>
+            {% endif %}
+            {% if image_versions %}
+                <br/><img src="{{ image_versions[0].url }}" style="max-width: 100%; height: auto;" loading="lazy" />
+            {% endif %}
+        {% elif media_type == 8 %}
+            {# Carousel #}
+            {% if carousel_media %}
+                {% for item in carousel_media %}
+                    {% if item.image_versions2.candidates %}
+                        <img src="{{ item.image_versions2.candidates[0].url }}" style="max-width: 100%; height: auto; margin: 5px;" loading="lazy" />
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endif %}
+        
+        {# Caption #}
+        {% if caption_text %}
+            <p>{{ caption_text }}</p>
+        {% endif %}
+    </div>
+    {% if music_info %}
+    <p style="font-style: italic;">♫ {{ music_info }}</p>
+    {% endif %}
+    <p>
+        By <a href="https://instagram.com/{{ author }}">@{{ author }}</a>
+        <span style="padding: 1em">❤️ {{ likes }}</span>
+        <span style="padding: 1em">💬 {{ comments }}</span>
+    </p>
+</section>
