@@ -12,7 +12,6 @@ from typing import Any, Callable, Dict
 
 from rss_glue.cache import FileCache, JsonCache, MediaCache, SimpleCache
 from rss_glue.logger import logger
-from rss_glue.mongo_cache import MongoCache
 
 if typing.TYPE_CHECKING:
     from rss_glue.feeds.feed import BaseFeed
@@ -38,7 +37,6 @@ class Config:
     base_url: str
     run_after_generate: Callable[[], None]
     output_limit: int
-    mongo_url: str | None
     sources: list["BaseFeed"]
     source_map: Dict[str, "BaseFeed"]
     sleep_range: tuple[int, int] = (2, 4)
@@ -51,7 +49,6 @@ class Config:
         self._cache = None
         self._file_cache = None
         self._media_cache = None
-        self.mongo_url = None
         self.sources = []
         self.source_map = {}
 
@@ -62,7 +59,6 @@ class Config:
         run_after_generate: Callable[[], None] = lambda: None,
         log_level: int = logging.INFO,
         output_limit: int = 12,
-        mongo_url: str | None = None,
         sleep_range: tuple[int, int] = (2, 4),
     ):
         """
@@ -71,15 +67,12 @@ class Config:
         :param run_after_generate: A function to run after generating the feeds
         :param log_level: The logging level to use
         :param output_limit: The maximum number of items to include in each output feed
-        :param mongo_url: MongoDB connection string (e.g., "mongodb://user:pass@host:27017/")
-                         If provided, uses MongoCache; otherwise uses JsonCache
         :param sleep_range: Tuple indicating min and max sleep time (in seconds) between requests
         """
         self.base_url = base_url
         self.static_root = static_root
         self.run_after_generate = run_after_generate
         self.output_limit = output_limit
-        self.mongo_url = mongo_url
         self.sleep_range = sleep_range
         logger.setLevel(log_level)
 
@@ -106,10 +99,7 @@ class Config:
     @property
     def cache(self) -> SimpleCache:
         if not self._cache:
-            if self.mongo_url:
-                self._cache = MongoCache(self.mongo_url)
-            else:
-                self._cache = JsonCache(self.static_root)
+            self._cache = JsonCache(self.static_root)
         return self._cache
 
     @property
