@@ -396,6 +396,10 @@ class AliasFeed(BaseFeed, ABC):
             return from_subpost(self.post_cls, subpost)
         return None
 
+    def migrate(self):
+        """Nothing to do for an alias feed"""
+        pass
+
     def posts(
         self, limit: int = 50, start: Optional[datetime] = None, end: Optional[datetime] = None
     ) -> list[FeedItem]:
@@ -426,7 +430,7 @@ class AugmentFeed(BaseFeed, ABC):
     @property
     def namespace(self):
         return f"{self.name}_{self.source.namespace}"
-    
+
     def sources(self) -> Iterable[BaseFeed]:
         yield self.source
 
@@ -435,4 +439,3 @@ class AugmentFeed(BaseFeed, ABC):
         if self.source.last_updated >= self.last_updated:
             return self.source.last_updated, True
         return source_next_update, source_needs_update
-
