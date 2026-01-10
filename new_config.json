@@ -1,0 +1,205 @@
+[
+  {
+    "id": "ig-behindbarsbicycleshop",
+    "type": "instagram",
+    "name": "behindbarsbicycleshop",
+    "username": "behindbarsbicycleshop",
+    "limit": 10
+  },
+  {
+    "id": "ig-bikingwithbaddies",
+    "type": "instagram",
+    "name": "bikingwithbaddies",
+    "username": "bikingwithbaddies",
+    "limit": 10
+  },
+  {
+    "id": "ig-perennialcycle",
+    "type": "instagram",
+    "name": "perennialcycle",
+    "username": "perennialcycle",
+    "limit": 10
+  },
+  {
+    "id": "ig-bonesawcyclingcollective",
+    "type": "instagram",
+    "name": "bonesawcyclingcollective",
+    "username": "bonesawcyclingcollective",
+    "limit": 10
+  },
+  {
+    "id": "ig-fastcasualmpls",
+    "type": "instagram",
+    "name": "fastcasualmpls",
+    "username": "fastcasualmpls",
+    "limit": 10
+  },
+  {
+    "id": "ig-versusraceteam",
+    "type": "instagram",
+    "name": "versusraceteam",
+    "username": "versusraceteam",
+    "limit": 10
+  },
+  {
+    "id": "ig-joyfulridersclub",
+    "type": "instagram",
+    "name": "joyfulridersclub",
+    "username": "joyfulridersclub",
+    "limit": 10
+  },
+  {
+    "id": "ig-handupracing",
+    "type": "instagram",
+    "name": "handupracing",
+    "username": "handupracing",
+    "limit": 10
+  },
+  {
+    "id": "fb-utepils",
+    "type": "facebook",
+    "name": "Utepils Cycling",
+    "url": "https://www.facebook.com/groups/UtepilsCycling/",
+    "limit": 10
+  },
+  {
+    "id": "hn-best",
+    "type": "hackernews",
+    "name": "Hacker News Best",
+    "story_type": "best",
+    "limit": 30
+  },
+  {
+    "id": "cycling-merge",
+    "type": "merge",
+    "name": "Cycling Instagram Merge",
+    "sources": [
+      "ig-behindbarsbicycleshop",
+      "ig-bikingwithbaddies",
+      "ig-perennialcycle",
+      "ig-bonesawcyclingcollective",
+      "ig-fastcasualmpls",
+      "ig-versusraceteam",
+      "ig-joyfulridersclub",
+      "ig-handupracing",
+      "fb-utepils"
+    ],
+    "limit": 20
+  },
+  {
+    "id": "nasa-apod",
+    "type": "rss",
+    "name": "NASA Image of the Day",
+    "url": "https://www.nasa.gov/feeds/iotd-feed/",
+    "limit": 10
+  },
+  {
+    "id": "reddit-selfhosted",
+    "type": "reddit",
+    "name": "r/selfhosted",
+    "subreddit": "selfhosted",
+    "listing_type": "top",
+    "time_filter": "week",
+    "limit": 20
+  },
+  {
+    "id": "digest-selfhosted",
+    "type": "digest",
+    "name": "Digest: r/selfhosted",
+    "source": "reddit-selfhosted",
+    "schedule": "15 6 * * 2",
+    "limit": 8
+  },
+  {
+    "id": "reddit-cyclingmsp",
+    "type": "reddit",
+    "name": "r/cyclingmsp",
+    "subreddit": "cyclingmsp",
+    "listing_type": "top",
+    "time_filter": "week",
+    "limit": 20
+  },
+  {
+    "id": "digest-cyclingmsp",
+    "type": "digest",
+    "name": "Digest: r/cyclingmsp",
+    "source": "reddit-cyclingmsp",
+    "schedule": "30 7 * * 1",
+    "limit": 8
+  },
+  {
+    "id": "reddit-myog",
+    "type": "reddit",
+    "name": "r/myog",
+    "subreddit": "myog",
+    "listing_type": "top",
+    "time_filter": "week",
+    "limit": 20
+  },
+  {
+    "id": "digest-myog",
+    "type": "digest",
+    "name": "Digest: r/myog",
+    "source": "reddit-myog",
+    "schedule": "15 6 * * 3",
+    "limit": 8
+  },
+  {
+    "id": "reddit-ezraklein",
+    "type": "reddit",
+    "name": "r/ezraklein",
+    "subreddit": "ezraklein",
+    "listing_type": "top",
+    "time_filter": "week",
+    "limit": 20
+  },
+  {
+    "id": "digest-ezraklein",
+    "type": "digest",
+    "name": "Digest: r/ezraklein",
+    "source": "reddit-ezraklein",
+    "schedule": "15 6 * * 4",
+    "limit": 8
+  },
+  {
+    "id": "reddit-minneapolis",
+    "type": "reddit",
+    "name": "r/minneapolis",
+    "subreddit": "minneapolis",
+    "listing_type": "top",
+    "time_filter": "week",
+    "limit": 20
+  },
+  {
+    "id": "digest-minneapolis",
+    "type": "digest",
+    "name": "Digest: r/minneapolis",
+    "source": "reddit-minneapolis",
+    "schedule": "0 8 * * 5",
+    "limit": 8
+  },
+  {
+    "id": "digest-hn",
+    "type": "digest",
+    "name": "Digest: Hacker News",
+    "source": "hn-best",
+    "schedule": "0 8 * * *",
+    "limit": 10
+  },
+  {
+    "id": "digest-apod",
+    "type": "digest",
+    "name": "Digest: NASA APOD",
+    "source": "nasa-apod",
+    "schedule": "30 9 * * 6",
+    "limit": 7
+  },
+  {
+    "id": "digest-cycling",
+    "type": "digest",
+    "name": "Digest: Cycling Merge",
+    "source": "cycling-merge",
+    "schedule": "0 7 * * 2",
+    "limit": 8
+  }
+]

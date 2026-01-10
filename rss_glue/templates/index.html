@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Feeds - RSS Glue{% endblock %}
+{% block content %}
+<h2>Configured Feeds</h2>
+
+{% if feeds %}
+<table border="1">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Limit</th>
+        <th>Updated</th>
+        <th>Actions</th>
+    </tr>
+    {% for feed in feeds %}
+    <tr>
+        <td>{{ feed.id }}</td>
+        <td>{{ feed.name }}</td>
+        <td>{{ feed.type }}</td>
+        <td>{{ feed.limit }}</td>
+        <td>{{ feed.updated_at.strftime('%Y-%m-%d %H:%M') if feed.updated_at else 'Never' }}</td>
+        <td>
+            <a href="/feed/{{ feed.id }}/html">HTML</a> |
+            <a href="/feed/{{ feed.id }}/rss">RSS</a>
+            <form action="/feed/{{ feed.id }}/update" method="post" style="display:inline">
+                <button type="submit">Update</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No feeds configured. <a href="/config">Add some feeds</a>.</p>
+{% endif %}
+
+<hr>
+<form action="/update" method="post">
+    <button type="submit">Update All Feeds</button>
+</form>
+{% endblock %}

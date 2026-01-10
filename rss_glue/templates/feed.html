@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ feed.name }} - RSS Glue{% endblock %}
+{% block content %}
+<h2>{{ feed.name }}</h2>
+<p>
+    <strong>ID:</strong> {{ feed.id }} |
+    <strong>Type:</strong> {{ feed.type }} |
+    <strong>Limit:</strong> {{ feed.limit }}
+</p>
+<p>
+    <a href="/feed/{{ feed.id }}/rss">RSS Feed</a>
+</p>
+
+<hr>
+
+<h3>Posts ({{ posts|length }})</h3>
+
+{% if posts %}
+{% for post in posts %}
+<article>
+    <h4><a href="{{ post.link }}">{{ post.title }}</a></h4>
+    <p>
+        <strong>Published:</strong> {{ post.published_at.strftime('%Y-%m-%d %H:%M') }}
+        {% if post.author %}| <strong>Author:</strong> {{ post.author }}{% endif %}
+    </p>
+    {% if post.content %}
+    <div>{{ post.content | safe }}</div>
+    {% endif %}
+    <hr>
+</article>
+{% endfor %}
+{% else %}
+<p>No posts yet. Try updating the feed.</p>
+{% endif %}
+{% endblock %}

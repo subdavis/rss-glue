@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Config - RSS Glue{% endblock %}
+{% block content %}
+<h2>Configuration</h2>
+
+{% if error %}
+<pre style="color: red;">Error: {{ error }}</pre>
+{% endif %}
+
+<form method="post" action="/config">
+    <div>
+        <label>
+            <input type="checkbox" name="cache_media" {% if config.cache_media %}checked{% endif %}>
+            Cache Embedded Media (Global)
+        </label>
+    </div>
+    <br>
+    <div>
+        <label>
+            ScrapeCreators API Key (for Instagram/Facebook):
+            <input type="text" name="scrape_creators_key" value="{{ config.scrape_creators_key or '' }}" style="width: 300px;">
+        </label>
+    </div>
+    <br>
+    <label>Feeds Configuration (JSON):</label>
+    <br>
+    <textarea name="feeds_json" rows="30" cols="80">{{ feeds_json }}</textarea>
+    <br>
+    <button type="submit">Save Configuration</button>
+</form>
+
+<h3>Config Format</h3>
+<p>Enter a list of feed objects:</p>
+<pre>
+[
+  {
+    "id": "unique-id",
+    "type": "rss",
+    "name": "Feed Name",
+    "url": "https://example.com/feed.xml",
+    "limit": 50
+  },
+  {
+    "id": "merged-feed",
+    "type": "merge",
+    "name": "Combined Feed",
+    "sources": ["unique-id", "other-id"],
+    "limit": 100
+  },
+  {
+    "id": "reddit-feed",
+    "type": "reddit",
+    "name": "r/selfhosted",
+    "subreddit": "selfhosted",
+    "listing_type": "top",
+    "time_filter": "week",
+    "limit": 20
+  }
+]
+</pre>
+
+<h3>Validation Rules</h3>
+<ul>
+    <li>Feed IDs must be unique and contain only letters, numbers, hyphens, and underscores</li>
+    <li>RSS feeds require a valid http/https URL</li>
+    <li>Merge feeds must reference existing feed IDs in sources</li>
+    <li>Circular dependencies are not allowed</li>
+    <li>Limit must be between 1 and 1000</li>
+</ul>
+{% endblock %}
