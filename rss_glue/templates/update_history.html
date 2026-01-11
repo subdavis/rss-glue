@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Update History - RSS Glue{% endblock %}
+{% block content %}
+<h2>Update History</h2>
+
+<p>Showing {{ history_data|length }} of {{ total_count }} total update attempts</p>
+
+{% if history_data %}
+<table border="1">
+    <tr>
+        <th>Feed ID</th>
+        <th>Started</th>
+        <th>Duration</th>
+        <th>Status</th>
+        <th>Posts Added</th>
+        <th>Error</th>
+    </tr>
+    {% for item in history_data %}
+    {% set history = item.history %}
+    {% set feed = item.feed %}
+    <tr>
+        <td>
+            <a href="/feed/{{ feed.id }}/html">{{ feed.id }}</a>
+        </td>
+        <td>{{ history.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td>
+            {% if history.completed_at %}
+            {% set duration = (history.completed_at - history.started_at).total_seconds() %}
+            {{ "%.1f"|format(duration) }}s
+            {% else %}
+            -
+            {% endif %}
+        </td>
+        <td>
+            <strong>{{ history.status|upper }}</strong>
+        </td>
+        <td>
+            {% if history.posts_added > 0 %}
+            <strong>{{ history.posts_added }}</strong>
+            {% else %}
+            {{ history.posts_added }}
+            {% endif %}
+        </td>
+        <td>
+            {% if history.error_message %}
+            <small>{{ history.error_message }}</small>
+            {% else %}
+            -
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div style="margin: 20px 0; text-align: center;">
+    <p>Page {{ current_page }} of {{ total_pages }}</p>
+
+    <div style="margin: 10px 0;">
+        {% if has_prev %}
+        <a href="/update-history?page={{ prev_page }}"
+            style="margin: 0 5px; padding: 5px 10px; background-color: #007bff; color: white; text-decoration: none; border-radius: 3px;">←
+            Previous</a>
+        {% else %}
+        <span style="margin: 0 5px; padding: 5px 10px; background-color: #6c757d; color: white; border-radius: 3px;">←
+            Previous</span>
+        {% endif %}
+
+        {% if current_page > 2 %}
+        <a href="/update-history?page=1"
+            style="margin: 0 2px; padding: 5px 8px; background-color: #f8f9fa; color: #007bff; text-decoration: none; border: 1px solid #dee2e6; border-radius: 3px;">1</a>
+        {% if current_page > 3 %}
+        <span style="margin: 0 2px;">...</span>
+        {% endif %}
+        {% endif %}
+
+        {% if has_prev %}
+        <a href="/update-history?page={{ prev_page }}"
+            style="margin: 0 2px; padding: 5px 8px; background-color: #f8f9fa; color: #007bff; text-decoration: none; border: 1px solid #dee2e6; border-radius: 3px;">{{
+            prev_page }}</a>
+        {% endif %}
+
+        <span
+            style="margin: 0 2px; padding: 5px 8px; background-color: #007bff; color: white; border: 1px solid #007bff; border-radius: 3px;"><strong>{{
+                current_page }}</strong></span>
+
+        {% if has_next %}
+        <a href="/update-history?page={{ next_page }}"
+            style="margin: 0 2px; padding: 5px 8px; background-color: #f8f9fa; color: #007bff; text-decoration: none; border: 1px solid #dee2e6; border-radius: 3px;">{{
+            next_page }}</a>
+        {% endif %}
+
+        {% if current_page < total_pages - 1 %} {% if current_page < total_pages - 2 %} <span style="margin: 0 2px;">
+            ...</span>
+            {% endif %}
+            <a href="/update-history?page={{ total_pages }}"
+                style="margin: 0 2px; padding: 5px 8px; background-color: #f8f9fa; color: #007bff; text-decoration: none; border: 1px solid #dee2e6; border-radius: 3px;">{{
+                total_pages }}</a>
+            {% endif %}
+
+            {% if has_next %}
+            <a href="/update-history?page={{ next_page }}"
+                style="margin: 0 5px; padding: 5px 10px; background-color: #007bff; color: white; text-decoration: none; border-radius: 3px;">Next
+                →</a>
+            {% else %}
+            <span
+                style="margin: 0 5px; padding: 5px 10px; background-color: #6c757d; color: white; border-radius: 3px;">Next
+                →</span>
+            {% endif %}
+    </div>
+
+    <form method="get" style="margin-top: 10px;">
+        <label for="page">Go to page:</label>
+        <input type="number" name="page" id="page" value="{{ current_page }}" min="1" max="{{ total_pages }}"
+            style="width: 60px; padding: 2px;">
+        <button type="submit" style="padding: 2px 8px;">Go</button>
+    </form>
+</div>
+{% endif %}
+
+{% else %}
+<p>No update history found. <a href="/update">Run an update</a> to see history here.</p>
+{% endif %}
+
+<hr>
+<p><a href="/">← Back to Feeds</a></p>
+
+{% endblock %}

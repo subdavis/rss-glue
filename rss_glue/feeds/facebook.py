@@ -1,12 +1,14 @@
 """Facebook feed handler using ScrapeCreators API."""
+
 import hashlib
+import html
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
-import httpx
 from sqlmodel import Session
 
+from rss_glue.feeds.http_client import create_client
 from rss_glue.feeds.registry import FeedRegistry
 from rss_glue.models.db import SystemConfig
 
@@ -43,36 +45,33 @@ class FacebookFeedHandler:
         api_key = key_entry.value if key_entry else None
 
         if not api_key:
-            logger.error(f"Facebook feed '{feed_id}': Missing scrape_creators_key in SystemConfig")
+            logger.error(
+                f"Facebook feed '{feed_id}': Missing scrape_creators_key in SystemConfig"
+            )
             return []
 
         try:
-            with httpx.Client(timeout=30.0) as client:
-                headers = {"x-api-key": api_key}
+            with create_client(
+                timeout=30.0, extra_headers={"x-api-key": api_key}
+            ) as client:
                 params = {"url": url, "sort_by": "CHRONOLOGICAL"}
-                response = client.get(SCRAPE_API_BASE, headers=headers, params=params)
+                response = client.get(SCRAPE_API_BASE, params=params)
                 response.raise_for_status()
                 data = response.json()
-                
+
                 if not data.get("success"):
-                    logger.warning(f"Facebook feed '{feed_id}': API returned unsuccessful status: {data}")
-                    # Continue if posts are present? The v1 code returns if not success.
-                    # Let's check if posts exist regardless, or respect success flag.
+                    logger.warning(
+                        f"Facebook feed '{feed_id}': API returned unsuccessful status: {data}"
+                    )
                     if not data.get("posts"):
                         return []
 
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Facebook feed '{feed_id}': API error {e.response.status_code}")
-            return []
-        except httpx.RequestError as e:
+        except Exception as e:
             logger.error(f"Facebook feed '{feed_id}': Request failed - {e}")
             return []
 
         posts = []
-        # ScrapeCreators v1 structure: {"posts": [...]}
         items = data.get("posts", [])
-        
-        # Limit locally
         items = items[:limit]
 
         for item in items:
@@ -82,54 +81,76 @@ class FacebookFeedHandler:
                 continue
             external_id = hashlib.sha256(str(post_id).encode()).hexdigest()[:16]
 
-            # Timestamp
+            # Timestamp - timezone-aware
             publish_time = item.get("publishTime")
             if publish_time:
-                published_at = datetime.fromtimestamp(publish_time, tz=timezone.utc).replace(tzinfo=None) # naive UTC
+                published_at = datetime.fromtimestamp(publish_time, tz=timezone.utc)
             else:
-                published_at = datetime.utcnow()
+                published_at = datetime.now(timezone.utc)
 
             # Author
             author_data = item.get("author")
             author_name = "Facebook User"
             if isinstance(author_data, dict):
                 author_name = author_data.get("name", author_name)
-            
-            # Text/Title
+
+            # Text/Title with fallbacks for Photo/Video posts (from v1)
             text = item.get("text", "")
-            title = text.split("\n")[0][:100] if text else "Facebook Post"
-            
+            if text:
+                title = text.split("\n")[0][:100]
+            elif item.get("image") or item.get("images"):
+                title = "Photo Post"
+            elif item.get("videoDetails"):
+                title = "Video Post"
+            else:
+                title = "Facebook Group Post"
+
             # Link
             post_url = item.get("url", url)
 
-            # Content Generation
-            content = f"<p>{text}</p>" if text else ""
-            
+            # Engagement metrics (from v1)
+            reaction_count = item.get("reactionCount", 0)
+            comment_count = item.get("commentCount", 0)
+            video_view_count = item.get("videoViewCount")
+
+            # Content Generation - escape HTML
+            content = f"<p>{html.escape(text)}</p>" if text else ""
+
             # Images
-            # 'images' is a list of urls, or 'image' is a single url
             images = item.get("images", [])
             if not images and item.get("image"):
                 images = [item.get("image")]
-            
+
             for img_url in images:
                 if img_url:
                     content += f'<p><img src="{img_url}" /></p>'
-            
+
             # Video
             if video_details := item.get("videoDetails"):
-                # Usually has thumbnail
-                thumb = video_details.get("thumbnail") or item.get("image")
+                thumb = video_details.get("thumbnailUrl") or item.get("image")
                 content += f'<p><a href="{post_url}">Watch Video</a></p>'
                 if thumb:
                     content += f'<p><img src="{thumb}" alt="Video thumbnail" /></p>'
 
-            posts.append({
-                "external_id": external_id,
-                "title": title,
-                "content": content,
-                "link": post_url,
-                "author": author_name,
-                "published_at": published_at,
-            })
+            # Add engagement metrics to content
+            engagement_parts = [
+                f"👍 {reaction_count:,} reactions",
+                f"💬 {comment_count:,} comments",
+            ]
+            if video_view_count is not None:
+                engagement_parts.append(f"👁 {video_view_count:,} views")
+            content += f"<p><small>{' | '.join(engagement_parts)}</small></p>"
+
+            posts.append(
+                {
+                    "external_id": external_id,
+                    "title": title,
+                    "content": content,
+                    "link": post_url,
+                    "author": author_name,
+                    "published_at": published_at,
+                    "score": float(reaction_count),  # Use reaction count as score
+                }
+            )
 
         return posts

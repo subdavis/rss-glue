@@ -1,5 +1,6 @@
 """Feed type registry for extensibility."""
-from typing import Protocol, Type, Callable, Any
+
+from typing import Any, Callable, Protocol, Type
 
 from sqlmodel import Session
 
@@ -28,7 +29,9 @@ class FeedRegistry:
     _handlers: dict[str, Type[FeedHandler]] = {}
 
     @classmethod
-    def register(cls, feed_type: str) -> Callable[[Type[FeedHandler]], Type[FeedHandler]]:
+    def register(
+        cls, feed_type: str
+    ) -> Callable[[Type[FeedHandler]], Type[FeedHandler]]:
         """Decorator to register a feed handler.
 
         Usage:

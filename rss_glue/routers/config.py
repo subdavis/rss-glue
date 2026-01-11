@@ -1,12 +1,13 @@
 """Config API routes."""
+
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Request, Depends, Form
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlmodel import Session
 from pydantic import ValidationError
+from sqlmodel import Session
 
 from rss_glue.database import get_session
 from rss_glue.models.config import AppConfig
@@ -24,6 +25,8 @@ def save_config(
     feeds_json: str = Form(...),
     cache_media: bool = Form(False),
     scrape_creators_key: str | None = Form(None),
+    default_cooldown_minutes: int = Form(15),
+    base_url: str = Form("http://localhost:8000"),
     session: Session = Depends(get_session),
 ):
     """Save config and sync to database."""
@@ -38,11 +41,13 @@ def save_config(
         config_dict = {
             "cache_media": cache_media,
             "scrape_creators_key": scrape_creators_key,
+            "default_cooldown_minutes": default_cooldown_minutes,
+            "base_url": base_url,
             "feeds": feeds_list,
         }
 
         # Validate with Pydantic
-        app_config = AppConfig(**config_dict)
+        app_config = AppConfig.model_validate(config_dict)
 
         # Sync to database
         sync_config_to_db(app_config, session)
@@ -53,6 +58,8 @@ def save_config(
         config_context = {
             "cache_media": cache_media,
             "scrape_creators_key": scrape_creators_key,
+            "default_cooldown_minutes": default_cooldown_minutes,
+            "base_url": base_url,
             "feeds": [],
         }
         return templates.TemplateResponse(
@@ -74,6 +81,8 @@ def save_config(
         config_context = {
             "cache_media": cache_media,
             "scrape_creators_key": scrape_creators_key,
+            "default_cooldown_minutes": default_cooldown_minutes,
+            "base_url": base_url,
             "feeds": feeds_list,
         }
         return templates.TemplateResponse(

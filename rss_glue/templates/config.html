@@ -7,26 +7,44 @@
 <pre style="color: red;">Error: {{ error }}</pre>
 {% endif %}
 
-<form method="post" action="/config">
-    <div>
-        <label>
-            <input type="checkbox" name="cache_media" {% if config.cache_media %}checked{% endif %}>
-            Cache Embedded Media (Global)
-        </label>
-    </div>
-    <br>
-    <div>
-        <label>
-            ScrapeCreators API Key (for Instagram/Facebook):
-            <input type="text" name="scrape_creators_key" value="{{ config.scrape_creators_key or '' }}" style="width: 300px;">
-        </label>
-    </div>
-    <br>
-    <label>Feeds Configuration (JSON):</label>
-    <br>
-    <textarea name="feeds_json" rows="30" cols="80">{{ feeds_json }}</textarea>
-    <br>
-    <button type="submit">Save Configuration</button>
+<form method="post" action="/config" style="display: flex; flex-direction: column; gap: 10px;">
+  <div>
+    <label>
+      <input type="checkbox" name="cache_media" {% if config.cache_media %}checked{% endif %}>
+      Cache Embedded Media (Global)
+    </label>
+  </div>
+
+  <div>
+    <label>
+      ScrapeCreators API Key (for Instagram/Facebook):
+      <input type="text" name="scrape_creators_key" value="{{ config.scrape_creators_key or '' }}"
+        style="width: 300px;">
+    </label>
+  </div>
+
+  <div>
+    <label>
+      Default Fetch Interval (minutes):
+      <input type="number" name="default_cooldown_minutes" value="{{ config.default_cooldown_minutes or 15 }}" min="0"
+        max="10080" style="width: 100px;">
+      <small>(0 = no cooldown, max 7 days)</small>
+    </label>
+  </div>
+
+  <div>
+    <label>
+      Base URL for RSS feeds:
+      <input type="url" name="base_url" value="{{ config.base_url or 'http://localhost:8000' }}"
+        style="width: 300px;" required>
+      <small>(Used for generating absolute URLs in RSS output)</small>
+    </label>
+  </div>
+
+  <label>Feeds Configuration (JSON):</label>
+  <textarea name="feeds_json" rows="30" cols="80">{{ feeds_json }}</textarea>
+
+  <button type="submit">Save Configuration</button>
 </form>
 
 <h3>Config Format</h3>
@@ -38,7 +56,8 @@
     "type": "rss",
     "name": "Feed Name",
     "url": "https://example.com/feed.xml",
-    "limit": 50
+    "limit": 50,
+    "cooldown_minutes": 30
   },
   {
     "id": "merged-feed",
@@ -61,10 +80,11 @@
 
 <h3>Validation Rules</h3>
 <ul>
-    <li>Feed IDs must be unique and contain only letters, numbers, hyphens, and underscores</li>
-    <li>RSS feeds require a valid http/https URL</li>
-    <li>Merge feeds must reference existing feed IDs in sources</li>
-    <li>Circular dependencies are not allowed</li>
-    <li>Limit must be between 1 and 1000</li>
+  <li>Feed IDs must be unique and contain only letters, numbers, hyphens, and underscores</li>
+  <li>RSS feeds require a valid http/https URL</li>
+  <li>Merge feeds must reference existing feed IDs in sources</li>
+  <li>Circular dependencies are not allowed</li>
+  <li>Limit must be between 1 and 1000</li>
+  <li>cooldown_minutes is optional (defaults to global setting), must be 0-10080 minutes</li>
 </ul>
 {% endblock %}

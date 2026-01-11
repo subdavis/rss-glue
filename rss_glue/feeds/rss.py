@@ -1,6 +1,7 @@
 """RSS feed handler."""
+
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import feedparser
@@ -34,7 +35,7 @@ class RssFeedHandler:
             elif hasattr(entry, "updated_parsed") and entry.updated_parsed:
                 published = datetime(*entry.updated_parsed[:6])
             else:
-                published = datetime.utcnow()
+                published = datetime.now(timezone.utc)
 
             # Extract content
             content = None

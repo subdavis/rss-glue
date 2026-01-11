@@ -1,5 +1,6 @@
 """Pydantic models for JSON configuration validation."""
-from typing import Literal, Annotated, Union
+
+from typing import Annotated, Literal, Union
 
 from croniter import croniter
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -28,6 +29,12 @@ class RssFeedConfig(BaseModel):
         default=None,
         description="Cache embedded media. None = use global setting.",
     )
+    cooldown_minutes: int | None = Field(
+        default=None,
+        ge=0,
+        le=10080,
+        description="Cooldown interval in minutes. None = use global setting.",
+    )
 
 
 class MergeFeedConfig(BaseModel):
@@ -51,6 +58,12 @@ class MergeFeedConfig(BaseModel):
     cache_media: bool | None = Field(
         default=None,
         description="Cache embedded media. None = use global setting.",
+    )
+    cooldown_minutes: int | None = Field(
+        default=None,
+        ge=0,
+        le=10080,
+        description="Cooldown interval in minutes. None = use global setting.",
     )
 
 
@@ -81,6 +94,12 @@ class DigestFeedConfig(BaseModel):
     cache_media: bool | None = Field(
         default=None,
         description="Cache embedded media. None = use global setting.",
+    )
+    cooldown_minutes: int | None = Field(
+        default=None,
+        ge=0,
+        le=10080,
+        description="Cooldown interval in minutes. None = use global setting.",
     )
 
     @field_validator("schedule")
@@ -114,6 +133,12 @@ class HackerNewsFeedConfig(BaseModel):
         default=None,
         description="Cache embedded media. None = use global setting.",
     )
+    cooldown_minutes: int | None = Field(
+        default=None,
+        ge=0,
+        le=10080,
+        description="Cooldown interval in minutes. None = use global setting.",
+    )
 
 
 class InstagramFeedConfig(BaseModel):
@@ -135,11 +160,19 @@ class InstagramFeedConfig(BaseModel):
     id: str = Field(..., min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
     type: Literal["instagram"]
     name: str = Field(..., min_length=1)
-    username: str = Field(..., min_length=1, description="Instagram username (without @)")
+    username: str = Field(
+        ..., min_length=1, description="Instagram username (without @)"
+    )
     limit: int = Field(default=20, ge=1, le=100)
     cache_media: bool | None = Field(
         default=None,
         description="Cache embedded media. None = use global setting.",
+    )
+    cooldown_minutes: int | None = Field(
+        default=None,
+        ge=0,
+        le=10080,
+        description="Cooldown interval in minutes. None = use global setting.",
     )
 
 
@@ -167,6 +200,12 @@ class FacebookFeedConfig(BaseModel):
     cache_media: bool | None = Field(
         default=None,
         description="Cache embedded media. None = use global setting.",
+    )
+    cooldown_minutes: int | None = Field(
+        default=None,
+        ge=0,
+        le=10080,
+        description="Cooldown interval in minutes. None = use global setting.",
     )
 
 
@@ -198,6 +237,12 @@ class RedditFeedConfig(BaseModel):
         default=None,
         description="Cache embedded media. None = use global setting.",
     )
+    cooldown_minutes: int | None = Field(
+        default=None,
+        ge=0,
+        le=10080,
+        description="Cooldown interval in minutes. None = use global setting.",
+    )
 
 
 FeedConfig = Annotated[
@@ -221,6 +266,7 @@ class AppConfig(BaseModel):
         {
             "cache_media": true,
             "scrape_creators_key": "sc_...",
+            "default_cooldown_minutes": 15,
             "feeds": [
                 {"id": "hn", "type": "rss", "name": "HN", "url": "https://..."},
                 {"id": "all", "type": "merge", "name": "All", "sources": ["hn"]}
@@ -235,6 +281,16 @@ class AppConfig(BaseModel):
     scrape_creators_key: str | None = Field(
         default=None,
         description="API Key for ScrapeCreators service (required for Instagram/Facebook).",
+    )
+    default_cooldown_minutes: int = Field(
+        default=15,
+        ge=0,
+        le=10080,  # Max 7 days
+        description="Global default cooldown interval in minutes between feed updates.",
+    )
+    base_url: str = Field(
+        default="http://localhost:8000",
+        description="Base URL for generating absolute links in RSS feeds.",
     )
     feeds: list[FeedConfig] = Field(default_factory=list)
 
@@ -258,13 +314,13 @@ class AppConfig(BaseModel):
         feed_ids = {feed.id for feed in self.feeds}
 
         for feed in self.feeds:
-            if feed.type == "merge":
+            if isinstance(feed, MergeFeedConfig):
                 for source_id in feed.sources:
                     if source_id not in feed_ids:
                         raise ValueError(
                             f"Merge feed '{feed.id}' references unknown feed '{source_id}'"
                         )
-            elif feed.type == "digest":
+            elif isinstance(feed, DigestFeedConfig):
                 if feed.source not in feed_ids:
                     raise ValueError(
                         f"Digest feed '{feed.id}' references unknown feed '{feed.source}'"
@@ -276,9 +332,9 @@ class AppConfig(BaseModel):
         """Detect circular dependencies in merge and digest feeds."""
         deps: dict[str, set[str]] = {}
         for feed in self.feeds:
-            if feed.type == "merge":
+            if isinstance(feed, MergeFeedConfig):
                 deps[feed.id] = set(feed.sources)
-            elif feed.type == "digest":
+            elif isinstance(feed, DigestFeedConfig):
                 deps[feed.id] = {feed.source}
             else:
                 deps[feed.id] = set()

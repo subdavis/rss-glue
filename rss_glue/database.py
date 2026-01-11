@@ -1,5 +1,8 @@
 """Database setup and session management."""
-from sqlmodel import SQLModel, Session, create_engine
+
+from sqlmodel import Session, SQLModel, create_engine
+
+from rss_glue.migrations import run_migrations
 
 DATABASE_URL = "sqlite:///rss_glue.db"
 
@@ -8,6 +11,7 @@ engine = create_engine(DATABASE_URL, echo=False)
 
 def create_db_and_tables():
     """Create all database tables."""
+    run_migrations(engine)
     SQLModel.metadata.create_all(engine)
 
 

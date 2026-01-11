@@ -1,4 +1,5 @@
 """Media caching service for downloading and storing embedded media."""
+
 import hashlib
 import mimetypes
 import os
@@ -18,13 +19,9 @@ MEDIA_DIR = Path("media")
 # Patterns to extract media URLs from HTML content
 IMG_PATTERN = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
 VIDEO_PATTERN = re.compile(r'<video[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
-VIDEO_SOURCE_PATTERN = re.compile(
-    r'<source[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE
-)
+VIDEO_SOURCE_PATTERN = re.compile(r'<source[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
 AUDIO_PATTERN = re.compile(r'<audio[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
-AUDIO_SOURCE_PATTERN = re.compile(
-    r'<source[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE
-)
+AUDIO_SOURCE_PATTERN = re.compile(r'<source[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
 
 # Common media extensions for guessing content type
 MEDIA_EXTENSIONS = {
@@ -230,25 +227,23 @@ def cache_media_file(
 def rewrite_content_urls(
     content: str,
     url_mapping: dict[str, str],
-    base_url: str,
 ) -> str:
-    """Rewrite media URLs in HTML content to use local cached versions.
+    """Rewrite media URLs in HTML content to use placeholder format.
 
     Args:
         content: HTML content to rewrite
         url_mapping: Dict mapping original URLs to local paths
-        base_url: Base URL for constructing full URLs to cached media
 
     Returns:
-        HTML content with rewritten URLs
+        HTML content with __BASE_URL__ placeholder URLs
     """
     if not content or not url_mapping:
         return content
 
     result = content
     for original_url, local_path in url_mapping.items():
-        # Construct the full URL to the cached media
-        cached_url = f"{base_url.rstrip('/')}/media/{local_path}"
+        # Use placeholder format that can be dynamically replaced
+        cached_url = f"__BASE_URL__/media/{local_path}"
         # Replace both single and double quoted versions
         result = result.replace(f'"{original_url}"', f'"{cached_url}"')
         result = result.replace(f"'{original_url}'", f"'{cached_url}'")
@@ -259,17 +254,15 @@ def rewrite_content_urls(
 def process_post_media(
     post: Post,
     session: Session,
-    base_url: str,
 ) -> str:
     """Process and cache all media in a post's content.
 
     Args:
         post: Post to process
         session: Database session
-        base_url: Base URL for rewriting content
 
     Returns:
-        Content with rewritten URLs (or original if no caching done)
+        Content with __BASE_URL__ placeholder URLs (or original if no caching done)
     """
     if not post.content:
         return post.content or ""
@@ -282,13 +275,30 @@ def process_post_media(
 
     # Cache each media file and build URL mapping
     url_mapping = {}
-    for url in media_urls:
-        cache_entry = cache_media_file(url, post.feed_id, post.id, session)
-        if cache_entry:
-            url_mapping[url] = cache_entry.local_path
+    if post.id is not None:
+        for url in media_urls:
+            cache_entry = cache_media_file(url, post.feed_id, post.id, session)
+            if cache_entry:
+                url_mapping[url] = cache_entry.local_path
 
-    # Rewrite content with cached URLs
+    # Rewrite content with placeholder URLs
     if url_mapping:
-        return rewrite_content_urls(post.content, url_mapping, base_url)
+        return rewrite_content_urls(post.content, url_mapping)
 
     return post.content
+
+
+def expand_placeholders(content: str, base_url: str) -> str:
+    """Replace placeholders in content with actual values.
+
+    Args:
+        content: Content with __BASE_URL__ placeholders
+        base_url: Base URL to substitute
+
+    Returns:
+        Content with placeholders replaced
+    """
+    if not content:
+        return content
+    
+    return content.replace("__BASE_URL__", base_url.rstrip("/"))

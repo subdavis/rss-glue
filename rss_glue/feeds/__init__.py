@@ -1,9 +1,10 @@
 """Feed handlers for RSS Glue."""
-from rss_glue.feeds.registry import FeedRegistry
-from rss_glue.feeds import rss
-from rss_glue.feeds import merge
-from rss_glue.feeds import digest
-from rss_glue.feeds import hackernews
-from rss_glue.feeds import instagram
-from rss_glue.feeds import facebook
-from rss_glue.feeds import reddit
+
+from rss_glue.feeds import digest as digest
+from rss_glue.feeds import facebook as facebook
+from rss_glue.feeds import hackernews as hackernews
+from rss_glue.feeds import instagram as instagram
+from rss_glue.feeds import merge as merge
+from rss_glue.feeds import reddit as reddit
+from rss_glue.feeds import rss as rss
+from rss_glue.feeds.registry import FeedRegistry as FeedRegistry

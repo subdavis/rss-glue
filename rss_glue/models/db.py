@@ -1,8 +1,9 @@
 """SQLModel database models."""
-from datetime import datetime
+
+from datetime import datetime, timezone
 from typing import Optional
 
-from sqlmodel import SQLModel, Field, Relationship, Column, JSON
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 
 class FeedRelationship(SQLModel, table=True):
@@ -26,8 +27,9 @@ class Feed(SQLModel, table=True):
     config: dict = Field(default_factory=dict, sa_column=Column(JSON))
     limit: int = Field(default=50)
     cache_media: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    cooldown_minutes: Optional[int] = Field(default=None)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = Field(default=None)
 
     posts: list["Post"] = Relationship(
         back_populates="feed",
@@ -56,7 +58,7 @@ class Post(SQLModel, table=True):
     link: str
     author: Optional[str] = None
     published_at: datetime
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     feed: Feed = Relationship(back_populates="posts")
     cached_media: list["MediaCache"] = Relationship(
@@ -72,7 +74,7 @@ class UpdateHistory(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     feed_id: str = Field(foreign_key="feed.id", index=True)
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     status: str = Field(default="running")
     error_message: Optional[str] = None
@@ -92,7 +94,7 @@ class MediaCache(SQLModel, table=True):
     original_url: str = Field(index=True)
     local_path: str
     content_type: Optional[str] = None
-    cached_at: datetime = Field(default_factory=datetime.utcnow)
+    cached_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     feed: Feed = Relationship(back_populates="cached_media")
     post: Post = Relationship(back_populates="cached_media")
@@ -116,7 +118,7 @@ class DigestIssue(SQLModel, table=True):
     feed_id: str = Field(foreign_key="feed.id", index=True)
     period_start: datetime = Field(index=True)
     period_end: datetime = Field(index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     posts: list["DigestIssuePost"] = Relationship(
         back_populates="digest_issue",

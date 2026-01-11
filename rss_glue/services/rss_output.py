@@ -1,12 +1,14 @@
 """RSS XML generation."""
+
 from datetime import datetime, timezone
 
 from feedgen.feed import FeedGenerator
 from sqlmodel import Session, select
 
-from rss_glue.models.db import Feed, Post
-from rss_glue.feeds.merge import MergeFeedHandler
 from rss_glue.feeds.digest import DigestFeedHandler
+from rss_glue.feeds.merge import MergeFeedHandler
+from rss_glue.models.db import Feed, Post
+from rss_glue.services.media_cache import expand_placeholders
 
 
 def format_digest_issue_content(posts: list[Post], base_url: str) -> str:
@@ -17,9 +19,7 @@ def format_digest_issue_content(posts: list[Post], base_url: str) -> str:
     lines = ["<ul>"]
     for post in posts:
         author_str = f" - {post.author}" if post.author else ""
-        lines.append(
-            f'<li><a href="{post.link}">{post.title}</a>{author_str}</li>'
-        )
+        lines.append(f'<li><a href="{post.link}">{post.title}</a>{author_str}</li>')
     lines.append("</ul>")
     return "\n".join(lines)
 
@@ -42,6 +42,8 @@ def generate_rss(feed_id: str, session: Session, base_url: str) -> str:
         issues = DigestFeedHandler.get_digest_issues(feed_id, feed.limit, session)
 
         for issue in issues:
+            if issue.id is None:
+                continue
             posts = DigestFeedHandler.get_issue_posts(issue.id, session)
             entry = fg.add_entry()
 
@@ -74,7 +76,7 @@ def generate_rss(feed_id: str, session: Session, base_url: str) -> str:
             stmt = (
                 select(Post)
                 .where(Post.feed_id == feed_id)
-                .order_by(Post.published_at.desc())
+                .order_by(Post.published_at.desc())  # type: ignore[union-attr]
                 .limit(feed.limit)
             )
             posts = list(session.exec(stmt).all())
@@ -86,7 +88,9 @@ def generate_rss(feed_id: str, session: Session, base_url: str) -> str:
             entry.guid(f"{post.feed_id}:{post.external_id}", permalink=False)
 
             if post.content:
-                entry.description(post.content)
+                # Expand placeholders to full URLs for RSS output
+                content_with_urls = expand_placeholders(post.content, base_url)
+                entry.description(content_with_urls)
 
             if post.author:
                 entry.author(name=post.author)

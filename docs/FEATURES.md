@@ -63,3 +63,22 @@ instagram, facebook, hackernews JSON
 ## Feature: Digest
 
 Implement the digest feature similar to v1 with a cron schedule.
+
+## Feature: Background upgrade worker
+
+Implement a background worker.
+
+* It should sleep until the next scheduled update.
+* next_update should be calculated per-feed and be part of the feed protocol.
+
+Some special considerations:
+
+1. Calculate the next update time per-feed
+1. Sleep until the closest next update time
+1. Wake up
+1. If the feed you're going to update has dependencies, update them first.
+1. Update the feed.
+1. Start over, and sleep to the next closest update time.
+
+* I want this process to be able to run in the background and started by the normal fastapi app.
+* I want to be able to run the web server without this background process in development mode if I choose by setting an environment variable.

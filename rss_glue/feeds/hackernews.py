@@ -1,13 +1,14 @@
 """HackerNews feed handler."""
+
 import asyncio
 import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
-import httpx
 from sqlmodel import Session
 
+from rss_glue.feeds.http_client import create_async_client
 from rss_glue.feeds.registry import FeedRegistry
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class HackerNewsFeedHandler:
 
 async def _fetch_stories(story_type: str, limit: int) -> list[dict]:
     """Async fetch of HN stories."""
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with create_async_client(timeout=30.0) as client:
         # Fetch story IDs
         endpoint = STORY_ENDPOINTS[story_type]
         response = await client.get(f"{HN_API_BASE}{endpoint}")
@@ -62,26 +63,28 @@ async def _fetch_stories(story_type: str, limit: int) -> list[dict]:
                 continue
             if item is None:
                 continue
+            if not isinstance(item, dict):
+                continue
 
-            post = _item_to_post(item)
+            post = await _item_to_post(client, item)
             if post:
                 posts.append(post)
 
         return posts
 
 
-async def _fetch_item(client: httpx.AsyncClient, item_id: int) -> dict | None:
+async def _fetch_item(client, item_id: int) -> dict | None:
     """Fetch a single HN item."""
     try:
         response = await client.get(f"{HN_API_BASE}/item/{item_id}.json")
         response.raise_for_status()
         return response.json()
-    except httpx.HTTPError as e:
+    except Exception as e:
         logger.warning(f"Failed to fetch item {item_id}: {e}")
         return None
 
 
-def _item_to_post(item: dict) -> dict | None:
+async def _item_to_post(client, item: dict) -> dict | None:
     """Convert HN item to post dict."""
     if not item or item.get("deleted") or item.get("dead"):
         return None
@@ -90,12 +93,20 @@ def _item_to_post(item: dict) -> dict | None:
     if not item_id:
         return None
 
+    # Skip non-story items (comments, jobs, etc.)
+    if item.get("type") != "story":
+        return None
+
     # Generate external_id from HN item ID
     external_id = hashlib.sha256(f"hn:{item_id}".encode()).hexdigest()[:16]
 
-    # Parse time (Unix timestamp)
+    # Parse time (Unix timestamp) - use timezone-aware datetime
     timestamp = item.get("time")
-    published_at = datetime.utcfromtimestamp(timestamp) if timestamp else datetime.utcnow()
+    published_at = (
+        datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        if timestamp
+        else datetime.now(timezone.utc)
+    )
 
     # Build content from text or URL
     title = item.get("title", "Untitled")
@@ -118,6 +129,16 @@ def _item_to_post(item: dict) -> dict | None:
     hn_link = f"https://news.ycombinator.com/item?id={item_id}"
     content += f'\n<p><small>{score} points | <a href="{hn_link}">{descendants} comments</a></small></p>'
 
+    # Fetch top comment if available
+    kids = item.get("kids", [])
+    if kids:
+        top_comment = await _fetch_top_comment(client, kids[0])
+        if top_comment:
+            comment_text = top_comment.get("text", "")
+            comment_author = top_comment.get("by", "anonymous")
+            if comment_text:
+                content += f"\n<blockquote><p>{comment_text}</p><cite>— {comment_author}</cite></blockquote>"
+
     return {
         "external_id": external_id,
         "title": title,
@@ -125,4 +146,26 @@ def _item_to_post(item: dict) -> dict | None:
         "link": link,
         "author": item.get("by"),
         "published_at": published_at,
+        "score": score,
     }
+
+
+async def _fetch_top_comment(client, comment_id: int) -> dict | None:
+    """Fetch the top comment for a story."""
+    try:
+        response = await client.get(f"{HN_API_BASE}/item/{comment_id}.json")
+        response.raise_for_status()
+        comment_data = response.json()
+
+        # Only return if not deleted/dead and has text
+        if (
+            comment_data
+            and not comment_data.get("deleted")
+            and not comment_data.get("dead")
+            and comment_data.get("text")
+        ):
+            return comment_data
+        return None
+    except Exception as e:
+        logger.warning(f"Failed to fetch comment {comment_id}: {e}")
+        return None

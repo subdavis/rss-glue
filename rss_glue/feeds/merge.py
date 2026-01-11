@@ -1,10 +1,11 @@
 """Merge feed handler."""
+
 from typing import Any
 
 from sqlmodel import Session, select
 
 from rss_glue.feeds.registry import FeedRegistry
-from rss_glue.models.db import Post, FeedRelationship
+from rss_glue.models.db import FeedRelationship, Post
 
 
 @FeedRegistry.register("merge")
@@ -26,7 +27,7 @@ class MergeFeedHandler:
         stmt = (
             select(FeedRelationship.child_feed_id)
             .where(FeedRelationship.parent_feed_id == feed_id)
-            .order_by(FeedRelationship.position)
+            .order_by(FeedRelationship.position)  # type: ignore[arg-type]
         )
         source_ids = list(session.exec(stmt).all())
 
@@ -36,8 +37,8 @@ class MergeFeedHandler:
         # Query posts from all source feeds
         stmt = (
             select(Post)
-            .where(Post.feed_id.in_(source_ids))
-            .order_by(Post.published_at.desc())
+            .where(Post.feed_id.in_(source_ids))  # type: ignore[union-attr]
+            .order_by(Post.published_at.desc())  # type: ignore[union-attr]
             .limit(limit)
         )
 

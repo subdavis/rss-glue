@@ -1,18 +1,14 @@
 """Digest feed handler - creates periodic rollups based on cron schedule."""
-from datetime import datetime
+
+from datetime import datetime, timezone
 from typing import Any
 
 from croniter import croniter
-from sqlmodel import Session, select, and_
+from sqlmodel import Session, and_, select
 
 from rss_glue.feeds.registry import FeedRegistry
-from rss_glue.models.db import (
-    DigestIssue,
-    DigestIssuePost,
-    Feed,
-    FeedRelationship,
-    Post,
-)
+from rss_glue.models.db import (DigestIssue, DigestIssuePost, Feed,
+                                FeedRelationship, Post)
 
 
 def get_source_feed_id(feed_id: str, session: Session) -> str | None:
@@ -45,12 +41,12 @@ def get_posts_for_period(
         select(Post)
         .where(
             and_(
-                Post.feed_id.in_(source_ids),
+                Post.feed_id.in_(source_ids),  # type: ignore[union-attr]
                 Post.published_at >= period_start,
                 Post.published_at < period_end,
             )
         )
-        .order_by(Post.published_at.desc())
+        .order_by(Post.published_at.desc())  # type: ignore[union-attr]
         .limit(limit)
     )
 
@@ -62,7 +58,7 @@ def _get_all_source_ids(merge_feed_id: str, session: Session) -> list[str]:
     stmt = (
         select(FeedRelationship.child_feed_id)
         .where(FeedRelationship.parent_feed_id == merge_feed_id)
-        .order_by(FeedRelationship.position)
+        .order_by(FeedRelationship.position)  # type: ignore[arg-type]
     )
     child_ids = list(session.exec(stmt).all())
 
@@ -113,7 +109,7 @@ def get_latest_digest_issue(feed_id: str, session: Session) -> DigestIssue | Non
     stmt = (
         select(DigestIssue)
         .where(DigestIssue.feed_id == feed_id)
-        .order_by(DigestIssue.period_end.desc())
+        .order_by(DigestIssue.period_end.desc())  # type: ignore[union-attr]
         .limit(1)
     )
     return session.exec(stmt).first()
@@ -183,7 +179,7 @@ class DigestFeedHandler:
         last_issue_end = latest_issue.period_end if latest_issue else None
 
         # Calculate missing periods
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         missing_periods = calculate_missing_periods(schedule, last_issue_end, now)
 
         # Create digest issues for each missing period
@@ -205,7 +201,7 @@ class DigestFeedHandler:
         stmt = (
             select(DigestIssue)
             .where(DigestIssue.feed_id == feed_id)
-            .order_by(DigestIssue.period_end.desc())
+            .order_by(DigestIssue.period_end.desc())  # type: ignore[union-attr]
             .limit(limit)
         )
         return list(session.exec(stmt).all())
@@ -215,8 +211,8 @@ class DigestFeedHandler:
         """Get posts for a specific digest issue in order."""
         stmt = (
             select(Post)
-            .join(DigestIssuePost, DigestIssuePost.post_id == Post.id)
+            .join(DigestIssuePost, DigestIssuePost.post_id == Post.id)  # type: ignore[arg-type]
             .where(DigestIssuePost.digest_issue_id == issue_id)
-            .order_by(DigestIssuePost.position)
+            .order_by(DigestIssuePost.position)  # type: ignore[arg-type]
         )
         return list(session.exec(stmt).all())

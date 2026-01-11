@@ -1,13 +1,13 @@
 """FastAPI application entry point."""
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from rss_glue.database import create_db_and_tables
-from rss_glue.routers import pages, config, feeds
-
 # Import feeds module to register handlers
 import rss_glue.feeds  # noqa: F401
+from rss_glue.database import create_db_and_tables
+from rss_glue.routers import config, feeds, pages
 
 
 @asynccontextmanager

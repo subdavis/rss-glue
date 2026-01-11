@@ -29,5 +29,26 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "isort>=7.0.0",
+    "poethepoet>=0.40.0",
     "ruff>=0.14.11",
+    "ty>=0.0.11",
 ]
+
+[tool.ty.src]
+exclude = ["v1", "prod.py"]
+
+
+[tool.ruff]
+exclude = ["v1", "prod.py"]
+
+[tool.poe.tasks.validate]
+parallel = ["lint", "type", "format", "sort"]
+
+[tool.poe.tasks]
+dev = "uvicorn rss_glue.main:app --reload"
+test = "pytest"
+lint = "ruff check"
+type = "ty check"
+format = "ruff format"
+sort = "isort ."
