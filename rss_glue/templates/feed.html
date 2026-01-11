@@ -7,9 +7,23 @@
     <strong>Type:</strong> {{ feed.type }} |
     <strong>Limit:</strong> {{ feed.limit }}
 </p>
-<p>
+<div style="display: flex; flex-direction: row; gap: 10px; align-items: center;">
     <a href="/feed/{{ feed.id }}/rss">RSS Feed</a>
-</p>
+
+    <form action="/feed/{{ feed.id }}/update" method="post" style="display:inline">
+        <button type="submit">Update</button>
+    </form>
+
+    <form action="/feed/{{ feed.id }}/reset" method="post" style="display:inline"
+        onsubmit="return confirm('Reset feed? This will delete all posts and media.')">
+        <button type="submit">Reset</button>
+    </form>
+
+</div>
+
+{% if message %}
+<p><strong>{{ message }}</strong></p>
+{% endif %}
 
 <hr>
 
@@ -19,7 +33,10 @@
 <article>
     <h4><a href="{{ post.link }}">{{ post.title }}</a></h4>
     <p>
-        <strong>Published:</strong> {{ post.published_at.strftime('%Y-%m-%d %H:%M') }}
+        <strong>Published:</strong>
+        <span data-utc-time="{{ post.published_at.isoformat() }}" data-format="relative">
+            {{ post.published_at.strftime('%Y-%m-%d %H:%M') }} UTC
+        </span>
         {% if post.author %}| <strong>Author:</strong> {{ post.author }}{% endif %}
     </p>
     {% if post.content %}

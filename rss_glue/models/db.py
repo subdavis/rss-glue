@@ -1,9 +1,27 @@
 """SQLModel database models."""
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
+from sqlalchemy import TypeDecorator, DateTime
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+
+
+class UTCDateTime(TypeDecorator):
+    """SQLAlchemy type that ensures datetimes are timezone-aware (UTC).
+
+    SQLite doesn't preserve timezone info, so naive datetimes from the DB
+    are assumed to be UTC and converted to timezone-aware.
+    """
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_result_value(self, value: Optional[datetime], dialect: Any) -> Optional[datetime]:
+        """Add UTC timezone to naive datetimes loaded from the database."""
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
 
 
 class FeedRelationship(SQLModel, table=True):
@@ -28,8 +46,14 @@ class Feed(SQLModel, table=True):
     limit: int = Field(default=50)
     cache_media: bool = Field(default=False)
     cooldown_minutes: Optional[int] = Field(default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(UTCDateTime, nullable=False)
+    )
+    updated_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(UTCDateTime, nullable=True)
+    )
 
     posts: list["Post"] = Relationship(
         back_populates="feed",
@@ -57,8 +81,11 @@ class Post(SQLModel, table=True):
     content: Optional[str] = None
     link: str
     author: Optional[str] = None
-    published_at: datetime
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    published_at: datetime = Field(sa_column=Column(UTCDateTime, nullable=False))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(UTCDateTime, nullable=False)
+    )
 
     feed: Feed = Relationship(back_populates="posts")
     cached_media: list["MediaCache"] = Relationship(
@@ -74,8 +101,14 @@ class UpdateHistory(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     feed_id: str = Field(foreign_key="feed.id", index=True)
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    completed_at: Optional[datetime] = None
+    started_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(UTCDateTime, nullable=False)
+    )
+    completed_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(UTCDateTime, nullable=True)
+    )
     status: str = Field(default="running")
     error_message: Optional[str] = None
     posts_added: int = Field(default=0)
@@ -94,7 +127,10 @@ class MediaCache(SQLModel, table=True):
     original_url: str = Field(index=True)
     local_path: str
     content_type: Optional[str] = None
-    cached_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    cached_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(UTCDateTime, nullable=False)
+    )
 
     feed: Feed = Relationship(back_populates="cached_media")
     post: Post = Relationship(back_populates="cached_media")
@@ -116,9 +152,12 @@ class DigestIssue(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     feed_id: str = Field(foreign_key="feed.id", index=True)
-    period_start: datetime = Field(index=True)
-    period_end: datetime = Field(index=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    period_start: datetime = Field(sa_column=Column(UTCDateTime, index=True, nullable=False))
+    period_end: datetime = Field(sa_column=Column(UTCDateTime, index=True, nullable=False))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(UTCDateTime, nullable=False)
+    )
 
     posts: list["DigestIssuePost"] = Relationship(
         back_populates="digest_issue",

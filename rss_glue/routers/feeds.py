@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select, func
 
@@ -47,21 +47,20 @@ def trigger_update_feed(
     force: bool = False,
     session: Session = Depends(get_session),
 ):
-    """Update a specific feed."""
+    """Update a specific feed and redirect to HTML preview."""
     try:
         result = update_feed(feed_id, session, force)
         if result:
-            return {
-                "feed_id": result.feed_id,
-                "status": result.status,
-                "posts_added": result.posts_added,
-                "error": result.error_message,
-            }
+            if result.status == "success":
+                msg = f"Updated: {result.posts_added} posts added"
+            else:
+                msg = f"Update failed: {result.error_message}"
         else:
-            return {
-                "feed_id": feed_id,
-                "status": "skipped",
-            }
+            msg = "Skipped: feed is on cooldown"
+        return RedirectResponse(
+            url=f"/feed/{feed_id}/html?message={msg}",
+            status_code=303,
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -71,18 +70,14 @@ def reset_feed_endpoint(
     feed_id: str,
     session: Session = Depends(get_session),
 ):
-    """Reset a feed to its initial state.
-
-    Removes posts, media cache, update history, and physical media files.
-    For derivative feeds (merge/digest), does not affect source feeds.
-    """
+    """Reset a feed to its initial state and redirect to HTML preview."""
     try:
         counts = reset_feed(feed_id, session)
-        return {
-            "feed_id": feed_id,
-            "status": "reset",
-            **counts,
-        }
+        msg = f"Reset: {counts['posts_deleted']} posts, {counts['files_deleted']} files deleted"
+        return RedirectResponse(
+            url=f"/feed/{feed_id}/html?message={msg}",
+            status_code=303,
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -106,6 +101,7 @@ def get_feed_rss(
 def get_feed_html(
     feed_id: str,
     request: Request,
+    message: str | None = None,
     session: Session = Depends(get_session),
 ):
     """Get HTML preview for a feed."""
@@ -161,7 +157,8 @@ def get_feed_html(
             post.content = expand_placeholders(post.content, base_url)
 
     return templates.TemplateResponse(
-        "feed.html", {"request": request, "feed": feed, "posts": posts}
+        "feed.html",
+        {"request": request, "feed": feed, "posts": posts, "message": message},
     )
 
 

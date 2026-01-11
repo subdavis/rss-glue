@@ -1,6 +1,7 @@
 """HTML page routes."""
 
 import json
+import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
@@ -10,6 +11,7 @@ from sqlmodel import Session, select, func
 from rss_glue.database import get_session
 from rss_glue.models.db import Feed, MediaCache, Post
 from rss_glue.services.config_sync import get_current_config
+from rss_glue.services.background_worker import calculate_next_update
 
 router = APIRouter()
 
@@ -21,8 +23,29 @@ templates = Jinja2Templates(directory=str(templates_dir))
 def index(request: Request, session: Session = Depends(get_session)):
     """List all feeds."""
     feeds = list(session.exec(select(Feed)).all())
+
+    # Calculate next update time for each feed
+    feed_schedules = []
+    for feed in feeds:
+        next_update = calculate_next_update(feed, session)
+        feed_schedules.append({
+            "feed": feed,
+            "next_update": next_update,
+        })
+
+    # Check if worker is enabled
+    worker_enabled = os.getenv("ENABLE_BACKGROUND_WORKER", "").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+
     return templates.TemplateResponse(
-        "index.html", {"request": request, "feeds": feeds}
+        "index.html", {
+            "request": request,
+            "feed_schedules": feed_schedules,
+            "worker_enabled": worker_enabled,
+        }
     )
 
 

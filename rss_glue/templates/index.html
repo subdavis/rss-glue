@@ -3,37 +3,48 @@
 {% block content %}
 <h2>Configured Feeds</h2>
 
-<p>Showing {{ feeds|length }} feed(s)</p>
+<p>
+    Showing {{ feed_schedules|length }} feed(s)
+    {% if worker_enabled %}
+    | <strong>Background Worker: ENABLED</strong>
+    {% else %}
+    | Background Worker: Disabled
+    {% endif %}
+</p>
 
-{% if feeds %}
+{% if feed_schedules %}
 <table border="1">
     <tr>
-        <th>ID</th>
         <th>Name</th>
         <th>Type</th>
         <th>Limit</th>
-        <th>Updated</th>
-        <th>Actions</th>
+        <th>Last Updated</th>
+        <th>Next Update</th>
     </tr>
-    {% for feed in feeds %}
+    {% for item in feed_schedules %}
     <tr>
         <td>
-            {{ feed.id }}
-            | <a href="/feed/{{ feed.id }}/rss">rss</a>
-            | <a href="/feed/{{ feed.id }}/html">html</a>
+            <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
         </td>
-        <td>{{ feed.name }}</td>
-        <td>{{ feed.type }}</td>
-        <td>{{ feed.limit }}</td>
-        <td>{{ feed.updated_at.strftime('%Y-%m-%d %H:%M') if feed.updated_at else 'Never' }}</td>
+        <td>{{ item.feed.type }}</td>
+        <td>{{ item.feed.limit }}</td>
         <td>
-            <form action="/feed/{{ feed.id }}/update" method="post" style="display:inline">
-                <button type="submit">Update</button>
-            </form>
-            <form action="/feed/{{ feed.id }}/reset" method="post" style="display:inline"
-                onsubmit="return confirm('Reset feed? This will delete all posts and media.')">
-                <button type="submit">Reset</button>
-            </form>
+            {% if item.feed.updated_at %}
+            <span data-utc-time="{{ item.feed.updated_at.isoformat() }}" data-format="relative">
+                {{ item.feed.updated_at.strftime('%Y-%m-%d %H:%M') }} UTC
+            </span>
+            {% else %}
+            Never
+            {% endif %}
+        </td>
+        <td>
+            {% if item.next_update %}
+            <span data-utc-time="{{ item.next_update.isoformat() }}" data-format="datetime">
+                {{ item.next_update.strftime('%Y-%m-%d %H:%M') }} UTC
+            </span>
+            {% else %}
+            Manual
+            {% endif %}
         </td>
     </tr>
     {% endfor %}

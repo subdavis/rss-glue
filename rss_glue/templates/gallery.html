@@ -27,7 +27,9 @@
         <img src="{{ item.media_url }}" alt="Image from {{ item.feed.name }}" loading="lazy">
         <div style="font-size: small; margin-top: 5px;">
             <strong>{{ item.feed.name }}</strong><br>
-            {{ item.post.published_at.strftime('%Y-%m-%d %H:%M') }}
+            <span data-utc-time="{{ item.post.published_at.isoformat() }}" data-format="relative">
+                {{ item.post.published_at.strftime('%Y-%m-%d %H:%M') }} UTC
+            </span>
         </div>
     </div>
     {% endfor %}

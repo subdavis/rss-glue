@@ -22,7 +22,11 @@
         <td>
             <a href="/feed/{{ feed.id }}/html">{{ feed.id }}</a>
         </td>
-        <td>{{ history.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td>
+            <span data-utc-time="{{ history.started_at.isoformat() }}" data-format="datetime">
+                {{ history.started_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC
+            </span>
+        </td>
         <td>
             {% if history.completed_at %}
             {% set duration = (history.completed_at - history.started_at).total_seconds() %}

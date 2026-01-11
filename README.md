@@ -77,6 +77,68 @@ The server runs at http://localhost:8000
 }
 ```
 
+## Background Worker
+
+RSS Glue can automatically update feeds using a background worker.
+
+### Enabling the Worker
+
+```bash
+ENABLE_BACKGROUND_WORKER=true uv run uvicorn rss_glue.main:app
+```
+
+Or with poe:
+```bash
+ENABLE_BACKGROUND_WORKER=true poe dev
+```
+
+### How It Works
+
+- **Regular feeds**: Update based on `cooldown_minutes`
+  - Set to 0 or omit for manual-only
+  - Example: `"cooldown_minutes": 60` updates hourly
+
+- **Digest feeds**: Update based on cron `schedule`
+  - Example: `"schedule": "0 0 * * 0"` runs weekly
+
+- **Dependencies**: Source feeds update before merge/digest feeds
+  - Worker updates dependencies even if not individually due
+  - Ensures fresh data for merged/digest outputs
+
+### Configuration Examples
+
+Per-feed cooldown:
+```json
+{
+  "feeds": [
+    {
+      "id": "hn",
+      "type": "rss",
+      "url": "https://news.ycombinator.com/rss",
+      "cooldown_minutes": 30
+    }
+  ]
+}
+```
+
+Global default cooldown:
+```json
+{
+  "default_cooldown_minutes": 60,
+  "feeds": [...]
+}
+```
+
+Manual-only feed:
+```json
+{
+  "id": "manual-feed",
+  "type": "rss",
+  "url": "...",
+  "cooldown_minutes": 0
+}
+```
+
 ## Feed Types
 
 ### rss - RSS/Atom feeds
@@ -237,6 +299,7 @@ Create periodic digest issues from a source feed.
 | Field | Default | Description |
 |-------|---------|-------------|
 | `cache_media` | false | Cache embedded media from all feeds |
+| `default_cooldown_minutes` | 15 | Default cooldown for automatic updates (used when feed doesn't specify) |
 
 ## Media Caching
 
