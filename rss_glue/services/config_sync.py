@@ -154,6 +154,7 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
             db_feed.limit = feed_config.limit
             db_feed.cache_media = cache_media
             db_feed.cooldown_minutes = cooldown_minutes
+            db_feed.enabled = feed_config.enabled
             db_feed.config = config_dict
             db_feed.updated_at = datetime.now(timezone.utc)
 
@@ -168,6 +169,7 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
                 limit=feed_config.limit,
                 cache_media=cache_media,
                 cooldown_minutes=cooldown_minutes,
+                enabled=feed_config.enabled,
                 config=config_dict,
                 updated_at=None,  # Will be set when first updated
             )
@@ -244,6 +246,7 @@ def get_current_config(session: Session) -> dict:
             "type": feed.type,
             "name": feed.name,
             "limit": feed.limit,
+            "enabled": feed.enabled,
         }
 
         # Restore explicit cache_media setting

@@ -15,23 +15,56 @@
 {% if feed_schedules %}
 <table border="1">
     <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Limit</th>
-        <th>Last Updated</th>
-        <th>Next Update</th>
+        <th>
+            <a href="/?sort_by=name&sort_order={% if sort_by == 'name' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                Name{% if sort_by == 'name' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>
+            <a href="/?sort_by=type&sort_order={% if sort_by == 'type' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                Type{% if sort_by == 'type' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>
+            <a href="/?sort_by=limit&sort_order={% if sort_by == 'limit' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                Limit{% if sort_by == 'limit' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>
+            <a href="/?sort_by=status&sort_order={% if sort_by == 'status' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                Status{% if sort_by == 'status' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>
+            <a href="/?sort_by=updated_at&sort_order={% if sort_by == 'updated_at' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                Last Updated{% if sort_by == 'updated_at' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
+        <th>
+            <a href="/?sort_by=next_update&sort_order={% if sort_by == 'next_update' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
+                Next Update{% if sort_by == 'next_update' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+            </a>
+        </th>
     </tr>
     {% for item in feed_schedules %}
-    <tr>
+    {% set is_overdue = item.feed.enabled and item.next_update and item.next_update < now %}
+    <tr{% if is_overdue %} style="background-color: lightyellow;"{% endif %}>
         <td>
             <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
         </td>
         <td>{{ item.feed.type }}</td>
         <td>{{ item.feed.limit }}</td>
         <td>
+            {% if item.feed.enabled %}
+            <span style="color: green;">Enabled</span>
+            {% else %}
+            <span style="color: red;">Disabled</span>
+            {% endif %}
+        </td>
+        <td>
             {% if item.feed.updated_at %}
-            <span data-utc-time="{{ item.feed.updated_at.isoformat() }}" data-format="relative">
-                {{ item.feed.updated_at.strftime('%Y-%m-%d %H:%M') }} UTC
+            <span data-utc-time="{{ item.feed.updated_at.isoformat() }}" data-format="relative" title="{{ item.feed.updated_at | localtime('tooltip') }}">
+                {{ item.feed.updated_at | localtime("relative") }}
             </span>
             {% else %}
             Never
@@ -39,8 +72,8 @@
         </td>
         <td>
             {% if item.next_update %}
-            <span data-utc-time="{{ item.next_update.isoformat() }}" data-format="datetime">
-                {{ item.next_update.strftime('%Y-%m-%d %H:%M') }} UTC
+            <span data-utc-time="{{ item.next_update.isoformat() }}" data-format="datetime" title="{{ item.next_update | localtime('tooltip') }}">
+                {{ item.next_update | localtime("relative") }}
             </span>
             {% else %}
             Manual

@@ -82,3 +82,15 @@ Some special considerations:
 
 * I want this process to be able to run in the background and started by the normal fastapi app.
 * I want to be able to run the web server without this background process in development mode if I choose by setting an environment variable.
+
+## Authentication
+
+Needs username and password auth.
+
+Anonymous users should not have access to the configuraiton page or the ability to trigger mutations like update and reset.
+
+Otherwise, anon users can access feeds, gallery, and everything else.
+
+If the users table is empty, special case where the user is prompted to make an account on first login.  
+
+Hash and salt the password in the standard way.

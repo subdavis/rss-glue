@@ -6,7 +6,7 @@ from typing import Any
 from croniter import croniter
 from sqlmodel import Session, and_, select
 
-from rss_glue.feeds.registry import FeedRegistry
+from rss_glue.feeds.registry import FeedRegistry, PostDict
 from rss_glue.models.db import (DigestIssue, DigestIssuePost, Feed,
                                 FeedRelationship, Post)
 
@@ -151,6 +151,19 @@ def create_digest_issue(
     return issue
 
 
+def format_digest_issue_content(posts: list[Post], base_url: str) -> str:
+    """Generate HTML content for a digest issue containing links to posts."""
+    if not posts:
+        return "<p>No posts in this digest period.</p>"
+
+    lines = ["<ul>"]
+    for post in posts:
+        author_str = f" - {post.author}" if post.author else ""
+        lines.append(f'<li><a href="{post.link}">{post.title}</a>{author_str}</li>')
+    lines.append("</ul>")
+    return "\n".join(lines)
+
+
 @FeedRegistry.register("digest")
 class DigestFeedHandler:
     """Handler for digest feeds - creates periodic rollups of source feed posts."""
@@ -190,24 +203,104 @@ class DigestFeedHandler:
             )
             issues_created += 1
 
-        # Return empty list - digest items are served via get_digest_issues()
+        # Return empty list - digest items are served via get_posts()
         return []
 
     @staticmethod
-    def get_digest_issues(
-        feed_id: str, limit: int, session: Session
-    ) -> list[DigestIssue]:
-        """Get digest issues for RSS output, most recent first."""
+    def next_update(feed: Feed, session: Session) -> datetime | None:
+        """Calculate when the next digest issue should be created.
+
+        Returns the end time of the next period that will be due.
+        This may be in the past if issues are overdue.
+        Returns None if no schedule is configured.
+        """
+        schedule = feed.config.get("schedule")
+        if not schedule:
+            return None  # Manual-only
+
+        try:
+            # Get the latest digest issue to find where we left off
+            latest_issue = get_latest_digest_issue(feed.id, session)
+
+            if latest_issue is None:
+                # No previous issues - calculate from one period ago
+                now = datetime.now(timezone.utc)
+                cron = croniter(schedule, now)
+                cron.get_prev(datetime)  # Go back one period
+                start_time = cron.get_prev(datetime)  # And one more to get start
+                cron = croniter(schedule, start_time)
+                # Next update is the end of this first period
+                cron.get_next(datetime)  # Skip past start
+                next_time = cron.get_next(datetime)
+            else:
+                # Start from the last issue end time
+                cron = croniter(schedule, latest_issue.period_end)
+                next_time = cron.get_next(datetime)
+
+            # Ensure timezone-aware
+            if next_time.tzinfo is None:
+                next_time = next_time.replace(tzinfo=timezone.utc)
+            return next_time
+        except (ValueError, KeyError):
+            return None  # Invalid cron schedule
+
+    @staticmethod
+    def reset(feed_id: str, session: Session) -> dict[str, int]:
+        """Delete digest issues (cascades to DigestIssuePost)."""
+        digest_issues = list(
+            session.exec(select(DigestIssue).where(DigestIssue.feed_id == feed_id)).all()
+        )
+        for issue in digest_issues:
+            session.delete(issue)
+
+        return {"digest_issues_deleted": len(digest_issues)}
+
+    @staticmethod
+    def get_posts(
+        feed_id: str, limit: int, session: Session, base_url: str = ""
+    ) -> list[PostDict]:
+        """Get digest issues formatted as posts for RSS/HTML output."""
+        # Get feed name for titles
+        feed = session.get(Feed, feed_id)
+        feed_name = feed.name if feed else feed_id
+
+        # Get digest issues
         stmt = (
             select(DigestIssue)
             .where(DigestIssue.feed_id == feed_id)
             .order_by(DigestIssue.period_end.desc())  # type: ignore[union-attr]
             .limit(limit)
         )
-        return list(session.exec(stmt).all())
+        issues = list(session.exec(stmt).all())
+
+        result: list[PostDict] = []
+        for issue in issues:
+            if issue.id is None:
+                continue
+
+            # Get posts for this issue
+            issue_posts = DigestFeedHandler._get_issue_posts(issue.id, session)
+            content = format_digest_issue_content(issue_posts, base_url)
+
+            # Format the title with date range
+            start_str = issue.period_start.strftime("%b %d")
+            end_str = issue.period_end.strftime("%b %d, %Y")
+
+            result.append(
+                PostDict(
+                    id=f"digest:{feed_id}:{issue.id}",
+                    title=f"{feed_name}: {start_str} - {end_str}",
+                    link=f"{base_url}feed/{feed_id}/rss",
+                    published_at=issue.period_end,
+                    content=content,
+                    author="System",
+                )
+            )
+
+        return result
 
     @staticmethod
-    def get_issue_posts(issue_id: int, session: Session) -> list[Post]:
+    def _get_issue_posts(issue_id: int, session: Session) -> list[Post]:
         """Get posts for a specific digest issue in order."""
         stmt = (
             select(Post)

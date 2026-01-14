@@ -9,7 +9,7 @@ from typing import Any
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_client
-from rss_glue.feeds.registry import FeedRegistry
+from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 from rss_glue.models.db import SystemConfig
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ SCRAPE_API_BASE = "https://api.scrapecreators.com/v2/instagram/user/posts"
 
 
 @FeedRegistry.register("instagram")
-class InstagramFeedHandler:
+class InstagramFeedHandler(BaseFeedHandler):
     """Handler for Instagram feeds using ScrapeCreators API."""
 
     @staticmethod

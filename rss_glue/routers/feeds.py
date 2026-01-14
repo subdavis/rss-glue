@@ -1,31 +1,29 @@
 """Feed and update routes."""
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
-from fastapi.templating import Jinja2Templates
 from sqlmodel import Session, select, func
 
 from rss_glue.database import get_session
-from rss_glue.models.db import Feed, Post, UpdateHistory
+from rss_glue.models.db import Feed, UpdateHistory
+from rss_glue.models.user import User
+from rss_glue.services.auth import require_auth
 from rss_glue.services.config_sync import get_current_config
 from rss_glue.services.media_cache import MEDIA_DIR, expand_placeholders
 from rss_glue.services.rss_output import generate_rss
 from rss_glue.services.update import reset_feed, update_all_feeds, update_feed
+from rss_glue.templates import templates
 
 router = APIRouter()
-
-templates_dir = Path(__file__).parent.parent / "templates"
-templates = Jinja2Templates(directory=str(templates_dir))
 
 
 @router.post("/update")
 def trigger_update_all(
     force: bool = False,
     session: Session = Depends(get_session),
+    user: User = Depends(require_auth),
 ):
-    """Update all feeds in topological order."""
+    """Update all feeds in topological order. Requires authentication."""
     results = update_all_feeds(session, force)
     return {
         "updated": len(results),
@@ -46,9 +44,14 @@ def trigger_update_feed(
     feed_id: str,
     force: bool = False,
     session: Session = Depends(get_session),
+    user: User = Depends(require_auth),
 ):
-    """Update a specific feed and redirect to HTML preview."""
+    """Update a specific feed and redirect to HTML preview. Requires authentication."""
     try:
+        feed = session.get(Feed, feed_id)
+        if not feed:
+            raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
+
         result = update_feed(feed_id, session, force)
         if result:
             if result.status == "success":
@@ -56,7 +59,11 @@ def trigger_update_feed(
             else:
                 msg = f"Update failed: {result.error_message}"
         else:
-            msg = "Skipped: feed is on cooldown"
+            # Feed was skipped - check why
+            if not feed.enabled:
+                msg = "Skipped: feed is disabled"
+            else:
+                msg = "Skipped: feed is on cooldown"
         return RedirectResponse(
             url=f"/feed/{feed_id}/html?message={msg}",
             status_code=303,
@@ -69,8 +76,9 @@ def trigger_update_feed(
 def reset_feed_endpoint(
     feed_id: str,
     session: Session = Depends(get_session),
+    user: User = Depends(require_auth),
 ):
-    """Reset a feed to its initial state and redirect to HTML preview."""
+    """Reset a feed to its initial state and redirect to HTML preview. Requires authentication."""
     try:
         counts = reset_feed(feed_id, session)
         msg = f"Reset: {counts['posts_deleted']} posts, {counts['files_deleted']} files deleted"
@@ -80,6 +88,29 @@ def reset_feed_endpoint(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/feed/{feed_id}/toggle")
+def toggle_feed_endpoint(
+    feed_id: str,
+    session: Session = Depends(get_session),
+    user: User = Depends(require_auth),
+):
+    """Toggle the enabled state of a feed and redirect to HTML preview. Requires authentication."""
+    feed = session.get(Feed, feed_id)
+    if not feed:
+        raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
+
+    feed.enabled = not feed.enabled
+    session.add(feed)
+    session.commit()
+
+    status = "enabled" if feed.enabled else "disabled"
+    msg = f"Feed {status}"
+    return RedirectResponse(
+        url=f"/feed/{feed_id}/html?message={msg}",
+        status_code=303,
+    )
 
 
 @router.get("/feed/{feed_id}/rss")
@@ -109,52 +140,19 @@ def get_feed_html(
     if not feed:
         raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
 
-    from rss_glue.feeds.digest import DigestFeedHandler
-    from rss_glue.feeds.merge import MergeFeedHandler
-    from rss_glue.services.rss_output import format_digest_issue_content
+    from rss_glue.feeds.registry import FeedRegistry
 
-    posts = []
-    if feed.type == "merge":
-        posts = MergeFeedHandler.get_merged_posts(feed_id, feed.limit, session)
-    elif feed.type == "digest":
-        issues = DigestFeedHandler.get_digest_issues(feed_id, feed.limit, session)
-        config = get_current_config(session)
-        base_url = config["base_url"]
-
-        # Convert issues to post-like objects for template
-        for issue in issues:
-            if issue.id is None:
-                continue
-            issue_posts = DigestFeedHandler.get_issue_posts(issue.id, session)
-            content = format_digest_issue_content(issue_posts, base_url)
-
-            start_str = issue.period_start.strftime("%b %d")
-            end_str = issue.period_end.strftime("%b %d, %Y")
-
-            posts.append(
-                {
-                    "title": f"{feed.name}: {start_str} - {end_str}",
-                    "link": f"{base_url}feed/{feed_id}/rss",
-                    "published_at": issue.period_end,
-                    "content": content,
-                    "author": "System",
-                }
-            )
-    else:
-        posts = list(
-            session.exec(
-                select(Post)
-                .where(Post.feed_id == feed_id)
-                .order_by(Post.published_at.desc())  # type: ignore[union-attr]
-            ).all()
-        )
-
-    # Expand placeholders in post content for web display
     config = get_current_config(session)
     base_url = config["base_url"]
+
+    # Get handler and fetch posts using the standardized get_posts method
+    handler = FeedRegistry.get_handler(feed.type)
+    posts = handler.get_posts(feed_id, feed.limit, session, base_url)
+
+    # Expand placeholders in post content for web display
     for post in posts:
-        if hasattr(post, "content") and post.content:
-            post.content = expand_placeholders(post.content, base_url)
+        if post.get("content"):
+            post["content"] = expand_placeholders(post["content"], base_url)
 
     return templates.TemplateResponse(
         "feed.html",

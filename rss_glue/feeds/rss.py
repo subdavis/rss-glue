@@ -7,11 +7,11 @@ from typing import Any
 import feedparser
 from sqlmodel import Session
 
-from rss_glue.feeds.registry import FeedRegistry
+from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 
 
 @FeedRegistry.register("rss")
-class RssFeedHandler:
+class RssFeedHandler(BaseFeedHandler):
     """Handler for RSS/Atom feeds."""
 
     @staticmethod

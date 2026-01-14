@@ -7,11 +7,11 @@ from typing import Any
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_client
-from rss_glue.feeds.registry import FeedRegistry
+from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 
 
 @FeedRegistry.register("reddit")
-class RedditFeedHandler:
+class RedditFeedHandler(BaseFeedHandler):
     """Handler for Reddit feeds using their JSON API."""
 
     @staticmethod

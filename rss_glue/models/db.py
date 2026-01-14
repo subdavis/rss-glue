@@ -46,6 +46,7 @@ class Feed(SQLModel, table=True):
     limit: int = Field(default=50)
     cache_media: bool = Field(default=False)
     cooldown_minutes: Optional[int] = Field(default=None)
+    enabled: bool = Field(default=True)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(UTCDateTime, nullable=False)

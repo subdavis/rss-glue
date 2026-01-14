@@ -14,6 +14,8 @@ dependencies = [
     "croniter>=2.0.0",
     "httpx>=0.26.0",
     "feedgen>=1.0.0",
+    "argon2-cffi>=23.0.0",
+    "itsdangerous>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -47,6 +49,9 @@ parallel = ["lint", "type", "format", "sort"]
 
 [tool.poe.tasks]
 dev = "uvicorn rss_glue.main:app --reload"
+devworker = "ENABLE_BACKGROUND_WORKER=true uvicorn rss_glue.main:app --reload"
+worker = "python -m rss_glue.worker"
+reset-password = "python -m rss_glue.scripts.reset_password"
 test = "pytest"
 lint = "ruff check"
 type = "ty check"

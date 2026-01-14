@@ -16,6 +16,23 @@ RSS feed aggregator and merger built with FastAPI, SQLModel, and Jinja2.
 - Python 3.11+
 - [uv](https://github.com/astral-sh/uv)
 
+## Configuration
+
+### Display Timezone
+
+By default, all times in the UI are displayed in America/New_York timezone. You can customize this by setting the `DISPLAY_TIMEZONE` environment variable to any valid IANA timezone identifier:
+
+```bash
+# Run with custom timezone
+DISPLAY_TIMEZONE=Europe/London uv run uvicorn rss_glue.main:app --reload
+
+# Or set it permanently in your environment
+export DISPLAY_TIMEZONE=America/Los_Angeles
+uv run uvicorn rss_glue.main:app --reload
+```
+
+Times are always stored in UTC in the database and converted to your display timezone only when shown in the web interface.
+
 ## Setup
 
 ```bash
@@ -81,7 +98,27 @@ The server runs at http://localhost:8000
 
 RSS Glue can automatically update feeds using a background worker.
 
-### Enabling the Worker
+### Running the Standalone Worker
+
+To run **only** the background worker without the web server:
+
+```bash
+poe worker
+```
+
+Or directly:
+```bash
+uv run python -m rss_glue.worker
+```
+
+This is useful for:
+- Running the worker as a separate service
+- Deploying worker and web server independently
+- Lower resource usage when the web UI isn't needed
+
+### Running Worker with Web Server
+
+To run the worker alongside the web server:
 
 ```bash
 ENABLE_BACKGROUND_WORKER=true uv run uvicorn rss_glue.main:app
@@ -89,7 +126,7 @@ ENABLE_BACKGROUND_WORKER=true uv run uvicorn rss_glue.main:app
 
 Or with poe:
 ```bash
-ENABLE_BACKGROUND_WORKER=true poe dev
+poe devworker
 ```
 
 ### How It Works

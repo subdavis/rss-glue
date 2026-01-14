@@ -1,22 +1,21 @@
 """Config API routes."""
 
 import json
-from pathlib import Path
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from sqlmodel import Session
 
 from rss_glue.database import get_session
 from rss_glue.models.config import AppConfig
-from rss_glue.services.config_sync import sync_config_to_db
+from rss_glue.models.user import User
+from rss_glue.services.auth import require_auth
+from rss_glue.services.config_sync import get_current_config, sync_config_to_db
+from rss_glue.templates import templates
 
 router = APIRouter()
-
-templates_dir = Path(__file__).parent.parent / "templates"
-templates = Jinja2Templates(directory=str(templates_dir))
 
 
 @router.post("")
@@ -28,6 +27,7 @@ def save_config(
     default_cooldown_minutes: int = Form(15),
     base_url: str = Form("http://localhost:8000"),
     session: Session = Depends(get_session),
+    user: User = Depends(require_auth),
 ):
     """Save config and sync to database."""
     if scrape_creators_key == "":
@@ -69,6 +69,8 @@ def save_config(
                 "config": config_context,
                 "feeds_json": feeds_json,
                 "error": f"Invalid JSON in feeds: {e}",
+                "message": None,
+                "password_error": None,
             },
             status_code=400,
         )
@@ -92,6 +94,59 @@ def save_config(
                 "config": config_context,
                 "feeds_json": feeds_json,
                 "error": str(e),
+                "message": None,
+                "password_error": None,
             },
             status_code=400,
         )
+
+
+@router.post("/password")
+def update_password(
+    request: Request,
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    session: Session = Depends(get_session),
+    user: User = Depends(require_auth),
+):
+    """Update the current user's password."""
+    config = get_current_config(session)
+    feeds_json = json.dumps(config["feeds"], indent=2)
+
+    # Helper to return error response
+    def error_response(error: str):
+        return templates.TemplateResponse(
+            "config.html",
+            {
+                "request": request,
+                "config": config,
+                "feeds_json": feeds_json,
+                "error": None,
+                "message": None,
+                "password_error": error,
+            },
+            status_code=400,
+        )
+
+    # Verify current password
+    if not user.verify_password(current_password):
+        return error_response("Current password is incorrect")
+
+    # Validate new password
+    if len(new_password) < 8:
+        return error_response("New password must be at least 8 characters")
+
+    if new_password != confirm_password:
+        return error_response("New passwords do not match")
+
+    # Update password
+    user.password_hash = User.hash_password(new_password)
+    session.add(user)
+    session.commit()
+
+    # Redirect back to config with success message
+    return RedirectResponse(
+        url=f"/config?{urlencode({'message': 'Password updated successfully'})}",
+        status_code=303,
+    )

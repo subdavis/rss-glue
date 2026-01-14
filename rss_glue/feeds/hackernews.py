@@ -9,7 +9,7 @@ from typing import Any
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_async_client
-from rss_glue.feeds.registry import FeedRegistry
+from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ STORY_ENDPOINTS = {
 
 
 @FeedRegistry.register("hackernews")
-class HackerNewsFeedHandler:
+class HackerNewsFeedHandler(BaseFeedHandler):
     """Handler for HackerNews feeds."""
 
     @staticmethod

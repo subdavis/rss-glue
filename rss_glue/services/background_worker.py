@@ -3,13 +3,13 @@
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from croniter import croniter
 from sqlmodel import Session, select
 
 from rss_glue.database import engine
+from rss_glue.feeds.registry import FeedRegistry
 from rss_glue.models.db import Feed, FeedRelationship
 from rss_glue.services.update import topological_sort_feeds, update_feed
 
@@ -20,50 +20,14 @@ _worker_task: Optional[asyncio.Task] = None
 _shutdown_event: Optional[asyncio.Event] = None
 
 
-def calculate_next_update(feed: Feed, session: Session) -> Optional[datetime]:
-    """Calculate when feed should next update. Returns None for manual-only feeds."""
-    # Merge feeds always update (no cooldown)
-    if feed.type == "merge":
-        return datetime.now(timezone.utc)
-
-    # Digest feeds use cron schedule
-    if feed.type == "digest":
-        schedule = feed.config.get("schedule")
-        if not schedule:
-            return None  # Manual-only
-
-        try:
-            # If never updated, calculate from one period ago
-            if feed.updated_at is None:
-                base_time = datetime.now(timezone.utc)
-                cron = croniter(schedule, base_time)
-                cron.get_prev(datetime)  # Go back one period
-                start_time = cron.get_prev(datetime)  # And one more to get start
-                cron = croniter(schedule, start_time)
-            else:
-                cron = croniter(schedule, feed.updated_at)
-
-            next_time = cron.get_next(datetime)
-            # Ensure timezone-aware
-            if next_time.tzinfo is None:
-                next_time = next_time.replace(tzinfo=timezone.utc)
-            return next_time
-        except (ValueError, KeyError) as e:
-            logger.warning(f"Invalid cron schedule for feed {feed.id}: {e}")
-            return None  # Manual-only if invalid
-
-    # Regular feeds use cooldown_minutes
-    if feed.cooldown_minutes is None or feed.cooldown_minutes <= 0:
-        return None  # Manual-only
-
-    if feed.updated_at is None:
-        # Never updated - schedule immediately
-        return datetime.now(timezone.utc)
-
-    # Calculate next update from last update time
-    from datetime import timedelta
-
-    return feed.updated_at + timedelta(minutes=feed.cooldown_minutes)
+def get_next_update(feed: Feed, session: Session) -> Optional[datetime]:
+    """Get next update time for a feed using its handler."""
+    try:
+        handler = FeedRegistry.get_handler(feed.type)
+        return handler.next_update(feed, session)
+    except ValueError:
+        # Unknown feed type
+        return None
 
 
 def get_feed_dependencies(feed_id: str, session: Session) -> list[str]:
@@ -89,6 +53,8 @@ def get_feeds_to_update(session: Session) -> list[str]:
     """Get feeds to update (due + dependencies) in topological order.
 
     Returns list of feed IDs to update, in dependency order.
+    Note: update_feed() will skip disabled feeds, so dependencies may include
+    disabled feeds that will be skipped during actual update.
     """
     now = datetime.now(timezone.utc)
     feeds_to_update = set()
@@ -96,11 +62,17 @@ def get_feeds_to_update(session: Session) -> list[str]:
     # Find all feeds that are due for update
     all_feeds = session.exec(select(Feed)).all()
     for feed in all_feeds:
-        next_update = calculate_next_update(feed, session)
-        if next_update and next_update <= now:
+        # Skip disabled feeds for scheduling purposes
+        # (we don't want to initiate updates for disabled feeds)
+        if not feed.enabled:
+            continue
+
+        next_update = get_next_update(feed, session)
+        if next_update and next_update <= (now + timedelta(seconds=1)):
             # This feed is due - add it and all its dependencies
             feeds_to_update.add(feed.id)
             dependencies = get_feed_dependencies(feed.id, session)
+            # Add all dependencies; update_feed() will skip disabled ones
             feeds_to_update.update(dependencies)
 
     if not feeds_to_update:
@@ -122,7 +94,11 @@ def calculate_next_wake_time(session: Session) -> Optional[datetime]:
     next_times = []
 
     for feed in all_feeds:
-        next_update = calculate_next_update(feed, session)
+        # Skip disabled feeds
+        if not feed.enabled:
+            continue
+
+        next_update = get_next_update(feed, session)
         if next_update:
             next_times.append(next_update)
 
@@ -148,6 +124,7 @@ async def run_update_cycle(shutdown_event: asyncio.Event) -> int:
                     break
 
                 try:
+                    # update_feed() will skip disabled feeds
                     history = update_feed(feed_id, session, force=True)
                     if history:
                         updated_count += 1
@@ -159,6 +136,9 @@ async def run_update_cycle(shutdown_event: asyncio.Event) -> int:
                             logger.error(
                                 f"Feed {feed_id} update failed: {history.error_message}"
                             )
+                    else:
+                        # Feed was skipped (disabled or not due)
+                        logger.debug(f"Skipped feed {feed_id}")
                 except ValueError as e:
                     # Feed not found (deleted while worker running)
                     logger.warning(f"Feed {feed_id} not found: {e}")
@@ -204,6 +184,8 @@ async def background_worker_loop(shutdown_event: asyncio.Event):
 
             # Sleep until next wake or shutdown
             try:
+                # Note that this does not run as expected when the machine is asleep: this sleep happens
+                # in python (userland), not the kernel.
                 await asyncio.wait_for(
                     shutdown_event.wait(), timeout=sleep_seconds
                 )

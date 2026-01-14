@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Setup - RSS Glue{% endblock %}
+{% block content %}
+<h2>Create Admin Account</h2>
+
+<p>Welcome to RSS Glue! Create your admin account to get started.</p>
+
+{% if error %}
+<p><strong>Error:</strong> {{ error }}</p>
+{% endif %}
+
+<form method="post" action="/auth/setup">
+    <p>
+        <label>
+            Username:<br>
+            <input type="text" name="username" required autofocus minlength="3">
+        </label>
+    </p>
+
+    <p>
+        <label>
+            Password:<br>
+            <input type="password" name="password" required minlength="8">
+        </label>
+        <br>
+        <small>Must be at least 8 characters</small>
+    </p>
+
+    <p>
+        <label>
+            Confirm Password:<br>
+            <input type="password" name="password_confirm" required minlength="8">
+        </label>
+    </p>
+
+    <p>
+        <button type="submit">Create Account</button>
+    </p>
+</form>
+{% endblock %}

@@ -1,0 +1,5 @@
+{% macro render(base_url, current_page, total_pages, has_prev, has_next, prev_page, next_page) %}
+{% if has_next %}
+<p><a href="{{ base_url }}?page={{ next_page }}">more</a></p>
+{% endif %}
+{% endmacro %}

@@ -8,14 +8,12 @@ from sqlmodel import Session, select
 
 from rss_glue.feeds.registry import FeedRegistry
 from rss_glue.models.db import (
-    DigestIssue,
     Feed,
     FeedRelationship,
     MediaCache,
     Post,
     UpdateHistory,
 )
-from rss_glue.services.cooldown import should_update_feed
 from rss_glue.services.media_cache import process_post_media
 
 
@@ -76,10 +74,16 @@ def update_feed(
     if not feed:
         raise ValueError(f"Feed not found: {feed_id}")
 
-    # Check cooldown before updating
-    should_update, next_update_time, reason = should_update_feed(feed, force)
-    if not should_update:
+    # Skip disabled feeds
+    if not feed.enabled:
         return None
+
+    # Check if update is due (skip if not forced and next_update is in the future)
+    if not force:
+        handler = FeedRegistry.get_handler(feed.type)
+        next_update = handler.next_update(feed, session)
+        if next_update is not None and datetime.now(timezone.utc) < next_update:
+            return None
 
     # Create update history record
     history = UpdateHistory(feed_id=feed_id)
@@ -186,8 +190,6 @@ def reset_feed(
     """Reset a feed to its initial state.
 
     Removes all posts, media cache, update history, and physical media files.
-    For merge feeds: only clears history (doesn't own posts).
-    For digest feeds: clears digest issues but not source posts.
 
     Args:
         feed_id: ID of the feed to reset
@@ -205,41 +207,14 @@ def reset_feed(
     if not feed:
         raise ValueError(f"Feed not found: {feed_id}")
 
-    counts = {
-        "posts_deleted": 0,
-        "media_deleted": 0,
-        "history_deleted": 0,
-        "digest_issues_deleted": 0,
-        "files_deleted": 0,
-    }
-
     # Get media cache entries before deleting (for file cleanup)
     media_entries = list(
         session.exec(select(MediaCache).where(MediaCache.feed_id == feed_id)).all()
     )
 
-    if feed.type == "merge":
-        # Merge feeds don't own posts, only clear history
-        pass
-
-    elif feed.type == "digest":
-        # Delete digest issues (cascades to DigestIssuePost)
-        digest_issues = list(
-            session.exec(
-                select(DigestIssue).where(DigestIssue.feed_id == feed_id)
-            ).all()
-        )
-        for issue in digest_issues:
-            session.delete(issue)
-        counts["digest_issues_deleted"] = len(digest_issues)
-
-    else:
-        # Regular feeds: delete posts (cascades to MediaCache via relationship)
-        posts = list(session.exec(select(Post).where(Post.feed_id == feed_id)).all())
-        for post in posts:
-            session.delete(post)
-        counts["posts_deleted"] = len(posts)
-        counts["media_deleted"] = len(media_entries)
+    # Use handler to reset feed-specific data (posts, digest issues, etc.)
+    handler = FeedRegistry.get_handler(feed.type)
+    counts = handler.reset(feed_id, session)
 
     # Delete update history for all feed types
     history_entries = list(
@@ -257,17 +232,19 @@ def reset_feed(
     session.commit()
 
     # Delete physical media files
+    files_deleted = 0
     for media in media_entries:
         file_path = MEDIA_DIR / media.local_path
         if file_path.exists():
             try:
                 file_path.unlink()
-                counts["files_deleted"] += 1
+                files_deleted += 1
                 # Try to remove empty parent directory
                 parent = file_path.parent
                 if parent.exists() and not any(parent.iterdir()):
                     parent.rmdir()
             except OSError:
                 pass  # Ignore file deletion errors
+    counts["files_deleted"] = files_deleted
 
     return counts

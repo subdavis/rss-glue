@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "pagination.html" import render as render_pagination %}
 {% block title %}Update History - RSS Glue{% endblock %}
 {% block content %}
 <h2>Update History</h2>
@@ -23,8 +24,8 @@
             <a href="/feed/{{ feed.id }}/html">{{ feed.id }}</a>
         </td>
         <td>
-            <span data-utc-time="{{ history.started_at.isoformat() }}" data-format="datetime">
-                {{ history.started_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC
+            <span data-utc-time="{{ history.started_at.isoformat() }}" data-format="datetime" title="{{ history.started_at | localtime('tooltip') }}">
+                {{ history.started_at | localtime }}
             </span>
         </td>
         <td>
@@ -56,78 +57,10 @@
     {% endfor %}
 </table>
 
-<!-- Pagination -->
-{% if total_pages > 1 %}
-<div style="margin: 20px 0; text-align: center;">
-    <p>Page {{ current_page }} of {{ total_pages }}</p>
-
-    <div style="margin: 10px 0;">
-        {% if has_prev %}
-        <a href="/update-history?page={{ prev_page }}"
-            style="margin: 0 5px; padding: 5px 10px; background-color: #007bff; color: white; text-decoration: none; border-radius: 3px;">←
-            Previous</a>
-        {% else %}
-        <span style="margin: 0 5px; padding: 5px 10px; background-color: #6c757d; color: white; border-radius: 3px;">←
-            Previous</span>
-        {% endif %}
-
-        {% if current_page > 2 %}
-        <a href="/update-history?page=1"
-            style="margin: 0 2px; padding: 5px 8px; background-color: #f8f9fa; color: #007bff; text-decoration: none; border: 1px solid #dee2e6; border-radius: 3px;">1</a>
-        {% if current_page > 3 %}
-        <span style="margin: 0 2px;">...</span>
-        {% endif %}
-        {% endif %}
-
-        {% if has_prev %}
-        <a href="/update-history?page={{ prev_page }}"
-            style="margin: 0 2px; padding: 5px 8px; background-color: #f8f9fa; color: #007bff; text-decoration: none; border: 1px solid #dee2e6; border-radius: 3px;">{{
-            prev_page }}</a>
-        {% endif %}
-
-        <span
-            style="margin: 0 2px; padding: 5px 8px; background-color: #007bff; color: white; border: 1px solid #007bff; border-radius: 3px;"><strong>{{
-                current_page }}</strong></span>
-
-        {% if has_next %}
-        <a href="/update-history?page={{ next_page }}"
-            style="margin: 0 2px; padding: 5px 8px; background-color: #f8f9fa; color: #007bff; text-decoration: none; border: 1px solid #dee2e6; border-radius: 3px;">{{
-            next_page }}</a>
-        {% endif %}
-
-        {% if current_page < total_pages - 1 %} {% if current_page < total_pages - 2 %} <span style="margin: 0 2px;">
-            ...</span>
-            {% endif %}
-            <a href="/update-history?page={{ total_pages }}"
-                style="margin: 0 2px; padding: 5px 8px; background-color: #f8f9fa; color: #007bff; text-decoration: none; border: 1px solid #dee2e6; border-radius: 3px;">{{
-                total_pages }}</a>
-            {% endif %}
-
-            {% if has_next %}
-            <a href="/update-history?page={{ next_page }}"
-                style="margin: 0 5px; padding: 5px 10px; background-color: #007bff; color: white; text-decoration: none; border-radius: 3px;">Next
-                →</a>
-            {% else %}
-            <span
-                style="margin: 0 5px; padding: 5px 10px; background-color: #6c757d; color: white; border-radius: 3px;">Next
-                →</span>
-            {% endif %}
-    </div>
-
-    <form method="get" style="margin-top: 10px;">
-        <label for="page">Go to page:</label>
-        <input type="number" name="page" id="page" value="{{ current_page }}" min="1" max="{{ total_pages }}"
-            style="width: 60px; padding: 2px;">
-        <button type="submit" style="padding: 2px 8px;">Go</button>
-    </form>
-</div>
-{% endif %}
+{{ render_pagination("/update-history", current_page, total_pages, has_prev, has_next, prev_page, next_page) }}
 
 {% else %}
 <p>No update history found. <a href="/update">Run an update</a> to see history here.</p>
 {% endif %}
-
-<hr>
-<p><a href="/">← Back to Feeds</a></p>
 
 {% endblock %}

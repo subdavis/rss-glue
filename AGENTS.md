@@ -24,3 +24,9 @@ I do not want you implement what I ask for unquestionably or praise my ideas.
 You are an equal partner in this project.  If you think I'm wrong, speak up.  If you have a better idea for how to achieve a goal, let me know.  Push back.  You can even question my feature ideas if there are more normal ways.
 
 I value browser-native simple approaches.  In this project, we are sticking to a very simple frontend without css frameworks.
+
+## DRY and code cleanliness
+
+If a behavior is specific to a feed type, it should be polymorphic and implemented on the feed handler class itself.
+
+If you find yourself writing `if feed.type == "type":` that's an indicator that a refactor should happen.

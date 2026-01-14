@@ -5,39 +5,14 @@ from typing import Annotated, Literal, Union
 from croniter import croniter
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-
-class RssFeedConfig(BaseModel):
-    """Configuration for an RSS source feed.
-
-    Example:
-        {
-            "id": "hackernews",
-            "type": "rss",
-            "name": "Hacker News",
-            "url": "https://news.ycombinator.com/rss",
-            "limit": 50,
-            "cache_media": true
-        }
-    """
-
-    id: str = Field(..., min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
+from rss_glue.models.feed_config import FeedConfigBase
+class RssFeedConfig(FeedConfigBase):
+    """Configuration for an RSS source feed."""
     type: Literal["rss"]
-    name: str = Field(..., min_length=1)
     url: str = Field(..., pattern=r"^https?://")
-    limit: int = Field(default=50, ge=1, le=1000)
-    cache_media: bool | None = Field(
-        default=None,
-        description="Cache embedded media. None = use global setting.",
-    )
-    cooldown_minutes: int | None = Field(
-        default=None,
-        ge=0,
-        le=10080,
-        description="Cooldown interval in minutes. None = use global setting.",
-    )
 
 
-class MergeFeedConfig(BaseModel):
+class MergeFeedConfig(FeedConfigBase):
     """Configuration for a merge feed that combines multiple sources.
 
     Example:
@@ -49,25 +24,11 @@ class MergeFeedConfig(BaseModel):
             "limit": 100
         }
     """
-
-    id: str = Field(..., min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
     type: Literal["merge"]
-    name: str = Field(..., min_length=1)
     sources: list[str] = Field(..., min_length=1)
-    limit: int = Field(default=100, ge=1, le=1000)
-    cache_media: bool | None = Field(
-        default=None,
-        description="Cache embedded media. None = use global setting.",
-    )
-    cooldown_minutes: int | None = Field(
-        default=None,
-        ge=0,
-        le=10080,
-        description="Cooldown interval in minutes. None = use global setting.",
-    )
 
 
-class DigestFeedConfig(BaseModel):
+class DigestFeedConfig(FeedConfigBase):
     """Configuration for a digest feed that creates periodic rollups.
 
     Example:
@@ -80,27 +41,9 @@ class DigestFeedConfig(BaseModel):
             "limit": 20
         }
     """
-
-    id: str = Field(..., min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
     type: Literal["digest"]
-    name: str = Field(..., min_length=1)
     source: str = Field(..., min_length=1, description="Single source feed ID")
-    schedule: str = Field(
-        ...,
-        min_length=1,
-        description="Cron expression like '0 0 * * 0' (weekly Sunday midnight)",
-    )
-    limit: int = Field(default=20, ge=1, le=1000, description="Posts per digest")
-    cache_media: bool | None = Field(
-        default=None,
-        description="Cache embedded media. None = use global setting.",
-    )
-    cooldown_minutes: int | None = Field(
-        default=None,
-        ge=0,
-        le=10080,
-        description="Cooldown interval in minutes. None = use global setting.",
-    )
+    schedule: str = Field(..., min_length=1, description="Cron expression like '0 0 * * 0' (weekly Sunday midnight)")
 
     @field_validator("schedule")
     @classmethod
@@ -111,7 +54,7 @@ class DigestFeedConfig(BaseModel):
         return v
 
 
-class HackerNewsFeedConfig(BaseModel):
+class HackerNewsFeedConfig(FeedConfigBase):
     """Configuration for a HackerNews feed.
 
     Example:
@@ -124,24 +67,11 @@ class HackerNewsFeedConfig(BaseModel):
         }
     """
 
-    id: str = Field(..., min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
     type: Literal["hackernews"]
-    name: str = Field(..., min_length=1)
     story_type: Literal["top", "new", "best"] = Field(default="top")
-    limit: int = Field(default=30, ge=1, le=500)
-    cache_media: bool | None = Field(
-        default=None,
-        description="Cache embedded media. None = use global setting.",
-    )
-    cooldown_minutes: int | None = Field(
-        default=None,
-        ge=0,
-        le=10080,
-        description="Cooldown interval in minutes. None = use global setting.",
-    )
 
 
-class InstagramFeedConfig(BaseModel):
+class InstagramFeedConfig(FeedConfigBase):
     """Configuration for an Instagram feed.
 
     Uses ScrapeCreators API.
@@ -157,26 +87,11 @@ class InstagramFeedConfig(BaseModel):
         }
     """
 
-    id: str = Field(..., min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
     type: Literal["instagram"]
-    name: str = Field(..., min_length=1)
-    username: str = Field(
-        ..., min_length=1, description="Instagram username (without @)"
-    )
-    limit: int = Field(default=20, ge=1, le=100)
-    cache_media: bool | None = Field(
-        default=None,
-        description="Cache embedded media. None = use global setting.",
-    )
-    cooldown_minutes: int | None = Field(
-        default=None,
-        ge=0,
-        le=10080,
-        description="Cooldown interval in minutes. None = use global setting.",
-    )
+    username: str = Field(..., min_length=1, description="Instagram username (without @)")
 
 
-class FacebookFeedConfig(BaseModel):
+class FacebookFeedConfig(FeedConfigBase):
     """Configuration for a Facebook page/group feed.
 
     Uses ScrapeCreators API.
@@ -192,24 +107,11 @@ class FacebookFeedConfig(BaseModel):
         }
     """
 
-    id: str = Field(..., min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
     type: Literal["facebook"]
-    name: str = Field(..., min_length=1)
     url: str = Field(..., min_length=1, description="Facebook Page or Group URL")
-    limit: int = Field(default=20, ge=1, le=100)
-    cache_media: bool | None = Field(
-        default=None,
-        description="Cache embedded media. None = use global setting.",
-    )
-    cooldown_minutes: int | None = Field(
-        default=None,
-        ge=0,
-        le=10080,
-        description="Cooldown interval in minutes. None = use global setting.",
-    )
 
 
-class RedditFeedConfig(BaseModel):
+class RedditFeedConfig(FeedConfigBase):
     """Configuration for a Reddit feed.
 
     Example:
@@ -224,24 +126,11 @@ class RedditFeedConfig(BaseModel):
         }
     """
 
-    id: str = Field(..., min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
     type: Literal["reddit"]
-    name: str = Field(..., min_length=1)
     subreddit: str = Field(..., min_length=1)
     listing_type: Literal["hot", "new", "top", "rising"] = Field(default="top")
     time_filter: Literal["hour", "day", "week", "month", "year", "all"] | None = Field(
         default="day", description="Only used for 'top' listing"
-    )
-    limit: int = Field(default=20, ge=1, le=100)
-    cache_media: bool | None = Field(
-        default=None,
-        description="Cache embedded media. None = use global setting.",
-    )
-    cooldown_minutes: int | None = Field(
-        default=None,
-        ge=0,
-        le=10080,
-        description="Cooldown interval in minutes. None = use global setting.",
     )
 
 
