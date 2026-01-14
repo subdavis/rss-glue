@@ -1,0 +1,17 @@
+{# Instagram post content template #}
+{% if caption_text %}<p>{{ caption_text }}</p>{% endif %}
+
+{% for img_url in carousel_images %}
+<p><img src="{{ img_url }}" /></p>
+{% endfor %}
+
+{% if is_video %}
+<p><a href="{{ link }}">Watch Video</a></p>
+{% if video_poster %}<p><img src="{{ video_poster }}" alt="Video thumbnail" /></p>{% endif %}
+{% elif single_image %}
+<p><img src="{{ single_image }}" /></p>
+{% endif %}
+
+<p><small>❤️ {{ "{:,}".format(like_count) }} likes | 💬 {{ "{:,}".format(comment_count) }} comments</small></p>
+
+{% if music_info %}<p><small>🎵 {{ music_info }}</small></p>{% endif %}

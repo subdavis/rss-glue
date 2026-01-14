@@ -6,10 +6,12 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
+from markupsafe import Markup
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_async_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
+from rss_glue.templates import templates
 
 logger = logging.getLogger(__name__)
 
@@ -111,33 +113,44 @@ async def _item_to_post(client, item: dict) -> dict | None:
     # Build content from text or URL
     title = item.get("title", "Untitled")
     url = item.get("url")
-    text = item.get("text", "")
+    text = item.get("text", "")  # Already HTML from HN API
 
     # For stories with URL, link to external; for Ask HN etc, link to HN
     if url:
         link = url
-        content = f'<p><a href="{url}">{title}</a></p>'
-        if text:
-            content += f"\n{text}"
     else:
         link = f"https://news.ycombinator.com/item?id={item_id}"
-        content = text if text else f'<p><a href="{link}">{title}</a></p>'
 
-    # Add metadata
+    # Metadata
     score = item.get("score", 0)
     descendants = item.get("descendants", 0)
     hn_link = f"https://news.ycombinator.com/item?id={item_id}"
-    content += f'\n<p><small>{score} points | <a href="{hn_link}">{descendants} comments</a></small></p>'
 
     # Fetch top comment if available
+    top_comment = None
     kids = item.get("kids", [])
     if kids:
-        top_comment = await _fetch_top_comment(client, kids[0])
-        if top_comment:
-            comment_text = top_comment.get("text", "")
-            comment_author = top_comment.get("by", "anonymous")
+        comment_data = await _fetch_top_comment(client, kids[0])
+        if comment_data:
+            comment_text = comment_data.get("text", "")
+            comment_author = comment_data.get("by", "anonymous")
             if comment_text:
-                content += f"\n<blockquote><p>{comment_text}</p><cite>— {comment_author}</cite></blockquote>"
+                top_comment = {
+                    "text": Markup(comment_text),  # Already HTML from HN API
+                    "author": comment_author,
+                }
+
+    # Render content using Jinja template
+    content_template = templates.env.get_template("feeds/hackernews.html")
+    content = content_template.render(
+        title=title,
+        url=url,
+        text=Markup(text) if text else None,  # Already HTML from HN API
+        hn_link=hn_link,
+        score=score,
+        descendants=descendants,
+        top_comment=top_comment,
+    )
 
     return {
         "external_id": external_id,

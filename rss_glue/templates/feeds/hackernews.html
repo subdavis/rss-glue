@@ -1,0 +1,18 @@
+{# HackerNews story content template #}
+{% if url %}
+<p><a href="{{ url }}">{{ title }}</a></p>
+{% if text %}{{ text }}{% endif %}
+{% elif text %}
+{{ text }}
+{% else %}
+<p><a href="{{ hn_link }}">{{ title }}</a></p>
+{% endif %}
+
+<p><small>{{ score }} points | <a href="{{ hn_link }}">{{ descendants }} comments</a></small></p>
+
+{% if top_comment %}
+<blockquote>
+{{ top_comment.text }}
+<cite>— {{ top_comment.author }}</cite>
+</blockquote>
+{% endif %}

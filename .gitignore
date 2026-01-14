@@ -166,3 +166,6 @@ docker-downloads/
 /static/
 
 config.json
+rss_glue.db
+etc/
+media/

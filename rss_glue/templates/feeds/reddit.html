@@ -1,0 +1,31 @@
+{# Reddit post content template #}
+{% if post_hint == "image" %}
+<p><img src="{{ url }}" alt="image" /></p>
+
+{% elif post_hint == "rich:video" %}
+{% if oembed_html %}
+{{ oembed_html | safe }}
+{% elif oembed_thumbnail %}
+<p><img src="{{ oembed_thumbnail }}" alt="video thumbnail" /></p>
+<p><a href="{{ url }}">Watch Video</a></p>
+{% else %}
+<p><a href="{{ url }}">Watch Video</a></p>
+{% endif %}
+
+{% elif post_hint == "hosted:video" %}
+{% if video_fallback_url %}
+<p><video controls src="{{ video_fallback_url }}"></video></p>
+{% else %}
+<p><a href="{{ url }}">Watch Video</a></p>
+{% endif %}
+
+{% elif post_hint == "link" %}
+<p><a href="{{ url }}">{{ url }}</a></p>
+
+{% elif url and url != post_link %}
+<p><a href="{{ url }}">{{ url }}</a></p>
+{% endif %}
+
+{% if selftext_html %}{{ selftext_html | safe }}{% endif %}
+
+<p><small>⬆️ {{ "{:,}".format(score) }} points | 💬 {{ "{:,}".format(num_comments) }} comments</small></p>

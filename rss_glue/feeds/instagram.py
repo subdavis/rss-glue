@@ -1,16 +1,17 @@
 """Instagram feed handler using ScrapeCreators API."""
 
 import hashlib
-import html
 import logging
 from datetime import datetime, timezone
 from typing import Any
 
+from markupsafe import Markup
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 from rss_glue.models.db import SystemConfig
+from rss_glue.templates import templates
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +96,6 @@ class InstagramFeedHandler(BaseFeedHandler):
                 caption_text.split("\n")[0][:100] if caption_text else "Instagram Post"
             )
 
-            # Content generation - escape HTML in caption
-            content = f"<p>{html.escape(caption_text)}</p>" if caption_text else ""
-
             # Engagement metrics
             like_count = item.get("like_count", 0)
             comment_count = item.get("comment_count", 0)
@@ -110,13 +108,16 @@ class InstagramFeedHandler(BaseFeedHandler):
                         music_title = music_asset_info.get("title")
                         artist = music_asset_info.get("display_artist")
                         if music_title and artist:
-                            music_info = (
-                                f"{html.escape(music_title)} - {html.escape(artist)}"
-                            )
+                            music_info = Markup("{} - {}").format(music_title, artist)
                         elif music_title:
-                            music_info = html.escape(music_title)
+                            music_info = Markup("{}").format(music_title)
 
-            # Images/Video
+            # Images/Video - collect data for template
+            carousel_images = []
+            is_video = False
+            video_poster = None
+            single_image = None
+
             if carousel_media := item.get("carousel_media"):
                 for media in carousel_media:
                     if image_versions := media.get("image_versions2", {}).get(
@@ -124,28 +125,28 @@ class InstagramFeedHandler(BaseFeedHandler):
                     ):
                         img_url = image_versions[0].get("url")
                         if img_url:
-                            content += f'<p><img src="{img_url}" /></p>'
+                            carousel_images.append(img_url)
             elif item.get("media_type") == 2 and item.get("video_versions"):
                 # Video - add poster image
-                poster_url = ""
+                is_video = True
                 if image_versions := item.get("image_versions2", {}).get("candidates"):
-                    poster_url = image_versions[0].get("url")
-                content += f'<p><a href="{link}">Watch Video</a></p>'
-                if poster_url:
-                    content += (
-                        f'<p><img src="{poster_url}" alt="Video thumbnail" /></p>'
-                    )
+                    video_poster = image_versions[0].get("url")
             elif image_versions := item.get("image_versions2", {}).get("candidates"):
-                img_url = image_versions[0].get("url")
-                if img_url:
-                    content += f'<p><img src="{img_url}" /></p>'
+                single_image = image_versions[0].get("url")
 
-            # Add engagement metrics to content
-            content += f"<p><small>❤️ {like_count:,} likes | 💬 {comment_count:,} comments</small></p>"
-
-            # Add music info if present
-            if music_info:
-                content += f"<p><small>🎵 {music_info}</small></p>"
+            # Render content using Jinja template
+            content_template = templates.env.get_template("feeds/instagram.html")
+            content = content_template.render(
+                caption_text=caption_text,
+                carousel_images=carousel_images,
+                is_video=is_video,
+                video_poster=video_poster,
+                single_image=single_image,
+                link=link,
+                like_count=like_count,
+                comment_count=comment_count,
+                music_info=music_info,
+            )
 
             # Author
             user = item.get("user", {})

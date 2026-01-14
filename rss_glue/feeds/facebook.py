@@ -1,7 +1,6 @@
 """Facebook feed handler using ScrapeCreators API."""
 
 import hashlib
-import html
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -11,6 +10,7 @@ from sqlmodel import Session
 from rss_glue.feeds.http_client import create_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 from rss_glue.models.db import SystemConfig
+from rss_glue.templates import templates
 
 logger = logging.getLogger(__name__)
 
@@ -113,33 +113,29 @@ class FacebookFeedHandler(BaseFeedHandler):
             comment_count = item.get("commentCount", 0)
             video_view_count = item.get("videoViewCount")
 
-            # Content Generation - escape HTML
-            content = f"<p>{html.escape(text)}</p>" if text else ""
-
             # Images
             images = item.get("images", [])
             if not images and item.get("image"):
                 images = [item.get("image")]
 
-            for img_url in images:
-                if img_url:
-                    content += f'<p><img src="{img_url}" /></p>'
-
             # Video
-            if video_details := item.get("videoDetails"):
-                thumb = video_details.get("thumbnailUrl") or item.get("image")
-                content += f'<p><a href="{post_url}">Watch Video</a></p>'
-                if thumb:
-                    content += f'<p><img src="{thumb}" alt="Video thumbnail" /></p>'
+            video_details = item.get("videoDetails")
+            video_thumbnail = None
+            if video_details:
+                video_thumbnail = video_details.get("thumbnailUrl") or item.get("image")
 
-            # Add engagement metrics to content
-            engagement_parts = [
-                f"👍 {reaction_count:,} reactions",
-                f"💬 {comment_count:,} comments",
-            ]
-            if video_view_count is not None:
-                engagement_parts.append(f"👁 {video_view_count:,} views")
-            content += f"<p><small>{' | '.join(engagement_parts)}</small></p>"
+            # Render content using Jinja template
+            content_template = templates.env.get_template("feeds/facebook.html")
+            content = content_template.render(
+                text=text,
+                images=images,
+                video_details=video_details,
+                video_thumbnail=video_thumbnail,
+                post_url=post_url,
+                reaction_count=reaction_count,
+                comment_count=comment_count,
+                video_view_count=video_view_count,
+            )
 
             posts.append(
                 {

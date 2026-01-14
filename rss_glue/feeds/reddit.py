@@ -4,10 +4,12 @@ import html
 from datetime import datetime, timezone
 from typing import Any
 
+from markupsafe import Markup
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
+from rss_glue.templates import templates
 
 
 @FeedRegistry.register("reddit")
@@ -57,56 +59,42 @@ class RedditFeedHandler(BaseFeedHandler):
             permalink = item.get("permalink")
             post_link = f"https://www.reddit.com{permalink}" if permalink else url_val
 
-            content_parts = []
-
-            # Handle different post types based on post_hint
-            if post_hint == "image":
-                content_parts.append(f'<p><img src="{url_val}" alt="image" /></p>')
-            elif post_hint == "rich:video":
-                # Handle oembed for rich videos (from v1)
-                oembed = item.get("media", {}).get("oembed")
-                if oembed:
-                    oembed_html = oembed.get("html", "")
-                    if oembed_html:
-                        content_parts.append(html.unescape(oembed_html))
-                    elif oembed.get("thumbnail_url"):
-                        content_parts.append(
-                            f'<p><img src="{oembed.get("thumbnail_url")}" alt="video thumbnail" /></p>'
-                        )
-                        content_parts.append(
-                            f'<p><a href="{url_val}">Watch Video</a></p>'
-                        )
+            # Extract oembed data for rich videos
+            oembed = item.get("media", {}).get("oembed")
+            oembed_html = None
+            oembed_thumbnail = None
+            if oembed:
+                raw_oembed_html = oembed.get("html", "")
+                if raw_oembed_html:
+                    oembed_html = Markup(html.unescape(raw_oembed_html))
                 else:
-                    content_parts.append(f'<p><a href="{url_val}">Watch Video</a></p>')
-            elif post_hint == "hosted:video":
-                # Handle hosted videos with fallback URL (from v1)
-                fallback_url = (
-                    item.get("media", {}).get("reddit_video", {}).get("fallback_url")
-                )
-                if fallback_url:
-                    content_parts.append(
-                        f'<p><video controls src="{fallback_url}"></video></p>'
-                    )
-                else:
-                    content_parts.append(f'<p><a href="{url_val}">Watch Video</a></p>')
-            elif post_hint == "link":
-                content_parts.append(f'<p><a href="{url_val}">{url_val}</a></p>')
-            elif url_val and url_val != post_link:
-                # External link
-                content_parts.append(f'<p><a href="{url_val}">{url_val}</a></p>')
+                    oembed_thumbnail = oembed.get("thumbnail_url")
 
-            # Add selftext if present
-            if selftext_html:
-                decoded_html = html.unescape(selftext_html)
-                content_parts.append(decoded_html)
-
-            # Add score and metadata
-            num_comments = item.get("num_comments", 0)
-            content_parts.append(
-                f"<p><small>⬆️ {score:,} points | 💬 {num_comments:,} comments</small></p>"
+            # Extract hosted video fallback URL
+            video_fallback_url = (
+                item.get("media", {}).get("reddit_video", {}).get("fallback_url")
             )
 
-            content = "\n".join(content_parts)
+            # Decode selftext HTML
+            decoded_selftext = None
+            if selftext_html:
+                decoded_selftext = Markup(html.unescape(selftext_html))
+
+            num_comments = item.get("num_comments", 0)
+
+            # Render content using Jinja template
+            content_template = templates.env.get_template("feeds/reddit.html")
+            content = content_template.render(
+                post_hint=post_hint,
+                url=url_val,
+                post_link=post_link,
+                oembed_html=oembed_html,
+                oembed_thumbnail=oembed_thumbnail,
+                video_fallback_url=video_fallback_url,
+                selftext_html=decoded_selftext,
+                score=score,
+                num_comments=num_comments,
+            )
 
             author = item.get("author", "unknown")
 

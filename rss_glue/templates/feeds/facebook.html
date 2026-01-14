@@ -1,0 +1,13 @@
+{# Facebook post content template #}
+{% if text %}<p>{{ text }}</p>{% endif %}
+
+{% for img_url in images %}
+{% if img_url %}<p><img src="{{ img_url }}" /></p>{% endif %}
+{% endfor %}
+
+{% if video_details %}
+<p><a href="{{ post_url }}">Watch Video</a></p>
+{% if video_thumbnail %}<p><img src="{{ video_thumbnail }}" alt="Video thumbnail" /></p>{% endif %}
+{% endif %}
+
+<p><small>👍 {{ "{:,}".format(reaction_count) }} reactions | 💬 {{ "{:,}".format(comment_count) }} comments{% if video_view_count is not none %} | 👁 {{ "{:,}".format(video_view_count) }} views{% endif %}</small></p>
