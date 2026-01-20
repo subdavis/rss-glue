@@ -142,7 +142,7 @@ dependencies = [
 
 ## Verification
 
-1. **Setup**: `uv sync && uv run uvicorn rss_glue.main:app --reload`
+1. **Setup**: `uv sync && poe dev`
 2. **Add config**: Go to `/config`, paste sample JSON, save
 3. **Verify feeds listed**: Go to `/`, see feeds in table
 4. **Trigger update**: Click "Update All Feeds" or POST `/update`

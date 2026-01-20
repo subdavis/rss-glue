@@ -162,11 +162,6 @@ RSS Glue can automatically update feeds using a background worker.
 ### Enabling the Worker
 
 ```bash
-ENABLE_BACKGROUND_WORKER=true uv run uvicorn rss_glue.main:app
-```
-
-Or with poe:
-```bash
 ENABLE_BACKGROUND_WORKER=true poe dev
 ```
 

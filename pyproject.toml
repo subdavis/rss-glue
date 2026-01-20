@@ -48,7 +48,7 @@ exclude = ["v1", "prod.py"]
 parallel = ["lint", "type", "format", "sort"]
 
 [tool.poe.tasks]
-dev = "uvicorn rss_glue.main:app --reload"
+dev = "uvicorn rss_glue.main:app --reload --host 0.0.0.0"
 devworker = "ENABLE_BACKGROUND_WORKER=true uvicorn rss_glue.main:app --reload"
 worker = "python -m rss_glue.worker"
 reset-password = "python -m rss_glue.scripts.reset_password"

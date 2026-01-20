@@ -40,10 +40,10 @@ Times are always stored in UTC in the database and converted to your display tim
 uv sync
 
 # Run the server
-uv run uvicorn rss_glue.main:app --reload
+poe dev
 ```
 
-The server runs at http://localhost:8000
+The server runs at http://localhost:8000 (and listens on all interfaces).
 
 ## Usage
 
@@ -100,32 +100,10 @@ RSS Glue can automatically update feeds using a background worker.
 
 ### Running the Standalone Worker
 
-To run **only** the background worker without the web server:
+To run **only** the background worker with or without the web server:
 
 ```bash
 poe worker
-```
-
-Or directly:
-```bash
-uv run python -m rss_glue.worker
-```
-
-This is useful for:
-- Running the worker as a separate service
-- Deploying worker and web server independently
-- Lower resource usage when the web UI isn't needed
-
-### Running Worker with Web Server
-
-To run the worker alongside the web server:
-
-```bash
-ENABLE_BACKGROUND_WORKER=true uv run uvicorn rss_glue.main:app
-```
-
-Or with poe:
-```bash
 poe devworker
 ```
 

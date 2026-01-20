@@ -169,3 +169,5 @@ config.json
 rss_glue.db
 etc/
 media/
+
+.DS_Store
