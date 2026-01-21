@@ -12,6 +12,13 @@ from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 from rss_glue.templates import templates
 
 
+def deep_get(d: dict | None, *keys) -> Any:
+    """Safely get nested dict values, returning None if any key is missing or value is None."""
+    for k in keys:
+        d = d.get(k) if isinstance(d, dict) else None
+    return d
+
+
 @FeedRegistry.register("reddit")
 class RedditFeedHandler(BaseFeedHandler):
     """Handler for Reddit feeds using their JSON API."""
@@ -60,7 +67,7 @@ class RedditFeedHandler(BaseFeedHandler):
             post_link = f"https://www.reddit.com{permalink}" if permalink else url_val
 
             # Extract oembed data for rich videos
-            oembed = item.get("media", {}).get("oembed")
+            oembed = deep_get(item, "media", "oembed")
             oembed_html = None
             oembed_thumbnail = None
             if oembed:
@@ -71,9 +78,7 @@ class RedditFeedHandler(BaseFeedHandler):
                     oembed_thumbnail = oembed.get("thumbnail_url")
 
             # Extract hosted video fallback URL
-            video_fallback_url = (
-                item.get("media", {}).get("reddit_video", {}).get("fallback_url")
-            )
+            video_fallback_url = deep_get(item, "media", "reddit_video", "fallback_url")
 
             # Decode selftext HTML
             decoded_selftext = None

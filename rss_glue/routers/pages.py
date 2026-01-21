@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select, func
 
 from rss_glue.database import get_session
-from rss_glue.models.db import Enclosure, Feed, MediaCache, Post
+from rss_glue.models.db import Feed, Post
 from rss_glue.models.user import User
 from rss_glue.services.auth import get_current_user_optional, require_auth
 from rss_glue.services.config_sync import get_current_config
@@ -117,51 +117,59 @@ def gallery_page(
     request: Request, page: int = 1, session: Session = Depends(get_session)
 ):
     """Gallery page showing all media images in reverse chronological order."""
+    from sqlalchemy import text as sql_text
+
     if page < 1:
         page = 1
 
     images_per_page = 50
     offset = (page - 1) * images_per_page
 
-    # Get total count for pagination (only images)
-    total_count = (
-        session.exec(
-            select(func.count(MediaCache.id)).where(
-                MediaCache.content_type.like("image/%")
-            )
-        ).first()
-        or 0
-    )
+    # Use UNION ALL with COUNT(*) OVER() to get total count and paginated results in one query
+    union_query = sql_text("""
+        SELECT local_path, post_id, feed_id, published_at, COUNT(*) OVER() as total_count
+        FROM (
+            SELECT mc.local_path, mc.post_id, mc.feed_id, p.published_at
+            FROM media_cache mc
+            JOIN post p ON mc.post_id = p.id
+            WHERE mc.content_type LIKE 'image/%'
+            UNION ALL
+            SELECT e.local_path, e.post_id, p.feed_id, p.published_at
+            FROM enclosure e
+            JOIN post p ON e.post_id = p.id
+            WHERE e.local_path IS NOT NULL AND e.mime_type LIKE 'image/%'
+        )
+        ORDER BY published_at DESC
+        LIMIT :limit OFFSET :offset
+    """)
+
+    results = session.exec(union_query, params={"limit": images_per_page, "offset": offset}).all()
+
+    # Extract total count from first row (or 0 if no results)
+    total_count = results[0][4] if results else 0
     total_pages = (total_count + images_per_page - 1) // images_per_page
 
-    # Get paginated media records in reverse chronological order by post published time
-    media_records = session.exec(
-        select(MediaCache, Feed, Post)
-        .join(Feed, MediaCache.feed_id == Feed.id)
-        .join(Post, MediaCache.post_id == Post.id)
-        .where(MediaCache.content_type.like("image/%"))  # Only images
-        .order_by(Post.published_at.desc())  # type: ignore[union-attr]
-        .offset(offset)
-        .limit(images_per_page)
-    ).all()
-
-    # Convert to list of dictionaries for template
+    # Build gallery data from results
     gallery_data = []
-    for media, feed, post in media_records:
-        # Build media URL from local_path
-        # Format: /media/{hash_prefix}/{filename}
-        path_parts = media.local_path.split("/")
-        if len(path_parts) >= 2:
-            hash_prefix = path_parts[-2]
-            filename = path_parts[-1]
-            media_url = f"/media/{hash_prefix}/{filename}"
-        else:
-            # Fallback if path format is unexpected
-            media_url = f"/media/{media.local_path}"
+    for row in results:
+        # Row is a tuple: (local_path, post_id, feed_id, published_at, total_count)
+        local_path, post_id, feed_id, _, _ = row
 
-        gallery_data.append(
-            {"media": media, "feed": feed, "post": post, "media_url": media_url}
-        )
+        # Get feed and post objects
+        feed = session.get(Feed, feed_id)
+        post = session.get(Post, post_id)
+
+        if feed and post and local_path:
+            path_parts = local_path.split("/")
+            if len(path_parts) >= 2:
+                media_url = f"/media/{path_parts[-2]}/{path_parts[-1]}"
+            else:
+                media_url = f"/media/{local_path}"
+            gallery_data.append({
+                "feed": feed,
+                "post": post,
+                "media_url": media_url,
+            })
 
     return templates.TemplateResponse(
         "gallery.html",
