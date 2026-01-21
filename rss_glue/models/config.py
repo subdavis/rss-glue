@@ -6,8 +6,11 @@ from croniter import croniter
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from rss_glue.models.feed_config import FeedConfigBase
+
+
 class RssFeedConfig(FeedConfigBase):
     """Configuration for an RSS source feed."""
+
     type: Literal["rss"]
     url: str = Field(..., pattern=r"^https?://")
 
@@ -24,6 +27,7 @@ class MergeFeedConfig(FeedConfigBase):
             "limit": 100
         }
     """
+
     type: Literal["merge"]
     sources: list[str] = Field(..., min_length=1)
 
@@ -41,9 +45,14 @@ class DigestFeedConfig(FeedConfigBase):
             "limit": 20
         }
     """
+
     type: Literal["digest"]
     source: str = Field(..., min_length=1, description="Single source feed ID")
-    schedule: str = Field(..., min_length=1, description="Cron expression like '0 0 * * 0' (weekly Sunday midnight)")
+    schedule: str = Field(
+        ...,
+        min_length=1,
+        description="Cron expression like '0 0 * * 0' (weekly Sunday midnight)",
+    )
 
     @field_validator("schedule")
     @classmethod
@@ -88,7 +97,9 @@ class InstagramFeedConfig(FeedConfigBase):
     """
 
     type: Literal["instagram"]
-    username: str = Field(..., min_length=1, description="Instagram username (without @)")
+    username: str = Field(
+        ..., min_length=1, description="Instagram username (without @)"
+    )
 
 
 class FacebookFeedConfig(FeedConfigBase):

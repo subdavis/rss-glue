@@ -3,7 +3,7 @@
 import os
 from typing import Optional
 
-from fastapi import Cookie, Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from itsdangerous import BadSignature, URLSafeSerializer
 from sqlmodel import Session, select

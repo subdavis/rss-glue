@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Callable, Protocol, Type, TypedDict
 
+from croniter import croniter
 from sqlmodel import Session, select
 
 from rss_glue.models.db import MediaCache, Post
@@ -36,7 +37,9 @@ class FeedHandler(Protocol):
     """Protocol for feed type handlers."""
 
     @staticmethod
-    def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:
+    def fetch(
+        feed_id: str, config: dict[str, Any], session: Session
+    ) -> list[dict] | None | int:
         """Fetch posts from the feed source.
 
         Returns list of post dicts with keys:
@@ -46,6 +49,9 @@ class FeedHandler(Protocol):
         - link: str
         - author: str | None
         - published_at: datetime
+
+        If return is None, indicates no work was done, no history should be recorded (e.g., no new posts).
+        If return is int, indicates number of items created for reporting purposes (for digest feeds).
         """
         ...
 
@@ -139,23 +145,51 @@ class BaseFeedHandler:
 
     @staticmethod
     def next_update(feed: "Feed", session: Session) -> datetime | None:
-        """Default implementation: cooldown-based scheduling.
+        """Default implementation: cooldown and/or schedule-based scheduling.
 
-        Returns next update time based on cooldown_minutes.
-        Returns None for manual-only feeds (cooldown_minutes <= 0).
+        If schedule is set, uses cron schedule for timing (with cooldown as minimum interval).
+        If no schedule, uses cooldown-based scheduling.
+        Returns None for manual-only feeds (no schedule and cooldown_minutes <= 0).
         """
         cooldown_minutes = feed.cooldown_minutes or 0
-
-        # Manual-only if no cooldown configured
-        if cooldown_minutes <= 0:
-            return None
+        schedule = feed.config.get("schedule")
 
         # Never updated - schedule immediately
         if feed.updated_at is None:
             return datetime.now(timezone.utc)
 
-        # Calculate next update from last update time
-        return feed.updated_at + timedelta(minutes=cooldown_minutes)
+        # Calculate cooldown-based next time
+        if cooldown_minutes > 0:
+            cooldown_time: datetime | None = feed.updated_at + timedelta(
+                minutes=cooldown_minutes
+            )
+        else:
+            cooldown_time = None
+
+        # Calculate schedule-based next time
+        schedule_time: datetime | None = None
+        if schedule:
+            try:
+                cron = croniter(schedule, feed.updated_at)
+                schedule_time = cron.get_next(datetime)
+                if schedule_time.tzinfo is None:
+                    schedule_time = schedule_time.replace(tzinfo=timezone.utc)
+            except (ValueError, KeyError):
+                schedule_time = None
+
+        # Determine next update time
+        if schedule_time is not None and cooldown_time is not None:
+            # Both set - must satisfy both conditions
+            return max(schedule_time, cooldown_time)
+        elif schedule_time is not None:
+            # Only schedule - use it
+            return schedule_time
+        elif cooldown_time is not None:
+            # Only cooldown - use it
+            return cooldown_time
+        else:
+            # Neither - manual only
+            return None
 
     @staticmethod
     def reset(feed_id: str, session: Session) -> dict[str, int]:

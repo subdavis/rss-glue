@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import TypeDecorator, DateTime
+from sqlalchemy import DateTime, TypeDecorator
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 
@@ -17,7 +17,9 @@ class UTCDateTime(TypeDecorator):
     impl = DateTime
     cache_ok = True
 
-    def process_result_value(self, value: Optional[datetime], dialect: Any) -> Optional[datetime]:
+    def process_result_value(
+        self, value: Optional[datetime], dialect: Any
+    ) -> Optional[datetime]:
         """Add UTC timezone to naive datetimes loaded from the database."""
         if value is not None and value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc)
@@ -49,11 +51,10 @@ class Feed(SQLModel, table=True):
     enabled: bool = Field(default=True)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(UTCDateTime, nullable=False)
+        sa_column=Column(UTCDateTime, nullable=False),
     )
     updated_at: Optional[datetime] = Field(
-        default=None,
-        sa_column=Column(UTCDateTime, nullable=True)
+        default=None, sa_column=Column(UTCDateTime, nullable=True)
     )
 
     posts: list["Post"] = Relationship(
@@ -82,10 +83,11 @@ class Post(SQLModel, table=True):
     content: Optional[str] = None
     link: str
     author: Optional[str] = None
+    score: Optional[int] = None
     published_at: datetime = Field(sa_column=Column(UTCDateTime, nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(UTCDateTime, nullable=False)
+        sa_column=Column(UTCDateTime, nullable=False),
     )
 
     feed: Feed = Relationship(back_populates="posts")
@@ -108,11 +110,10 @@ class UpdateHistory(SQLModel, table=True):
     feed_id: str = Field(foreign_key="feed.id", index=True)
     started_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(UTCDateTime, nullable=False)
+        sa_column=Column(UTCDateTime, nullable=False),
     )
     completed_at: Optional[datetime] = Field(
-        default=None,
-        sa_column=Column(UTCDateTime, nullable=True)
+        default=None, sa_column=Column(UTCDateTime, nullable=True)
     )
     status: str = Field(default="running")
     error_message: Optional[str] = None
@@ -134,7 +135,7 @@ class MediaCache(SQLModel, table=True):
     content_type: Optional[str] = None
     cached_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(UTCDateTime, nullable=False)
+        sa_column=Column(UTCDateTime, nullable=False),
     )
 
     feed: Feed = Relationship(back_populates="cached_media")
@@ -157,11 +158,15 @@ class DigestIssue(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     feed_id: str = Field(foreign_key="feed.id", index=True)
-    period_start: datetime = Field(sa_column=Column(UTCDateTime, index=True, nullable=False))
-    period_end: datetime = Field(sa_column=Column(UTCDateTime, index=True, nullable=False))
+    period_start: datetime = Field(
+        sa_column=Column(UTCDateTime, index=True, nullable=False)
+    )
+    period_end: datetime = Field(
+        sa_column=Column(UTCDateTime, index=True, nullable=False)
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(UTCDateTime, nullable=False)
+        sa_column=Column(UTCDateTime, nullable=False),
     )
 
     posts: list["DigestIssuePost"] = Relationship(

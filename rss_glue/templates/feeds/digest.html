@@ -1,0 +1,15 @@
+{# Digest issue content template - full articles instead of just links #}
+{% if posts %}
+{% for post in posts %}
+<section>
+    <a href="{{ post.link }}">
+        <h2>{{ post.title }}</h2>
+    </a>
+    <time>{{ post.published_at | localtime }}</time>
+    <div>{{ post.content | safe }}</div>
+    <hr>
+</section>
+{% endfor %}
+{% else %}
+<p>No posts in this digest period.</p>
+{% endif %}

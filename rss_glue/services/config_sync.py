@@ -4,10 +4,16 @@ from datetime import datetime, timezone
 
 from sqlmodel import Session, select
 
-from rss_glue.models.config import (AppConfig, DigestFeedConfig,
-                                    FacebookFeedConfig, HackerNewsFeedConfig,
-                                    InstagramFeedConfig, MergeFeedConfig,
-                                    RedditFeedConfig, RssFeedConfig)
+from rss_glue.models.config import (
+    AppConfig,
+    DigestFeedConfig,
+    FacebookFeedConfig,
+    HackerNewsFeedConfig,
+    InstagramFeedConfig,
+    MergeFeedConfig,
+    RedditFeedConfig,
+    RssFeedConfig,
+)
 from rss_glue.models.db import Feed, FeedRelationship, SystemConfig
 
 
@@ -73,9 +79,7 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
     # Save base URL
     system_config_base_url = session.get(SystemConfig, "base_url")
     if not system_config_base_url:
-        system_config_base_url = SystemConfig(
-            key="base_url", value=config.base_url
-        )
+        system_config_base_url = SystemConfig(key="base_url", value=config.base_url)
         session.add(system_config_base_url)
     else:
         system_config_base_url.value = config.base_url
@@ -226,7 +230,9 @@ def get_current_config(session: Session) -> dict:
 
     system_config_base_url = session.get(SystemConfig, "base_url")
     base_url = (
-        system_config_base_url.value if system_config_base_url else "http://localhost:8000"
+        system_config_base_url.value
+        if system_config_base_url
+        else "http://localhost:8000"
     )
 
     feeds = session.exec(select(Feed)).all()
@@ -234,7 +240,7 @@ def get_current_config(session: Session) -> dict:
         "cache_media": global_cache_media,
         "default_cooldown_minutes": default_cooldown_minutes,
         "base_url": base_url,
-        "feeds": []
+        "feeds": [],
     }
 
     if scrape_creators_key:

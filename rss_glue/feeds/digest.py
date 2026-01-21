@@ -1,14 +1,20 @@
 """Digest feed handler - creates periodic rollups based on cron schedule."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from croniter import croniter
 from sqlmodel import Session, and_, select
 
 from rss_glue.feeds.registry import FeedRegistry, PostDict
-from rss_glue.models.db import (DigestIssue, DigestIssuePost, Feed,
-                                FeedRelationship, Post)
+from rss_glue.models.db import (
+    DigestIssue,
+    DigestIssuePost,
+    Feed,
+    FeedRelationship,
+    Post,
+)
+from rss_glue.templates import templates
 
 
 def get_source_feed_id(feed_id: str, session: Session) -> str | None:
@@ -46,7 +52,7 @@ def get_posts_for_period(
                 Post.published_at < period_end,
             )
         )
-        .order_by(Post.published_at.desc())  # type: ignore[union-attr]
+        .order_by(Post.score.desc())  # type: ignore[union-attr]
         .limit(limit)
     )
 
@@ -152,16 +158,9 @@ def create_digest_issue(
 
 
 def format_digest_issue_content(posts: list[Post], base_url: str) -> str:
-    """Generate HTML content for a digest issue containing links to posts."""
-    if not posts:
-        return "<p>No posts in this digest period.</p>"
-
-    lines = ["<ul>"]
-    for post in posts:
-        author_str = f" - {post.author}" if post.author else ""
-        lines.append(f'<li><a href="{post.link}">{post.title}</a>{author_str}</li>')
-    lines.append("</ul>")
-    return "\n".join(lines)
+    """Generate HTML content for a digest issue with full article content."""
+    template = templates.env.get_template("feeds/digest.html")
+    return template.render(posts=posts)
 
 
 @FeedRegistry.register("digest")
@@ -169,7 +168,7 @@ class DigestFeedHandler:
     """Handler for digest feeds - creates periodic rollups of source feed posts."""
 
     @staticmethod
-    def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:
+    def fetch(feed_id: str, config: dict[str, Any], session: Session) -> None | int:
         """Create digest issues for any missing periods.
 
         Unlike RSS feeds, digest doesn't return posts directly.
@@ -180,12 +179,12 @@ class DigestFeedHandler:
         limit = config.get("limit", 20)
 
         if not schedule:
-            return []
+            return None
 
         # Get source feed ID from relationship
         source_id = get_source_feed_id(feed_id, session)
         if not source_id:
-            return []
+            return None
 
         # Find the latest existing digest issue
         latest_issue = get_latest_digest_issue(feed_id, session)
@@ -204,7 +203,10 @@ class DigestFeedHandler:
             issues_created += 1
 
         # Return empty list - digest items are served via get_posts()
-        return []
+        if issues_created > 0:
+            return issues_created
+
+        return None
 
     @staticmethod
     def next_update(feed: Feed, session: Session) -> datetime | None:
@@ -226,15 +228,14 @@ class DigestFeedHandler:
                 # No previous issues - calculate from one period ago
                 now = datetime.now(timezone.utc)
                 cron = croniter(schedule, now)
-                cron.get_prev(datetime)  # Go back one period
-                start_time = cron.get_prev(datetime)  # And one more to get start
-                cron = croniter(schedule, start_time)
-                # Next update is the end of this first period
-                cron.get_next(datetime)  # Skip past start
-                next_time = cron.get_next(datetime)
+                # Go back one period to find the closing time of the first issue
+                next_time = cron.get_prev(datetime)
             else:
-                # Start from the last issue end time
-                cron = croniter(schedule, latest_issue.period_end)
+                # Start from the last issue end time plus one second (to avoid confusion with exact matches)
+                cron = croniter(
+                    schedule, latest_issue.period_end + timedelta(seconds=1)
+                )
+                # The next issue end time is the next scheduled time
                 next_time = cron.get_next(datetime)
 
             # Ensure timezone-aware
@@ -248,7 +249,9 @@ class DigestFeedHandler:
     def reset(feed_id: str, session: Session) -> dict[str, int]:
         """Delete digest issues (cascades to DigestIssuePost)."""
         digest_issues = list(
-            session.exec(select(DigestIssue).where(DigestIssue.feed_id == feed_id)).all()
+            session.exec(
+                select(DigestIssue).where(DigestIssue.feed_id == feed_id)
+            ).all()
         )
         for issue in digest_issues:
             session.delete(issue)

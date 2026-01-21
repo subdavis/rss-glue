@@ -12,6 +12,11 @@
     {% endif %}
 </p>
 
+
+<form action="/update" method="post" style="margin: 1rem 0;">
+    <button type="submit">Update All Feeds</button>
+</form>
+
 {% if feed_schedules %}
 <table border="1">
     <tr>
@@ -76,7 +81,7 @@
                 {{ item.next_update | localtime("relative") }}
             </span>
             {% else %}
-            Manual
+            -
             {% endif %}
         </td>
     </tr>
@@ -86,7 +91,4 @@
 <p>No feeds configured. <a href="/config">Add some feeds</a>.</p>
 {% endif %}
 
-<form action="/update" method="post" style="margin-top: 20px;">
-    <button type="submit">Update All Feeds</button>
-</form>
 {% endblock %}

@@ -51,7 +51,7 @@ def login_submit(
     # Find user by username
     user = session.exec(select(User).where(User.username == username)).first()
 
-    if user is None or not user.verify_password(password):
+    if user is None or user.id is None or not user.verify_password(password):
         return templates.TemplateResponse(
             "login.html",
             {"request": request, "next": next, "error": "Invalid username or password"},
@@ -119,6 +119,7 @@ def setup_submit(
 
     # Log them in and redirect to home
     response = RedirectResponse(url="/", status_code=303)
+    assert user.id is not None
     return set_auth_cookie(response, user.id)
 
 

@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlmodel import Session, select
@@ -186,9 +186,7 @@ async def background_worker_loop(shutdown_event: asyncio.Event):
             try:
                 # Note that this does not run as expected when the machine is asleep: this sleep happens
                 # in python (userland), not the kernel.
-                await asyncio.wait_for(
-                    shutdown_event.wait(), timeout=sleep_seconds
-                )
+                await asyncio.wait_for(shutdown_event.wait(), timeout=sleep_seconds)
                 # If we get here, shutdown was signaled
                 break
             except asyncio.TimeoutError:
@@ -238,7 +236,8 @@ async def stop_background_worker():
         return
 
     logger.info("Stopping background worker...")
-    _shutdown_event.set()
+    if _shutdown_event is not None:
+        _shutdown_event.set()
 
     try:
         await asyncio.wait_for(_worker_task, timeout=5.0)

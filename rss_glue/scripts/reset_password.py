@@ -21,16 +21,20 @@ def main():
             print("Available users:")
             for user in users:
                 print(f"  - {user.username}")
-            print(f"\nUsage: uv run python -m rss_glue.scripts.reset_password <username>")
+            print(
+                "\nUsage: uv run python -m rss_glue.scripts.reset_password <username>"
+            )
         sys.exit(1)
 
     username = sys.argv[1]
 
     with Session(engine) as session:
         user = session.exec(select(User).where(User.username == username)).first()
-        if not user:
+        if user is None:
             print(f"Error: User '{username}' not found.")
             sys.exit(1)
+
+        assert user is not None  # for type checker after sys.exit
 
         # Prompt for new password
         password = getpass.getpass("New password: ")

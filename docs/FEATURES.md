@@ -94,3 +94,7 @@ Otherwise, anon users can access feeds, gallery, and everything else.
 If the users table is empty, special case where the user is prompted to make an account on first login.  
 
 Hash and salt the password in the standard way.
+
+## Broken stuff
+
+Something's wrong with adding new feeds. Next update and last update seem weird.

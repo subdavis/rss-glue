@@ -7,6 +7,7 @@ from fastapi import FastAPI
 
 # Import feeds module to register handlers
 import rss_glue.feeds  # noqa: F401
+
 # Import User model to register with SQLModel before table creation
 import rss_glue.models.user  # noqa: F401
 from rss_glue.database import create_db_and_tables

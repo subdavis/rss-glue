@@ -5,14 +5,14 @@ import os
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
-from sqlmodel import Session, select, func
+from sqlmodel import Session, func, select
 
 from rss_glue.database import get_session
 from rss_glue.models.db import Feed, Post
 from rss_glue.models.user import User
-from rss_glue.services.auth import get_current_user_optional, require_auth
-from rss_glue.services.config_sync import get_current_config
+from rss_glue.services.auth import require_auth
 from rss_glue.services.background_worker import get_next_update
+from rss_glue.services.config_sync import get_current_config
 from rss_glue.templates import templates
 
 router = APIRouter()
@@ -32,10 +32,12 @@ def index(
     feed_schedules = []
     for feed in feeds:
         next_update = get_next_update(feed, session)
-        feed_schedules.append({
-            "feed": feed,
-            "next_update": next_update,
-        })
+        feed_schedules.append(
+            {
+                "feed": feed,
+                "next_update": next_update,
+            }
+        )
 
     # Sort feed_schedules based on sort_by parameter
     def get_sort_key(item):
@@ -143,7 +145,9 @@ def gallery_page(
         LIMIT :limit OFFSET :offset
     """)
 
-    results = session.exec(union_query, params={"limit": images_per_page, "offset": offset}).all()
+    results = session.exec(
+        union_query, params={"limit": images_per_page, "offset": offset}
+    ).all()
 
     # Extract total count from first row (or 0 if no results)
     total_count = results[0][4] if results else 0
@@ -165,11 +169,13 @@ def gallery_page(
                 media_url = f"/media/{path_parts[-2]}/{path_parts[-1]}"
             else:
                 media_url = f"/media/{local_path}"
-            gallery_data.append({
-                "feed": feed,
-                "post": post,
-                "media_url": media_url,
-            })
+            gallery_data.append(
+                {
+                    "feed": feed,
+                    "post": post,
+                    "media_url": media_url,
+                }
+            )
 
     return templates.TemplateResponse(
         "gallery.html",
@@ -203,7 +209,7 @@ def posts_page(
         session.exec(
             select(func.count(Post.id))
             .join(Feed, Post.feed_id == Feed.id)
-            .where(Feed.type.not_in(["merge", "digest"]))
+            .where(Feed.type.not_in(["merge", "digest"]))  # type: ignore[union-attr]
         ).first()
         or 0
     )
@@ -212,8 +218,8 @@ def posts_page(
     # Get paginated posts in reverse chronological order
     post_records = session.exec(
         select(Post, Feed)
-        .join(Feed, Post.feed_id == Feed.id)
-        .where(Feed.type.not_in(["merge", "digest"]))
+        .join(Feed, Post.feed_id == Feed.id)  # type: ignore[arg-type]
+        .where(Feed.type.not_in(["merge", "digest"]))  # type: ignore[union-attr]
         .order_by(Post.published_at.desc())  # type: ignore[union-attr]
         .offset(offset)
         .limit(posts_per_page)

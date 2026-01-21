@@ -1,7 +1,7 @@
 This is a python uv project
 
 Always read README.md for project context to begin.
-FEATURES.md has more context too
+./docs/FEATURES.md has more context too
 
 This is v2 of a project.  v1 is in the v1 directory included for reference, never modify it.
 

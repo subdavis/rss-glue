@@ -48,11 +48,15 @@ class RssFeedHandler(BaseFeedHandler):
             enclosures = []
             if hasattr(entry, "enclosures") and entry.enclosures:
                 for enc in entry.enclosures:
-                    enclosures.append({
-                        "url": enc.get("href", ""),
-                        "mime_type": enc.get("type"),
-                        "length": int(enc.get("length", 0)) if enc.get("length") else None,
-                    })
+                    enclosures.append(
+                        {
+                            "url": enc.get("href", ""),
+                            "mime_type": enc.get("type"),
+                            "length": int(enc.get("length", 0))
+                            if enc.get("length")
+                            else None,
+                        }
+                    )
 
             posts.append(
                 {

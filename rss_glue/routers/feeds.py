@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
-from sqlmodel import Session, select, func
+from sqlmodel import Session, func, select
 
 from rss_glue.database import get_session
 from rss_glue.models.db import Feed, UpdateHistory
@@ -219,7 +219,7 @@ def get_update_history(
     # Get paginated records in reverse chronological order
     history_records = session.exec(
         select(UpdateHistory, Feed)
-        .join(Feed, UpdateHistory.feed_id == Feed.id)
+        .join(Feed, UpdateHistory.feed_id == Feed.id)  # type: ignore[arg-type]
         .order_by(UpdateHistory.started_at.desc())  # type: ignore[union-attr]
         .offset(offset)
         .limit(records_per_page)

@@ -1,10 +1,10 @@
 """Media caching service for downloading and storing embedded media."""
 
 import hashlib
+import html
 import mimetypes
 import os
 import re
-import html
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urljoin, urlparse
@@ -324,7 +324,9 @@ def cache_enclosure(enclosure: Enclosure, session: Session) -> bool:
         content, content_type = download_media(enclosure.original_url)
 
         # Generate local path using original URL
-        local_path = get_local_path(enclosure.original_url, content_type or enclosure.mime_type)
+        local_path = get_local_path(
+            enclosure.original_url, content_type or enclosure.mime_type
+        )
         full_path = MEDIA_DIR / local_path
 
         # Ensure directory exists

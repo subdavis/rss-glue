@@ -79,6 +79,10 @@ def update_feed(
     if not feed.enabled:
         return None
 
+    # Merge is a special case - no updates
+    if feed.type == "merge":
+        return None
+
     # Check if update is due (skip if not forced and next_update is in the future)
     if not force:
         handler = FeedRegistry.get_handler(feed.type)
@@ -95,31 +99,19 @@ def update_feed(
     try:
         handler = FeedRegistry.get_handler(feed.type)
 
-        # Merge feeds don't fetch external data
-        if feed.type == "merge":
-            history.status = "success"
-            history.completed_at = datetime.now(timezone.utc)
-            session.add(history)
-            session.commit()
-            return history
-
-        # Digest feeds create issues from source feed posts
-        if feed.type == "digest":
-            config_with_limit = {**feed.config, "limit": feed.limit}
-            handler.fetch(feed_id, config_with_limit, session)
-            history.status = "success"
-            history.completed_at = datetime.now(timezone.utc)
-            feed.updated_at = datetime.now(timezone.utc)
-            session.add(feed)
-            session.add(history)
-            session.commit()
-            return history
-
         # Fetch posts from source
         config_with_limit = {**feed.config, "limit": feed.limit}
-        posts_data = handler.fetch(feed_id, config_with_limit, session)
-
+        result = handler.fetch(feed_id, config_with_limit, session)
         posts_added = 0
+        posts_data: list[dict] = []
+
+        if result is None:
+            return None  # Short circuit if no work was done.
+        elif isinstance(result, int):
+            posts_added = result
+        else:
+            posts_data = result
+
         new_posts = []
         new_post_enclosures: list[tuple[Post, list[dict]]] = []
         for post_data in posts_data:
@@ -141,6 +133,12 @@ def update_feed(
                 if enclosures_data:
                     new_post_enclosures.append((post, enclosures_data))
                 posts_added += 1
+            
+            elif post_data.get("score"):
+                # Update score for existing post if provided
+                # Helpful because scores generally go up over time.
+                existing.score = post_data["score"]
+                session.add(existing)
 
         # Create enclosure records for new posts
         for post, enclosures_data in new_post_enclosures:
@@ -181,6 +179,8 @@ def update_feed(
         history.status = "error"
         history.error_message = str(e)
         history.completed_at = datetime.now(timezone.utc)
+        feed.enabled = False  # Disable feed on error
+        session.add(feed)
 
     session.add(history)
     session.commit()

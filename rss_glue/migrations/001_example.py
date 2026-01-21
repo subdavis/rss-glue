@@ -17,10 +17,4 @@ Example real migration:
 
 def migrate(engine):
     """Placeholder migration - does nothing."""
-    # Example:
-    # from sqlalchemy import text
-    # from sqlmodel import Session
-    # with Session(engine) as session:
-    #     session.exec(text("ALTER TABLE post ADD COLUMN score INTEGER"))
-    #     session.commit()
     pass

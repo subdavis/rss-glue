@@ -37,8 +37,10 @@ def get_applied_migrations(engine) -> set[str]:
 def mark_migration_applied(engine, name: str):
     """Mark a migration as applied."""
     with Session(engine) as session:
-        session.execute(
-            text("INSERT INTO schema_version (name) VALUES (:name)"), {"name": name}
+        session.exec(
+            text("INSERT INTO schema_version (name) VALUES (:name)").bindparams(
+                name=name
+            )
         )
         session.commit()
 
