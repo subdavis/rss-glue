@@ -46,4 +46,14 @@ def generate_rss(feed_id: str, session: Session, base_url: str) -> str:
             pub_date = pub_date.replace(tzinfo=timezone.utc)
         entry.pubDate(pub_date)
 
+        # Add enclosures
+        for enc in post.get("enclosures", []):
+            # Expand placeholder URL if cached
+            enc_url = expand_placeholders(enc["url"], base_url)
+            entry.enclosure(
+                url=enc_url,
+                type=enc.get("mime_type") or "application/octet-stream",
+                length=str(enc.get("length") or 0),
+            )
+
     return fg.rss_str(pretty=True).decode("utf-8")

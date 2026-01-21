@@ -44,6 +44,16 @@ class RssFeedHandler(BaseFeedHandler):
             elif hasattr(entry, "summary"):
                 content = entry.summary
 
+            # Extract enclosures
+            enclosures = []
+            if hasattr(entry, "enclosures") and entry.enclosures:
+                for enc in entry.enclosures:
+                    enclosures.append({
+                        "url": enc.get("href", ""),
+                        "mime_type": enc.get("type"),
+                        "length": int(enc.get("length", 0)) if enc.get("length") else None,
+                    })
+
             posts.append(
                 {
                     "external_id": external_id,
@@ -52,6 +62,7 @@ class RssFeedHandler(BaseFeedHandler):
                     "link": entry.link,
                     "author": getattr(entry, "author", None),
                     "published_at": published,
+                    "enclosures": enclosures,
                 }
             )
 

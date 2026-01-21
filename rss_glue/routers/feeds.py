@@ -149,10 +149,12 @@ def get_feed_html(
     handler = FeedRegistry.get_handler(feed.type)
     posts = handler.get_posts(feed_id, feed.limit, session, base_url)
 
-    # Expand placeholders in post content for web display
+    # Expand placeholders in post content and enclosure URLs for web display
     for post in posts:
         if post.get("content"):
             post["content"] = expand_placeholders(post["content"], base_url)
+        for enc in post.get("enclosures", []):
+            enc["url"] = expand_placeholders(enc["url"], base_url)
 
     return templates.TemplateResponse(
         "feed.html",

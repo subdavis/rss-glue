@@ -93,6 +93,10 @@ class Post(SQLModel, table=True):
         back_populates="post",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
+    enclosures: list["Enclosure"] = Relationship(
+        back_populates="post",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
 
 
 class UpdateHistory(SQLModel, table=True):
@@ -178,3 +182,19 @@ class DigestIssuePost(SQLModel, table=True):
 
     digest_issue: DigestIssue = Relationship(back_populates="posts")
     post: Post = Relationship()
+
+
+class Enclosure(SQLModel, table=True):
+    """RSS enclosures (attachments) for posts."""
+
+    __tablename__ = "enclosure"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    post_id: int = Field(foreign_key="post.id", index=True)
+    url: str  # URL for rendering (may be __BASE_URL__ placeholder if cached)
+    original_url: str  # Always the original URL
+    local_path: Optional[str] = None  # Cached path (if cached)
+    mime_type: Optional[str] = None
+    length: Optional[int] = None  # Size in bytes
+
+    post: Post = Relationship(back_populates="enclosures")

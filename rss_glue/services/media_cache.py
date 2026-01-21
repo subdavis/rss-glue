@@ -4,6 +4,7 @@ import hashlib
 import mimetypes
 import os
 import re
+import html
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urljoin, urlparse
@@ -11,7 +12,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from sqlmodel import Session, select
 
-from rss_glue.models.db import MediaCache, Post
+from rss_glue.models.db import Enclosure, MediaCache, Post
 
 # Media directory relative to the project root
 MEDIA_DIR = Path("media")
@@ -157,7 +158,7 @@ def download_media(url: str, timeout: float = 30.0) -> tuple[bytes, Optional[str
         httpx.HTTPError: On network errors
     """
     with httpx.Client(timeout=timeout, follow_redirects=True) as client:
-        response = client.get(url)
+        response = client.get(html.unescape(url))
         response.raise_for_status()
         content_type = response.headers.get("content-type")
         return response.content, content_type
@@ -300,5 +301,48 @@ def expand_placeholders(content: str, base_url: str) -> str:
     """
     if not content:
         return content
-    
+
     return content.replace("__BASE_URL__", base_url.rstrip("/"))
+
+
+def cache_enclosure(enclosure: Enclosure, session: Session) -> bool:
+    """Download and cache an enclosure file.
+
+    Args:
+        enclosure: Enclosure record to cache (must already be saved to DB)
+        session: Database session
+
+    Returns:
+        True if successfully cached, False otherwise
+    """
+    if enclosure.local_path:
+        # Already cached
+        return True
+
+    try:
+        # Download the media
+        content, content_type = download_media(enclosure.original_url)
+
+        # Generate local path using original URL
+        local_path = get_local_path(enclosure.original_url, content_type or enclosure.mime_type)
+        full_path = MEDIA_DIR / local_path
+
+        # Ensure directory exists
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write file
+        full_path.write_bytes(content)
+
+        # Update enclosure record with cached info
+        enclosure.local_path = local_path
+        enclosure.url = f"__BASE_URL__/media/{local_path}"
+        if content_type:
+            enclosure.mime_type = content_type
+        session.add(enclosure)
+        session.commit()
+
+        return True
+
+    except Exception:
+        # Log error but don't fail the whole process
+        return False

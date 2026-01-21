@@ -8,13 +8,14 @@ from sqlmodel import Session, select
 
 from rss_glue.feeds.registry import FeedRegistry
 from rss_glue.models.db import (
+    Enclosure,
     Feed,
     FeedRelationship,
     MediaCache,
     Post,
     UpdateHistory,
 )
-from rss_glue.services.media_cache import process_post_media
+from rss_glue.services.media_cache import cache_enclosure, process_post_media
 
 
 def topological_sort_feeds(session: Session) -> list[str]:
@@ -120,6 +121,7 @@ def update_feed(
 
         posts_added = 0
         new_posts = []
+        new_post_enclosures: list[tuple[Post, list[dict]]] = []
         for post_data in posts_data:
             # Check if post already exists
             existing = session.exec(
@@ -130,11 +132,34 @@ def update_feed(
             ).first()
 
             if not existing:
+                # Extract enclosures before creating Post (not a column field)
+                enclosures_data = post_data.pop("enclosures", [])
                 post = Post(feed_id=feed_id, **post_data)
                 session.add(post)
                 session.flush()  # Get the post ID
                 new_posts.append(post)
+                if enclosures_data:
+                    new_post_enclosures.append((post, enclosures_data))
                 posts_added += 1
+
+        # Create enclosure records for new posts
+        for post, enclosures_data in new_post_enclosures:
+            for enc_data in enclosures_data:
+                if not enc_data.get("url"):
+                    continue
+                enclosure = Enclosure(
+                    post_id=post.id,
+                    url=enc_data["url"],
+                    original_url=enc_data["url"],
+                    mime_type=enc_data.get("mime_type"),
+                    length=enc_data.get("length"),
+                )
+                session.add(enclosure)
+                session.flush()
+
+                # Cache enclosure if media caching is enabled
+                if feed.cache_media:
+                    cache_enclosure(enclosure, session)
 
         # Process media caching for new posts if enabled
         if feed.cache_media and new_posts:
@@ -212,6 +237,16 @@ def reset_feed(
         session.exec(select(MediaCache).where(MediaCache.feed_id == feed_id)).all()
     )
 
+    # Get enclosure entries with local_path before deleting (for file cleanup)
+    posts = list(session.exec(select(Post).where(Post.feed_id == feed_id)).all())
+    post_ids = [p.id for p in posts if p.id is not None]
+    enclosure_paths = []
+    if post_ids:
+        enclosures = list(
+            session.exec(select(Enclosure).where(Enclosure.post_id.in_(post_ids))).all()  # type: ignore[union-attr]
+        )
+        enclosure_paths = [e.local_path for e in enclosures if e.local_path]
+
     # Use handler to reset feed-specific data (posts, digest issues, etc.)
     handler = FeedRegistry.get_handler(feed.type)
     counts = handler.reset(feed_id, session)
@@ -231,10 +266,11 @@ def reset_feed(
     session.add(feed)
     session.commit()
 
-    # Delete physical media files
+    # Delete physical media files (from MediaCache and Enclosures)
     files_deleted = 0
-    for media in media_entries:
-        file_path = MEDIA_DIR / media.local_path
+    all_paths = [media.local_path for media in media_entries] + enclosure_paths
+    for local_path in all_paths:
+        file_path = MEDIA_DIR / local_path
         if file_path.exists():
             try:
                 file_path.unlink()

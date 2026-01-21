@@ -11,6 +11,15 @@ if TYPE_CHECKING:
     from rss_glue.models.db import Feed
 
 
+class EnclosureDict(TypedDict, total=False):
+    """Standardized enclosure dictionary for templates and RSS output."""
+
+    url: str
+    original_url: str
+    mime_type: str | None
+    length: int | None
+
+
 class PostDict(TypedDict, total=False):
     """Standardized post dictionary for templates and RSS output."""
 
@@ -20,6 +29,7 @@ class PostDict(TypedDict, total=False):
     published_at: datetime
     content: str | None
     author: str | None
+    enclosures: list[EnclosureDict]
 
 
 class FeedHandler(Protocol):
@@ -102,17 +112,30 @@ class BaseFeedHandler:
         )
         posts = list(session.exec(stmt).all())
 
-        return [
-            PostDict(
-                id=post.external_id,
-                title=post.title,
-                link=post.link,
-                published_at=post.published_at,
-                content=post.content,
-                author=post.author,
+        result = []
+        for post in posts:
+            # Get enclosures for this post
+            enclosures = [
+                EnclosureDict(
+                    url=enc.url,
+                    original_url=enc.original_url,
+                    mime_type=enc.mime_type,
+                    length=enc.length,
+                )
+                for enc in post.enclosures
+            ]
+            result.append(
+                PostDict(
+                    id=post.external_id,
+                    title=post.title,
+                    link=post.link,
+                    published_at=post.published_at,
+                    content=post.content,
+                    author=post.author,
+                    enclosures=enclosures,
+                )
             )
-            for post in posts
-        ]
+        return result
 
     @staticmethod
     def next_update(feed: "Feed", session: Session) -> datetime | None:

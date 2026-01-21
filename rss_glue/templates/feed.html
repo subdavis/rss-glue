@@ -49,6 +49,27 @@
     {% if post.content %}
     <div>{{ post.content | safe }}</div>
     {% endif %}
+    {% if post.enclosures %}
+    <div>
+        {% for enc in post.enclosures %}
+        {% if enc.mime_type and enc.mime_type.startswith('audio/') %}
+        <audio controls>
+            <source src="{{ enc.url }}" type="{{ enc.mime_type }}">
+            <a href="{{ enc.url }}">Download audio</a>
+        </audio>
+        {% elif enc.mime_type and enc.mime_type.startswith('video/') %}
+        <video controls width="640">
+            <source src="{{ enc.url }}" type="{{ enc.mime_type }}">
+            <a href="{{ enc.url }}">Download video</a>
+        </video>
+        {% elif enc.mime_type and enc.mime_type.startswith('image/') %}
+        <img src="{{ enc.url }}" alt="Enclosure">
+        {% else %}
+        <p><a href="{{ enc.url }}">Download attachment{% if enc.mime_type %} ({{ enc.mime_type }}){% endif %}</a></p>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
     <hr>
 </article>
 {% endfor %}

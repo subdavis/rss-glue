@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session, select, func
 
 from rss_glue.database import get_session
-from rss_glue.models.db import Feed, MediaCache, Post
+from rss_glue.models.db import Enclosure, Feed, MediaCache, Post
 from rss_glue.models.user import User
 from rss_glue.services.auth import get_current_user_optional, require_auth
 from rss_glue.services.config_sync import get_current_config
