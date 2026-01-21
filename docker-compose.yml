@@ -1,0 +1,17 @@
+services:
+  rss-glue:
+    image: ghcr.io/subdavis/rss-glue:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - rss-glue-data:/var/data
+      - rss-glue-media:/var/media
+    environment:
+      - DISPLAY_TIMEZONE=America/New_York
+      - ENABLE_BACKGROUND_WORKER=true
+      # - MEDIA_DIR=/var/media  # Default, can be customized
+    restart: unless-stopped
+
+volumes:
+  rss-glue-data:
+  rss-glue-media:

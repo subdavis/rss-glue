@@ -57,10 +57,32 @@ def discover_migrations() -> list[tuple[str, Callable]]:
     return migrations
 
 
-def run_migrations(engine):
-    """Run all pending migrations in order."""
+def is_fresh_database(engine) -> bool:
+    """Check if this is a fresh database (no migrations have ever been applied)."""
+    with Session(engine) as session:
+        result = session.exec(text("SELECT COUNT(*) FROM schema_version"))
+        return result.one()[0] == 0
+
+
+def run_migrations(engine, fresh_db: bool = False):
+    """Run all pending migrations in order.
+
+    Args:
+        engine: SQLAlchemy engine
+        fresh_db: If True, mark all migrations as applied without running them
+                  (used when create_all() already created the current schema)
+    """
     applied = get_applied_migrations(engine)
     migrations = discover_migrations()
+
+    if fresh_db and not applied:
+        # Fresh database - schema is already current from create_all()
+        # Mark all migrations as applied without running them
+        print("Fresh database detected, marking all migrations as applied")
+        for name, _ in migrations:
+            mark_migration_applied(engine, name)
+            print(f"  ✓ {name} marked as applied")
+        return
 
     for name, migrate_fn in migrations:
         if name not in applied:

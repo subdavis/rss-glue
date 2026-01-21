@@ -14,8 +14,8 @@ from sqlmodel import Session, select
 
 from rss_glue.models.db import Enclosure, MediaCache, Post
 
-# Media directory relative to the project root
-MEDIA_DIR = Path("media")
+# Media directory - configurable via environment variable
+MEDIA_DIR = Path(os.getenv("MEDIA_DIR", "media"))
 
 # Patterns to extract media URLs from HTML content
 IMG_PATTERN = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
