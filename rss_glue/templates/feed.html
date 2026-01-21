@@ -2,25 +2,25 @@
 {% block title %}{{ feed.name }} - RSS Glue{% endblock %}
 {% block content %}
 <h2>{{ feed.name }}</h2>
-<p>
+<p class="feed-meta">
     <strong>ID:</strong> {{ feed.id }} |
     <strong>Type:</strong> {{ feed.type }} |
     <strong>Limit:</strong> {{ feed.limit }} |
-    <strong>Status:</strong> {% if feed.enabled %}<span style="color: green;">Enabled</span>{% else %}<span style="color: red;">Disabled</span>{% endif %}
+    <strong>Status:</strong> {% if feed.enabled %}<span class="status-enabled">Enabled</span>{% else %}<span class="status-disabled">Disabled</span>{% endif %}
 </p>
-<div style="display: flex; flex-direction: row; gap: 10px; align-items: center;">
+<div class="feed-actions">
     <a href="/feed/{{ feed.id }}/rss">RSS Feed</a>
 
     {% if request.cookies.get('session') %}
-    <form action="/feed/{{ feed.id }}/update" method="post" style="display:inline">
+    <form action="/feed/{{ feed.id }}/update" method="post">
         <button type="submit">Update</button>
     </form>
 
-    <form action="/feed/{{ feed.id }}/toggle" method="post" style="display:inline">
+    <form action="/feed/{{ feed.id }}/toggle" method="post">
         <button type="submit">{% if feed.enabled %}Disable{% else %}Enable{% endif %}</button>
     </form>
 
-    <form action="/feed/{{ feed.id }}/reset" method="post" style="display:inline"
+    <form action="/feed/{{ feed.id }}/reset" method="post"
         onsubmit="return confirm('Reset feed? This will delete all posts and media.')">
         <button type="submit">Reset</button>
     </form>
@@ -70,7 +70,6 @@
         {% endfor %}
     </div>
     {% endif %}
-    <hr>
 </article>
 {% endfor %}
 {% else %}

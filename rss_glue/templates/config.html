@@ -8,39 +8,37 @@
 {% endif %}
 
 {% if error %}
-<pre style="color: red;">Error: {{ error }}</pre>
+<pre class="error-box">Error: {{ error }}</pre>
 {% endif %}
 
-<form method="post" action="/config" style="display: flex; flex-direction: column; gap: 10px;">
-  <div>
+<form method="post" action="/config" class="form-stack">
+  <div class="form-group">
     <label>
       <input type="checkbox" name="cache_media" {% if config.cache_media %}checked{% endif %}>
       Cache Embedded Media (Global)
     </label>
   </div>
 
-  <div>
+  <div class="form-group">
     <label>
       ScrapeCreators API Key (for Instagram/Facebook):
-      <input type="text" name="scrape_creators_key" value="{{ config.scrape_creators_key or '' }}"
-        style="width: 300px;">
+      <input type="text" name="scrape_creators_key" value="{{ config.scrape_creators_key or '' }}">
     </label>
   </div>
 
-  <div>
+  <div class="form-group">
     <label>
       Default Fetch Interval (minutes):
       <input type="number" name="default_cooldown_minutes" value="{{ config.default_cooldown_minutes or 15 }}" min="0"
-        max="10080" style="width: 100px;">
+        max="10080">
       <small>(0 = no cooldown, max 7 days)</small>
     </label>
   </div>
 
-  <div>
+  <div class="form-group">
     <label>
       Base URL for RSS feeds:
-      <input type="url" name="base_url" value="{{ config.base_url or 'http://localhost:8000' }}"
-        style="width: 300px;" required>
+      <input type="url" name="base_url" value="{{ config.base_url or 'http://localhost:8000' }}" required>
       <small>(Used for generating absolute URLs in RSS output)</small>
     </label>
   </div>
@@ -97,25 +95,25 @@
 <h2>Change Password</h2>
 
 {% if password_error %}
-<pre style="color: red;">Error: {{ password_error }}</pre>
+<pre class="error-box">Error: {{ password_error }}</pre>
 {% endif %}
 
-<form method="post" action="/config/password" style="display: flex; flex-direction: column; gap: 10px; max-width: 400px;">
-  <div>
+<form method="post" action="/config/password" class="form-stack">
+  <div class="form-group">
     <label>
       Current Password:
       <input type="password" name="current_password" required>
     </label>
   </div>
 
-  <div>
+  <div class="form-group">
     <label>
       New Password:
       <input type="password" name="new_password" required minlength="8">
     </label>
   </div>
 
-  <div>
+  <div class="form-group">
     <label>
       Confirm New Password:
       <input type="password" name="confirm_password" required minlength="8">

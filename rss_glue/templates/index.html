@@ -13,7 +13,7 @@
 </p>
 
 
-<form action="/update" method="post" style="margin: 1rem 0;">
+<form action="/update" method="post">
     <button type="submit">Update All Feeds</button>
 </form>
 
@@ -53,7 +53,7 @@
     </tr>
     {% for item in feed_schedules %}
     {% set is_overdue = item.feed.enabled and item.next_update and item.next_update < now %}
-    <tr{% if is_overdue %} style="background-color: lightyellow;"{% endif %}>
+    <tr{% if is_overdue %} class="overdue"{% endif %}>
         <td>
             <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
         </td>
@@ -61,9 +61,9 @@
         <td>{{ item.feed.limit }}</td>
         <td>
             {% if item.feed.enabled %}
-            <span style="color: green;">Enabled</span>
+            <span class="status-enabled">Enabled</span>
             {% else %}
-            <span style="color: red;">Disabled</span>
+            <span class="status-disabled">Disabled</span>
             {% endif %}
         </td>
         <td>

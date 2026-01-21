@@ -12,9 +12,7 @@
         <th>Feed ID</th>
         <th>Started</th>
         <th>Duration</th>
-        <th>Status</th>
         <th>Posts Added</th>
-        <th>Error</th>
     </tr>
     {% for item in history_data %}
     {% set history = item.history %}
@@ -22,6 +20,11 @@
     <tr>
         <td>
             <a href="/feed/{{ feed.id }}/html">{{ feed.id }}</a>
+            {% if history.status == 'error' %}
+            ❌
+            {% elif history.status == 'running' %}
+            ⏳
+            {% endif %}
         </td>
         <td>
             <span data-utc-time="{{ history.started_at.isoformat() }}" data-format="datetime" title="{{ history.started_at | localtime('tooltip') }}">
@@ -37,20 +40,10 @@
             {% endif %}
         </td>
         <td>
-            <strong>{{ history.status|upper }}</strong>
-        </td>
-        <td>
             {% if history.posts_added > 0 %}
             <strong>{{ history.posts_added }}</strong>
             {% else %}
             {{ history.posts_added }}
-            {% endif %}
-        </td>
-        <td>
-            {% if history.error_message %}
-            <small>{{ history.error_message }}</small>
-            {% else %}
-            -
             {% endif %}
         </td>
     </tr>

@@ -7,26 +7,11 @@
 <p>Showing {{ gallery_data|length }} of {{ total_count }} total images</p>
 
 {% if gallery_data %}
-<style>
-    .gallery-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 10px;
-        margin: 20px 0;
-    }
-
-    .gallery-item img {
-        width: 100%;
-        height: auto;
-        object-fit: cover;
-    }
-</style>
-
 <div class="gallery-grid">
     {% for item in gallery_data %}
     <div class="gallery-item">
         <img src="{{ item.media_url }}" alt="Image from {{ item.feed.name }}" loading="lazy">
-        <div style="font-size: small; margin-top: 5px;">
+        <div class="gallery-item-meta">
             <strong>{{ item.feed.name }}</strong><br>
             <span data-utc-time="{{ item.post.published_at.isoformat() }}" data-format="relative" title="{{ item.post.published_at | localtime('tooltip') }}">
                 {{ item.post.published_at | localtime("relative") }}

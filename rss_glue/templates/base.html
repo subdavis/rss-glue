@@ -3,40 +3,10 @@
 
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}RSS Glue{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
-
-<style>
-    nav a {
-        font-weight: bold;
-        font-family: monospace;
-        padding: 0 10px;
-    }
-
-    article {
-        max-width: 600px;
-    }
-
-    article img,
-    article video {
-        max-width: 100%;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    th,
-    td {
-        padding: 2px 8px;
-        text-align: left;
-    }
-
-    th {
-        background-color: #f0f0f0;
-    }
-</style>
 
 <body>
     <nav>
@@ -52,7 +22,6 @@
         <a href="/auth/login">Login</a>
         {% endif %}
     </nav>
-    <hr>
     {% block content %}{% endblock %}
 
 </body>

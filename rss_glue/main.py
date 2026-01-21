@@ -2,8 +2,10 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 # Import feeds module to register handlers
 import rss_glue.feeds  # noqa: F401
@@ -42,3 +44,7 @@ app.include_router(pages.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(config.router, prefix="/config", tags=["config"])
 app.include_router(feeds.router, tags=["feeds"])
+
+# Mount static files (CSS, etc.)
+static_dir = Path(__file__).parent.parent / "static"
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
