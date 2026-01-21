@@ -81,7 +81,11 @@ def reset_feed_endpoint(
     """Reset a feed to its initial state and redirect to HTML preview. Requires authentication."""
     try:
         counts = reset_feed(feed_id, session)
-        msg = f"Reset: {counts['posts_deleted']} posts, {counts['files_deleted']} files deleted"
+        posts = counts.get("posts_deleted", 0)
+        issues = counts.get("digest_issues_deleted", 0)
+        files = counts.get("files_deleted", 0)
+        items = posts + issues
+        msg = f"Reset: {items} items, {files} files deleted"
         return RedirectResponse(
             url=f"/feed/{feed_id}/html?message={msg}",
             status_code=303,

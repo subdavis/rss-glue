@@ -181,7 +181,6 @@ def update_feed(
         history.status = "error"
         history.error_message = str(e)
         history.completed_at = datetime.now(timezone.utc)
-        raise e
 
     session.add(history)
     session.commit()
