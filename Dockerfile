@@ -24,6 +24,9 @@ WORKDIR /app
 # Copy the virtual environment from builder
 COPY --from=builder /app/.venv /app/.venv
 
+# Copy static files
+COPY static /app/static
+
 # Copy application code
 COPY --from=builder /app/rss_glue ./rss_glue
 
