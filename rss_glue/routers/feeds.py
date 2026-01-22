@@ -2,10 +2,11 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
+from sqlalchemy import text as sql_text
 from sqlmodel import Session, func, select
 
 from rss_glue.database import get_session
-from rss_glue.models.db import Feed, UpdateHistory
+from rss_glue.models.db import Feed, FeedRelationship, Post, UpdateHistory
 from rss_glue.models.user import User
 from rss_glue.services.auth import require_auth
 from rss_glue.services.config_sync import get_current_config
@@ -15,6 +16,38 @@ from rss_glue.services.update import reset_feed, update_all_feeds, update_feed
 from rss_glue.templates import templates
 
 router = APIRouter()
+
+
+def get_source_feed_ids(feed: Feed, session: Session) -> list[str]:
+    """Get all source feed IDs for a feed.
+
+    For merge feeds, recursively resolves all source feeds.
+    For other feeds, returns a list containing just the feed's own ID.
+    """
+    if feed.type != "merge":
+        return [feed.id]
+
+    return _resolve_merge_sources(feed.id, session)
+
+
+def _resolve_merge_sources(merge_feed_id: str, session: Session) -> list[str]:
+    """Recursively get all source feed IDs for a merge feed."""
+    stmt = (
+        select(FeedRelationship.child_feed_id)
+        .where(FeedRelationship.parent_feed_id == merge_feed_id)
+        .order_by(FeedRelationship.position)  # type: ignore[arg-type]
+    )
+    child_ids = list(session.exec(stmt).all())
+
+    result = []
+    for child_id in child_ids:
+        child_feed = session.get(Feed, child_id)
+        if child_feed and child_feed.type == "merge":
+            result.extend(_resolve_merge_sources(child_id, session))
+        else:
+            result.append(child_id)
+
+    return result
 
 
 @router.post("/update")
@@ -205,41 +238,174 @@ def get_update_history(
     page: int = 1,
     session: Session = Depends(get_session),
 ):
-    """Get paginated update history."""
+    """Get paginated update history for all feeds."""
+    return _render_update_history(request, session, page, feed=None)
+
+
+@router.get("/feed/{feed_id}/history")
+def get_feed_history(
+    feed_id: str,
+    request: Request,
+    page: int = 1,
+    session: Session = Depends(get_session),
+):
+    """Get paginated update history for a specific feed."""
+    feed = session.get(Feed, feed_id)
+    if not feed:
+        raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
+    return _render_update_history(request, session, page, feed=feed)
+
+
+def _render_update_history(
+    request: Request,
+    session: Session,
+    page: int,
+    feed: Feed | None,
+):
+    """Render update history page for all feeds or a specific feed.
+
+    For merge feeds, shows history from all source feeds.
+    """
     if page < 1:
         page = 1
 
     records_per_page = 100
     offset = (page - 1) * records_per_page
 
-    # Get total count for pagination
-    total_count = session.exec(select(func.count(UpdateHistory.id))).first() or 0
-    total_pages = (total_count + records_per_page - 1) // records_per_page
-
-    # Get paginated records in reverse chronological order
-    history_records = session.exec(
+    # Build query with optional feed filter
+    count_query = select(func.count(UpdateHistory.id))
+    history_query = (
         select(UpdateHistory, Feed)
         .join(Feed, UpdateHistory.feed_id == Feed.id)  # type: ignore[arg-type]
         .order_by(UpdateHistory.started_at.desc())  # type: ignore[union-attr]
-        .offset(offset)
-        .limit(records_per_page)
+    )
+
+    if feed:
+        # For merge feeds, get history from all source feeds
+        source_ids = get_source_feed_ids(feed, session)
+        count_query = count_query.where(UpdateHistory.feed_id.in_(source_ids))  # type: ignore[union-attr]
+        history_query = history_query.where(UpdateHistory.feed_id.in_(source_ids))  # type: ignore[union-attr]
+
+    total_count = session.exec(count_query).first() or 0
+    total_pages = (total_count + records_per_page - 1) // records_per_page
+
+    history_records = session.exec(
+        history_query.offset(offset).limit(records_per_page)
     ).all()
 
     # Convert to list of dictionaries for template
     history_data = []
-    for history, feed in history_records:
+    for history, history_feed in history_records:
         history_data.append(
             {
                 "history": history,
-                "feed": feed,
+                "feed": history_feed,
             }
         )
+
+    # Determine pagination base URL
+    pagination_base_url = f"/feed/{feed.id}/history" if feed else "/update-history"
 
     return templates.TemplateResponse(
         "update_history.html",
         {
             "request": request,
+            "feed": feed,
             "history_data": history_data,
+            "pagination_base_url": pagination_base_url,
+            "current_page": page,
+            "total_pages": total_pages,
+            "total_count": total_count,
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "prev_page": page - 1 if page > 1 else None,
+            "next_page": page + 1 if page < total_pages else None,
+        },
+    )
+
+
+@router.get("/feed/{feed_id}/gallery")
+def get_feed_gallery(
+    feed_id: str,
+    request: Request,
+    page: int = 1,
+    session: Session = Depends(get_session),
+):
+    """Get gallery of images for a specific feed.
+
+    For merge feeds, shows images from all source feeds.
+    """
+    feed = session.get(Feed, feed_id)
+    if not feed:
+        raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
+
+    if page < 1:
+        page = 1
+
+    images_per_page = 50
+    offset = (page - 1) * images_per_page
+
+    # Get source feed IDs (handles merge feeds)
+    source_ids = get_source_feed_ids(feed, session)
+
+    # Build placeholders for SQL IN clause
+    placeholders = ", ".join(f":feed_id_{i}" for i in range(len(source_ids)))
+    params = {f"feed_id_{i}": fid for i, fid in enumerate(source_ids)}
+    params["limit"] = images_per_page
+    params["offset"] = offset
+
+    # Query for images from the feed(s)
+    union_query = sql_text(f"""
+        SELECT local_path, post_id, feed_id, published_at, COUNT(*) OVER() as total_count
+        FROM (
+            SELECT mc.local_path, mc.post_id, mc.feed_id, p.published_at
+            FROM media_cache mc
+            JOIN post p ON mc.post_id = p.id
+            WHERE mc.content_type LIKE 'image/%' AND mc.feed_id IN ({placeholders})
+            UNION ALL
+            SELECT e.local_path, e.post_id, p.feed_id, p.published_at
+            FROM enclosure e
+            JOIN post p ON e.post_id = p.id
+            WHERE e.local_path IS NOT NULL AND e.mime_type LIKE 'image/%' AND p.feed_id IN ({placeholders})
+        )
+        ORDER BY published_at DESC
+        LIMIT :limit OFFSET :offset
+    """)
+
+    results = session.exec(union_query, params=params).all()
+
+    # Extract total count from first row (or 0 if no results)
+    total_count = results[0][4] if results else 0
+    total_pages = (total_count + images_per_page - 1) // images_per_page
+
+    # Build gallery data from results
+    gallery_data = []
+    for row in results:
+        local_path, post_id, row_feed_id, _, _ = row
+        post = session.get(Post, post_id)
+        row_feed = session.get(Feed, row_feed_id)
+
+        if post and local_path and row_feed:
+            path_parts = local_path.split("/")
+            if len(path_parts) >= 2:
+                media_url = f"/media/{path_parts[-2]}/{path_parts[-1]}"
+            else:
+                media_url = f"/media/{local_path}"
+            gallery_data.append(
+                {
+                    "feed": row_feed,
+                    "post": post,
+                    "media_url": media_url,
+                }
+            )
+
+    return templates.TemplateResponse(
+        "gallery.html",
+        {
+            "request": request,
+            "feed": feed,
+            "gallery_data": gallery_data,
+            "pagination_base_url": f"/feed/{feed_id}/gallery",
             "current_page": page,
             "total_pages": total_pages,
             "total_count": total_count,

@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% from "pagination.html" import render as render_pagination %}
-{% block title %}Update History - RSS Glue{% endblock %}
+{% block title %}Update History{% endblock %}
 {% block content %}
+{% if feed %}
+    {% include "feed_header.html" %}
+{% endif %}
+
 <h2>Update History</h2>
 
 <p>Showing {{ history_data|length }} of {{ total_count }} total update attempts</p>
@@ -9,24 +13,27 @@
 {% if history_data %}
 <table border="1">
     <tr>
-        <th>Feed ID</th>
+        {% if not feed or feed.type == 'merge' %}<th>Feed ID</th>{% endif %}
         <th>Started</th>
         <th>Duration</th>
         <th>Posts Added</th>
     </tr>
     {% for item in history_data %}
     {% set history = item.history %}
-    {% set feed = item.feed %}
+    {% set item_feed = item.feed %}
     <tr>
+        {% if not feed or feed.type == 'merge' %}
         <td>
-            <a href="/feed/{{ feed.id }}/html">{{ feed.id }}</a>
+            <a href="/feed/{{ item_feed.id }}/html">{{ item_feed.id }}</a>
             {% if history.status == 'error' %}
             ❌
             {% elif history.status == 'running' %}
             ⏳
             {% endif %}
         </td>
+        {% endif %}
         <td>
+            {% if feed and feed.type != 'merge' %}{% if history.status == 'error' %}❌{% elif history.status == 'running' %}⏳{% endif %}{% endif %}
             <span data-utc-time="{{ history.started_at.isoformat() }}" data-format="datetime" title="{{ history.started_at | localtime('tooltip') }}">
                 {{ history.started_at | localtime }}
             </span>
@@ -50,10 +57,11 @@
     {% endfor %}
 </table>
 
-{{ render_pagination("/update-history", current_page, total_pages, has_prev, has_next, prev_page, next_page) }}
+{{ render_pagination(pagination_base_url, current_page, total_pages, has_prev, has_next, prev_page, next_page) }}
 
 {% else %}
-<p>No update history found. <a href="/update">Run an update</a> to see history here.</p>
+<p>No update history found.{% if not feed %} <a href="/update">Run an update</a> to see history here.{% endif %}</p>
 {% endif %}
+
 
 {% endblock %}

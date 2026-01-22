@@ -1,0 +1,34 @@
+<h2>{{ feed.name }}</h2>
+<p class="feed-meta">
+    <strong>ID:</strong> {{ feed.id }} |
+    <strong>Type:</strong> {{ feed.type }} |
+    <strong>Limit:</strong> {{ feed.limit }} |
+    <strong>Status:</strong> {% if feed.enabled %}<span class="status-enabled">Enabled</span>{% else %}<span class="status-disabled">Disabled</span>{% endif %}
+</p>
+<div class="feed-actions">
+    <a href="/feed/{{ feed.id }}/html">Posts</a>
+    <a href="/feed/{{ feed.id }}/history">History</a>
+    <a href="/feed/{{ feed.id }}/gallery">Gallery</a>
+    <a href="/feed/{{ feed.id }}/rss">RSS</a>
+
+    {% if request.cookies.get('session') %}
+    <form action="/feed/{{ feed.id }}/update" method="post">
+        <button type="submit">Update</button>
+    </form>
+
+    <form action="/feed/{{ feed.id }}/toggle" method="post">
+        <button type="submit">{% if feed.enabled %}Disable{% else %}Enable{% endif %}</button>
+    </form>
+
+    <form action="/feed/{{ feed.id }}/reset" method="post"
+        onsubmit="return confirm('Reset feed? This will delete all posts and media.')">
+        <button type="submit">Reset</button>
+    </form>
+    {% endif %}
+
+</div>
+
+{% if message %}
+<p><strong>{{ message }}</strong></p>
+{% endif %}
+<hr>

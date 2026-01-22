@@ -163,7 +163,7 @@ cookies.txt
 docker-config/
 docker-downloads/
 /bcs
-/static/
+/static_old/
 
 config.json
 rss_glue.db

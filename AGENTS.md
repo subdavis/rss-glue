@@ -11,7 +11,7 @@ This is v2 of a project.  v1 is in the v1 directory included for reference, neve
 
 ## Frontent
 
-No CSS of any kind should be used.  This is a CSS free applicaiton
+css is in /static/style.css
 
 ## Tooling
 

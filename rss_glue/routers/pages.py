@@ -181,7 +181,9 @@ def gallery_page(
         "gallery.html",
         {
             "request": request,
+            "feed": None,
             "gallery_data": gallery_data,
+            "pagination_base_url": "/gallery",
             "current_page": page,
             "total_pages": total_pages,
             "total_count": total_count,

@@ -1,18 +1,21 @@
 {% extends "base.html" %}
 {% from "pagination.html" import render as render_pagination %}
-{% block title %}Gallery - RSS Glue{% endblock %}
+{% block title %}Media Gallery{% endblock %}
 {% block content %}
+{% if feed %}
+    {% include "feed_header.html" %}
+{% endif %}
 <h2>Media Gallery</h2>
 
 <p>Showing {{ gallery_data|length }} of {{ total_count }} total images</p>
 
 {% if gallery_data %}
-<div class="gallery-grid">
+<div class="gallery-grid" id="gallery-grid">
     {% for item in gallery_data %}
     <div class="gallery-item">
         <img src="{{ item.media_url }}" alt="Image from {{ item.feed.name }}" loading="lazy">
         <div class="gallery-item-meta">
-            <strong>{{ item.feed.name }}</strong><br>
+            {% if not feed or feed.type == 'merge' %}<strong>{{ item.feed.name }}</strong><br>{% endif %}
             <span data-utc-time="{{ item.post.published_at.isoformat() }}" data-format="relative" title="{{ item.post.published_at | localtime('tooltip') }}">
                 {{ item.post.published_at | localtime("relative") }}
             </span>
@@ -21,13 +24,68 @@
     {% endfor %}
 </div>
 
-{{ render_pagination("/gallery", current_page, total_pages, has_prev, has_next, prev_page, next_page) }}
+<script>
+(function() {
+    const grid = document.getElementById('gallery-grid');
+    const items = Array.from(grid.querySelectorAll('.gallery-item'));
+    const gap = 16;
+
+    function layout() {
+        const containerWidth = grid.clientWidth;
+        const itemWidth = items[0]?.offsetWidth || 200;
+        const columns = Math.max(1, Math.floor((containerWidth + gap) / (itemWidth + gap)));
+        const columnHeights = new Array(columns).fill(0);
+        const actualGap = (containerWidth - (columns * itemWidth)) / (columns - 1) || gap;
+
+        items.forEach(item => {
+            // Find shortest column
+            const minHeight = Math.min(...columnHeights);
+            const columnIndex = columnHeights.indexOf(minHeight);
+
+            // Position item
+            item.style.left = columnIndex * (itemWidth + actualGap) + 'px';
+            item.style.top = minHeight + 'px';
+
+            // Update column height
+            columnHeights[columnIndex] = minHeight + item.offsetHeight + gap;
+        });
+
+        // Set container height
+        grid.style.height = Math.max(...columnHeights) + 'px';
+    }
+
+    // Wait for images to load before layout
+    let loaded = 0;
+    const images = grid.querySelectorAll('img');
+
+    function checkLayout() {
+        loaded++;
+        if (loaded >= images.length) {
+            layout();
+        }
+    }
+
+    images.forEach(img => {
+        if (img.complete) {
+            checkLayout();
+        } else {
+            img.addEventListener('load', checkLayout);
+            img.addEventListener('error', checkLayout);
+        }
+    });
+
+    // Handle empty gallery
+    if (images.length === 0) layout();
+
+    // Relayout on resize
+    window.addEventListener('resize', layout);
+})();
+</script>
+
+{{ render_pagination(pagination_base_url, current_page, total_pages, has_prev, has_next, prev_page, next_page) }}
 
 {% else %}
-<p>No images found. <a href="/">Update some feeds</a> with media caching enabled to see images here.</p>
+<p>No images found.{% if not feed %} <a href="/">Update some feeds</a> with media caching enabled to see images here.{% endif %}</p>
 {% endif %}
-
-<hr>
-<p><a href="/">← Back to Feeds</a></p>
 
 {% endblock %}
