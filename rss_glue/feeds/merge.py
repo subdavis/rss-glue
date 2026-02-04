@@ -6,15 +6,34 @@ from typing import TYPE_CHECKING, Any
 from sqlmodel import Session, select
 
 from rss_glue.feeds.registry import FeedRegistry, PostDict
-from rss_glue.models.db import FeedRelationship, Post
+from rss_glue.models.db import Feed, FeedTag, Post, Tag
 
-if TYPE_CHECKING:
-    from rss_glue.models.db import Feed
+
+def get_merge_source_ids(feed_id: str, session: Session) -> set[str]:
+    """Get all source feed IDs for a merge feed based on its include_tags.
+
+    This is the canonical function for resolving merge feed sources.
+    Used by merge handler, digest handler, update service, etc.
+    """
+    feed = session.get(Feed, feed_id)
+    if not feed or feed.type != "merge":
+        return set()
+
+    include_tags = feed.config.get("include_tags", [])
+    if not include_tags:
+        return set()
+
+    stmt = (
+        select(FeedTag.feed_id)
+        .join(Tag)
+        .where(Tag.name.in_(include_tags))  # type: ignore[attr-defined]
+    )
+    return set(session.exec(stmt).all())
 
 
 @FeedRegistry.register("merge")
 class MergeFeedHandler:
-    """Handler for merge feeds - combines posts from multiple sources."""
+    """Handler for merge feeds - combines posts from sources matching tags."""
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:
@@ -42,13 +61,7 @@ class MergeFeedHandler:
         feed_id: str, limit: int, session: Session, base_url: str = ""
     ) -> list[PostDict]:
         """Get posts from all source feeds, sorted by published_at."""
-        # Get source feed IDs in order
-        stmt = (
-            select(FeedRelationship.child_feed_id)
-            .where(FeedRelationship.parent_feed_id == feed_id)
-            .order_by(FeedRelationship.position)  # type: ignore[arg-type]
-        )
-        source_ids = list(session.exec(stmt).all())
+        source_ids = get_merge_source_ids(feed_id, session)
 
         if not source_ids:
             return []

@@ -30,3 +30,7 @@ I value browser-native simple approaches.  In this project, we are sticking to a
 If a behavior is specific to a feed type, it should be polymorphic and implemented on the feed handler class itself.
 
 If you find yourself writing `if feed.type == "type":` that's an indicator that a refactor should happen.
+
+## Tests
+
+There are no tests, don't worry about writing persistent ones.  Feel free to write ephemeral tests to validate work if that seems useful.

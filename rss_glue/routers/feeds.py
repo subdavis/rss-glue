@@ -6,7 +6,7 @@ from sqlalchemy import text as sql_text
 from sqlmodel import Session, func, select
 
 from rss_glue.database import get_session
-from rss_glue.models.db import Feed, FeedRelationship, Post, UpdateHistory
+from rss_glue.models.db import Feed, Post, UpdateHistory
 from rss_glue.models.user import User
 from rss_glue.services.auth import require_auth
 from rss_glue.services.config_sync import get_current_config
@@ -21,7 +21,7 @@ router = APIRouter()
 def get_source_feed_ids(feed: Feed, session: Session) -> list[str]:
     """Get all source feed IDs for a feed.
 
-    For merge feeds, recursively resolves all source feeds.
+    For merge feeds, recursively resolves all source feeds via tags.
     For other feeds, returns a list containing just the feed's own ID.
     """
     if feed.type != "merge":
@@ -31,13 +31,10 @@ def get_source_feed_ids(feed: Feed, session: Session) -> list[str]:
 
 
 def _resolve_merge_sources(merge_feed_id: str, session: Session) -> list[str]:
-    """Recursively get all source feed IDs for a merge feed."""
-    stmt = (
-        select(FeedRelationship.child_feed_id)
-        .where(FeedRelationship.parent_feed_id == merge_feed_id)
-        .order_by(FeedRelationship.position)  # type: ignore[arg-type]
-    )
-    child_ids = list(session.exec(stmt).all())
+    """Recursively get all source feed IDs for a merge feed (using tags)."""
+    from rss_glue.feeds.merge import get_merge_source_ids
+
+    child_ids = get_merge_source_ids(merge_feed_id, session)
 
     result = []
     for child_id in child_ids:

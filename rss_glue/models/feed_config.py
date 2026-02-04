@@ -28,6 +28,10 @@ class FeedConfigBase(BaseModel):
         default=True,
         description="Whether this feed is enabled and should be updated by the worker.",
     )
+    tags: list[str] = Field(
+        default_factory=list,
+        description="List of tags for categorizing and grouping feeds.",
+    )
 
     @field_validator("schedule")
     @classmethod

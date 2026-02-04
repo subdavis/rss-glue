@@ -21,9 +21,11 @@ from rss_glue.services.media_cache import cache_enclosure, process_post_media
 def topological_sort_feeds(session: Session) -> list[str]:
     """Return feed IDs in topological order (dependencies first).
 
-    For update order: source feeds must be updated before merge feeds.
+    For update order: source feeds must be updated before merge/digest feeds.
     Uses Kahn's algorithm.
     """
+    from rss_glue.feeds.merge import get_merge_source_ids
+
     # Get all feeds
     feeds = {f.id: f for f in session.exec(select(Feed)).all()}
 
@@ -31,10 +33,17 @@ def topological_sort_feeds(session: Session) -> list[str]:
         return []
 
     # Build dependency graph
-    # For update order, parent (merge) depends on children (sources)
+    # For update order, parent (merge/digest) depends on children (sources)
     deps: dict[str, set[str]] = defaultdict(set)
+
+    # Get digest dependencies from FeedRelationship
     for rel in session.exec(select(FeedRelationship)).all():
         deps[rel.parent_feed_id].add(rel.child_feed_id)
+
+    # Get merge dependencies from tags
+    for feed_id, feed in feeds.items():
+        if feed.type == "merge":
+            deps[feed_id] = get_merge_source_ids(feed_id, session)
 
     # Initialize in-degree for all feeds
     in_degree: dict[str, int] = {feed_id: 0 for feed_id in feeds}

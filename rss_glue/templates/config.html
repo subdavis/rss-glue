@@ -63,13 +63,14 @@
     "name": "Feed Name",
     "url": "https://example.com/feed.xml",
     "limit": 50,
-    "cooldown_minutes": 30
+    "cooldown_minutes": 30,
+    "tags": ["tech", "news"]
   },
   {
     "id": "merged-feed",
     "type": "merge",
     "name": "Combined Feed",
-    "sources": ["unique-id", "other-id"],
+    "include_tags": ["tech"],
     "limit": 100
   },
   {
@@ -79,7 +80,8 @@
     "subreddit": "selfhosted",
     "listing_type": "top",
     "time_filter": "week",
-    "limit": 20
+    "limit": 20,
+    "tags": ["tech"]
   }
 ]
 </pre>
@@ -88,7 +90,7 @@
 <ul>
   <li>Feed IDs must be unique and contain only letters, numbers, hyphens, and underscores</li>
   <li>RSS feeds require a valid http/https URL</li>
-  <li>Merge feeds must reference existing feed IDs in sources</li>
+  <li>Merge feeds must specify include_tags to select source feeds by tag</li>
   <li>Circular dependencies are not allowed</li>
   <li>Limit must be between 1 and 1000</li>
   <li>cooldown_minutes is optional (defaults to global setting), must be 0-10080 minutes</li>

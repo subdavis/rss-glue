@@ -34,11 +34,23 @@ def get_feed_dependencies(feed_id: str, session: Session) -> list[str]:
     """Recursively get all dependencies of a feed.
 
     Returns list of feed IDs that this feed depends on (children/sources).
+    For merge feeds, uses tag-based resolution. For digest feeds, uses FeedRelationship.
     """
-    stmt = select(FeedRelationship.child_feed_id).where(
-        FeedRelationship.parent_feed_id == feed_id
-    )
-    children = list(session.exec(stmt).all())
+    from rss_glue.feeds.merge import get_merge_source_ids
+
+    feed = session.get(Feed, feed_id)
+    if not feed:
+        return []
+
+    if feed.type == "merge":
+        # Merge feeds use tag-based sources
+        children = list(get_merge_source_ids(feed_id, session))
+    else:
+        # Digest feeds use FeedRelationship
+        stmt = select(FeedRelationship.child_feed_id).where(
+            FeedRelationship.parent_feed_id == feed_id
+        )
+        children = list(session.exec(stmt).all())
 
     result = []
     for child_id in children:

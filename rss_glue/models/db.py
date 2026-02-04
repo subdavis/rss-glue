@@ -36,6 +36,26 @@ class FeedRelationship(SQLModel, table=True):
     position: int = Field(default=0)
 
 
+class FeedTag(SQLModel, table=True):
+    """Many-to-many link between Feed and Tag."""
+
+    __tablename__ = "feed_tag"
+
+    feed_id: str = Field(foreign_key="feed.id", primary_key=True)
+    tag_id: int = Field(foreign_key="tag.id", primary_key=True)
+
+
+class Tag(SQLModel, table=True):
+    """Tags for categorizing feeds."""
+
+    __tablename__ = "tag"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(index=True, unique=True)
+
+    feeds: list["Feed"] = Relationship(back_populates="tags", link_model=FeedTag)
+
+
 class Feed(SQLModel, table=True):
     """Feed configuration stored in database."""
 
@@ -69,6 +89,7 @@ class Feed(SQLModel, table=True):
         back_populates="feed",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
+    tags: list["Tag"] = Relationship(back_populates="feeds", link_model=FeedTag)
 
 
 class Post(SQLModel, table=True):

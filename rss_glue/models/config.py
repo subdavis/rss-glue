@@ -16,20 +16,22 @@ class RssFeedConfig(FeedConfigBase):
 
 
 class MergeFeedConfig(FeedConfigBase):
-    """Configuration for a merge feed that combines multiple sources.
+    """Configuration for a merge feed that combines multiple sources by tags.
 
     Example:
         {
             "id": "tech-news",
             "type": "merge",
             "name": "Tech News",
-            "sources": ["hackernews", "lobsters"],
+            "include_tags": ["tech", "coding"],
             "limit": 100
         }
     """
 
     type: Literal["merge"]
-    sources: list[str] = Field(..., min_length=1)
+    include_tags: list[str] = Field(
+        ..., min_length=1, description="Include feeds that have any of these tags."
+    )
 
 
 class DigestFeedConfig(FeedConfigBase):
@@ -168,8 +170,8 @@ class AppConfig(BaseModel):
             "scrape_creators_key": "sc_...",
             "default_cooldown_minutes": 15,
             "feeds": [
-                {"id": "hn", "type": "rss", "name": "HN", "url": "https://..."},
-                {"id": "all", "type": "merge", "name": "All", "sources": ["hn"]}
+                {"id": "hn", "type": "rss", "name": "HN", "url": "https://...", "tags": ["tech"]},
+                {"id": "all", "type": "merge", "name": "All", "include_tags": ["tech"]}
             ]
         }
     """
@@ -210,17 +212,11 @@ class AppConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_references(self) -> "AppConfig":
-        """Validate that merge and digest feeds only reference existing feed IDs."""
+        """Validate that digest feeds only reference existing feed IDs."""
         feed_ids = {feed.id for feed in self.feeds}
 
         for feed in self.feeds:
-            if isinstance(feed, MergeFeedConfig):
-                for source_id in feed.sources:
-                    if source_id not in feed_ids:
-                        raise ValueError(
-                            f"Merge feed '{feed.id}' references unknown feed '{source_id}'"
-                        )
-            elif isinstance(feed, DigestFeedConfig):
+            if isinstance(feed, DigestFeedConfig):
                 if feed.source not in feed_ids:
                     raise ValueError(
                         f"Digest feed '{feed.id}' references unknown feed '{feed.source}'"
@@ -229,12 +225,14 @@ class AppConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_no_cycles(self) -> "AppConfig":
-        """Detect circular dependencies in merge and digest feeds."""
+        """Detect circular dependencies in digest feeds.
+
+        Note: Merge feeds use tag-based sources which are resolved at runtime,
+        so cycle detection for them happens at the database level.
+        """
         deps: dict[str, set[str]] = {}
         for feed in self.feeds:
-            if isinstance(feed, MergeFeedConfig):
-                deps[feed.id] = set(feed.sources)
-            elif isinstance(feed, DigestFeedConfig):
+            if isinstance(feed, DigestFeedConfig):
                 deps[feed.id] = {feed.source}
             else:
                 deps[feed.id] = set()

@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 
+from sqlalchemy import text
 from sqlmodel import Session, select
 
 from rss_glue.models.config import (
@@ -14,7 +15,7 @@ from rss_glue.models.config import (
     RedditFeedConfig,
     RssFeedConfig,
 )
-from rss_glue.models.db import Feed, FeedRelationship, SystemConfig
+from rss_glue.models.db import Feed, FeedRelationship, FeedTag, SystemConfig, Tag
 
 
 def sync_config_to_db(config: AppConfig, session: Session) -> dict:
@@ -150,6 +151,9 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
                     "time_filter": feed_config.time_filter,
                 }
             )
+        elif isinstance(feed_config, MergeFeedConfig):
+            if feed_config.include_tags:
+                config_dict["include_tags"] = feed_config.include_tags
 
         if feed_config.id in existing_feeds:
             # Update existing
@@ -182,23 +186,15 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
 
     session.commit()
 
-    # Clear all existing relationships
+    # Clear all existing relationships and tags
     for rel in session.exec(select(FeedRelationship)).all():
         session.delete(rel)
+    session.exec(text("DELETE FROM feed_tag"))
     session.commit()
 
-    # Create relationships for merge and digest feeds
+    # Create relationships for digest feeds (merge feeds use tags instead)
     for feed_config in config.feeds:
-        if isinstance(feed_config, MergeFeedConfig):
-            for i, source_id in enumerate(feed_config.sources):
-                rel = FeedRelationship(
-                    parent_feed_id=feed_config.id,
-                    child_feed_id=source_id,
-                    position=i,
-                )
-                session.add(rel)
-                stats["relationships_updated"] += 1
-        elif isinstance(feed_config, DigestFeedConfig):
+        if isinstance(feed_config, DigestFeedConfig):
             # Digest feeds have a single source
             rel = FeedRelationship(
                 parent_feed_id=feed_config.id,
@@ -207,6 +203,22 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
             )
             session.add(rel)
             stats["relationships_updated"] += 1
+
+    # Sync tags
+    existing_tags = {t.name: t for t in session.exec(select(Tag)).all()}
+    for feed_config in config.feeds:
+        if feed_config.tags:
+            for tag_name in feed_config.tags:
+                if tag_name not in existing_tags:
+                    new_tag = Tag(name=tag_name)
+                    session.add(new_tag)
+                    session.flush()
+                    session.refresh(new_tag)
+                    existing_tags[tag_name] = new_tag
+                
+                tag_obj = existing_tags[tag_name]
+                # Check if link exists? No, we cleared all feed_tags
+                session.add(FeedTag(feed_id=feed_config.id, tag_id=tag_obj.id))
 
     session.commit()
     return stats
@@ -255,6 +267,10 @@ def get_current_config(session: Session) -> dict:
             "enabled": feed.enabled,
         }
 
+        # Restore tags
+        if feed.tags:
+            feed_dict["tags"] = [t.name for t in feed.tags]
+
         # Restore explicit cache_media setting
         if feed.config.get("cache_media_explicit") is not None:
             feed_dict["cache_media"] = feed.config["cache_media_explicit"]
@@ -270,14 +286,9 @@ def get_current_config(session: Session) -> dict:
         if feed.type == "rss":
             feed_dict["url"] = feed.config.get("url", "")
         elif feed.type == "merge":
-            # Get source IDs
-            rels = session.exec(
-                select(FeedRelationship)
-                .where(FeedRelationship.parent_feed_id == feed.id)
-                .order_by(FeedRelationship.position)  # type: ignore[arg-type]
-            ).all()
-            sources = [r.child_feed_id for r in rels]
-            feed_dict["sources"] = sources
+            # Restore include_tags
+            if feed.config.get("include_tags"):
+                feed_dict["include_tags"] = feed.config["include_tags"]
         elif feed.type == "digest":
             # Get source ID (digest has a single source)
             rel = session.exec(

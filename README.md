@@ -66,20 +66,22 @@ The server runs at http://localhost:8000 (and listens on all interfaces).
       "name": "Hacker News RSS",
       "url": "https://news.ycombinator.com/rss",
       "limit": 50,
-      "cache_media": true
+      "cache_media": true,
+      "tags": ["tech", "news"]
     },
     {
       "id": "hn-api",
       "type": "hackernews",
       "name": "HN Top Stories",
       "story_type": "top",
-      "limit": 30
+      "limit": 30,
+      "tags": ["tech"]
     },
     {
       "id": "tech",
       "type": "merge",
       "name": "Tech Combined",
-      "sources": ["hn-rss", "hn-api"],
+      "include_tags": ["tech"],
       "limit": 100
     },
     {
@@ -263,16 +265,16 @@ Fetch posts from Facebook Pages.
 3. Request pages_read_engagement permission
 4. Generate a Page Access Token for the target page
 
-### merge - Combine feeds
+### merge - Combine feeds by tags
 
-Merge posts from multiple source feeds into one.
+Merge posts from feeds matching specified tags into one.
 
 ```json
 {
   "id": "combined",
   "type": "merge",
-  "name": "All Feeds",
-  "sources": ["feed1", "feed2", "feed3"],
+  "name": "All Tech",
+  "include_tags": ["tech", "coding"],
   "limit": 100
 }
 ```
@@ -282,8 +284,19 @@ Merge posts from multiple source feeds into one.
 | `id` | Yes | Unique identifier |
 | `type` | Yes | Must be "merge" |
 | `name` | Yes | Display name |
-| `sources` | Yes | Array of feed IDs to merge |
+| `include_tags` | Yes | Array of tags - includes feeds having any of these tags |
 | `limit` | No | Max posts in output (default: 100, max: 1000) |
+
+To use merge feeds, first tag your source feeds:
+
+```json
+{
+  "feeds": [
+    {"id": "hn", "type": "rss", "url": "...", "name": "HN", "tags": ["tech"]},
+    {"id": "reddit-go", "type": "reddit", "subreddit": "golang", "name": "r/golang", "tags": ["tech", "coding"]},
+    {"id": "all-tech", "type": "merge", "name": "All Tech", "include_tags": ["tech"]}
+  ]
+}
 
 ### digest - Periodic rollups
 

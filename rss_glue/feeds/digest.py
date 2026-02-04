@@ -60,13 +60,10 @@ def get_posts_for_period(
 
 
 def _get_all_source_ids(merge_feed_id: str, session: Session) -> list[str]:
-    """Recursively get all source feed IDs for a merge feed."""
-    stmt = (
-        select(FeedRelationship.child_feed_id)
-        .where(FeedRelationship.parent_feed_id == merge_feed_id)
-        .order_by(FeedRelationship.position)  # type: ignore[arg-type]
-    )
-    child_ids = list(session.exec(stmt).all())
+    """Recursively get all source feed IDs for a merge feed (using tags)."""
+    from rss_glue.feeds.merge import get_merge_source_ids
+
+    child_ids = get_merge_source_ids(merge_feed_id, session)
 
     result = []
     for child_id in child_ids:
