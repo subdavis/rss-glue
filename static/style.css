@@ -63,11 +63,11 @@
     /* Spacing */
     --content-max-width: 900px;
     --article-max-width: 700px;
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 16px;
-    --spacing-lg: 24px;
-    --spacing-xl: 32px;
+    --spacing-xs: 3px;
+    --spacing-sm: 6px;
+    --spacing-md: 12px;
+    --spacing-lg: 18px;
+    --spacing-xl: 24px;
 }
 
 /* ============================================
@@ -289,12 +289,25 @@ small {
 
 .form-group {
     margin-bottom: var(--spacing-md);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.form-group label {
+    flex: 0 0 200px;
+    margin-bottom: 0;
+    align-self: center;
+}
+
+.form-group small {
+    display: block;
+    padding-left: 10px;
 }
 
 .form-stack {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
 }
 
 .form-inline {
@@ -302,6 +315,18 @@ small {
     flex-direction: row;
     gap: var(--spacing-sm);
     align-items: center;
+}
+
+fieldset {
+    border: 1px solid var(--input-border-color);
+    border-radius: 4px;
+    padding: var(--spacing-md);
+    margin: var(--spacing-sm) 0;
+}
+
+fieldset legend {
+    font-weight: 600;
+    padding: 0 var(--spacing-xs);
 }
 
 /* ============================================

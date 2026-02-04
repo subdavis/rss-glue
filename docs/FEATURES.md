@@ -97,4 +97,4 @@ Hash and salt the password in the standard way.
 
 ## Broken stuff
 
-Something's wrong with adding new feeds. Next update and last update seem weird.
+Cron expressions need to be evaluated in local time rather than UTC.

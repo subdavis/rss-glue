@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Create Feed - RSS Glue{% endblock %}
+{% block content %}
+<h2>Create Feed</h2>
+
+{% if error %}
+<pre class="error-box">Error: {{ error }}</pre>
+{% endif %}
+
+<form method="post" action="/config/create" class="form-stack">
+  <div class="form-group">
+    <label for="id">Feed ID:</label>
+    <input type="text" name="id" id="id" value="{{ form.id or '' }}" required pattern="^[a-zA-Z0-9_-]+$">
+    <div><small>(alphanumeric, hyphens, underscores only)</small></div>
+  </div>
+
+  <div class="form-group">
+    <label for="name">Name:</label>
+    <input type="text" name="name" id="name" value="{{ form.name or '' }}" required>
+  </div>
+
+  <div class="form-group">
+    <label for="feed-type">Type:</label>
+    <select name="type" id="feed-type" required>
+      <option value="rss" {% if form.type == 'rss' %}selected{% endif %}>RSS</option>
+      <option value="hackernews" {% if form.type == 'hackernews' %}selected{% endif %}>Hacker News</option>
+      <option value="reddit" {% if form.type == 'reddit' %}selected{% endif %}>Reddit</option>
+      <option value="instagram" {% if form.type == 'instagram' %}selected{% endif %}>Instagram</option>
+      <option value="facebook" {% if form.type == 'facebook' %}selected{% endif %}>Facebook</option>
+      <option value="merge" {% if form.type == 'merge' %}selected{% endif %}>Merge</option>
+      <option value="digest" {% if form.type == 'digest' %}selected{% endif %}>Digest</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="limit">Limit:</label>
+    <input type="number" name="limit" id="limit" value="{{ form.limit or 50 }}" min="1" max="1000">
+  </div>
+
+  <div class="form-group">
+    <label>
+      <input type="checkbox" name="enabled" {% if form.enabled is not defined or form.enabled %}checked{% endif %}>
+      Enabled
+    </label>
+  </div>
+
+  <div class="form-group">
+    <label for="cooldown_minutes">Cooldown (minutes):</label>
+    <input type="number" name="cooldown_minutes" id="cooldown_minutes" value="{{ form.cooldown_minutes or '' }}" min="0" max="10080">
+    <div><small>(empty = use global default)</small></div>
+  </div>
+
+  <div class="form-group">
+    <label for="schedule">Schedule (cron):</label>
+    <input type="text" name="schedule" id="schedule" value="{{ form.schedule or '' }}" placeholder="0 0 * * *">
+    <div><small>(optional, for scheduled updates)</small></div>
+  </div>
+
+  <div class="form-group">
+    <label>
+      <input type="checkbox" name="cache_media" {% if form.cache_media %}checked{% endif %}>
+      Cache Media
+    </label>
+    <div><small>(unchecked = use global setting)</small></div>
+  </div>
+
+  <hr>
+
+  <!-- RSS -->
+  <fieldset id="config-rss" class="type-config">
+    <legend>RSS Configuration</legend>
+    <div class="form-group">
+      <label for="rss_url">Feed URL:</label>
+      <input type="url" name="rss_url" id="rss_url" value="{{ form.rss_url or '' }}" placeholder="https://example.com/feed.xml">
+    </div>
+  </fieldset>
+
+  <!-- HackerNews -->
+  <fieldset id="config-hackernews" class="type-config">
+    <legend>Hacker News Configuration</legend>
+    <div class="form-group">
+      <label for="hn_story_type">Story Type:</label>
+      <select name="hn_story_type" id="hn_story_type">
+        <option value="top" {% if form.hn_story_type == 'top' %}selected{% endif %}>Top</option>
+        <option value="new" {% if form.hn_story_type == 'new' %}selected{% endif %}>New</option>
+        <option value="best" {% if form.hn_story_type == 'best' %}selected{% endif %}>Best</option>
+      </select>
+    </div>
+  </fieldset>
+
+  <!-- Reddit -->
+  <fieldset id="config-reddit" class="type-config">
+    <legend>Reddit Configuration</legend>
+    <div class="form-group">
+      <label for="reddit_subreddit">Subreddit:</label>
+      <input type="text" name="reddit_subreddit" id="reddit_subreddit" value="{{ form.reddit_subreddit or '' }}" placeholder="selfhosted">
+      <div><small>(without r/)</small></div>
+    </div>
+    <div class="form-group">
+      <label for="reddit_listing_type">Listing Type:</label>
+      <select name="reddit_listing_type" id="reddit_listing_type">
+        <option value="hot" {% if form.reddit_listing_type == 'hot' %}selected{% endif %}>Hot</option>
+        <option value="new" {% if form.reddit_listing_type == 'new' %}selected{% endif %}>New</option>
+        <option value="top" {% if form.reddit_listing_type == 'top' %}selected{% endif %}>Top</option>
+        <option value="rising" {% if form.reddit_listing_type == 'rising' %}selected{% endif %}>Rising</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="reddit_time_filter">Time Filter:</label>
+      <select name="reddit_time_filter" id="reddit_time_filter">
+        <option value="hour" {% if form.reddit_time_filter == 'hour' %}selected{% endif %}>Hour</option>
+        <option value="day" {% if form.reddit_time_filter == 'day' or not form.reddit_time_filter %}selected{% endif %}>Day</option>
+        <option value="week" {% if form.reddit_time_filter == 'week' %}selected{% endif %}>Week</option>
+        <option value="month" {% if form.reddit_time_filter == 'month' %}selected{% endif %}>Month</option>
+        <option value="year" {% if form.reddit_time_filter == 'year' %}selected{% endif %}>Year</option>
+        <option value="all" {% if form.reddit_time_filter == 'all' %}selected{% endif %}>All</option>
+      </select>
+      <div><small>(only applies to "top" listing)</small></div>
+    </div>
+  </fieldset>
+
+  <!-- Instagram -->
+  <fieldset id="config-instagram" class="type-config">
+    <legend>Instagram Configuration</legend>
+    <div class="form-group">
+      <label for="ig_username">Username:</label>
+      <input type="text" name="ig_username" id="ig_username" value="{{ form.ig_username or '' }}" placeholder="natgeo">
+      <div><small>(without @)</small></div>
+    </div>
+  </fieldset>
+
+  <!-- Facebook -->
+  <fieldset id="config-facebook" class="type-config">
+    <legend>Facebook Configuration</legend>
+    <div class="form-group">
+      <label for="fb_url">Page/Group URL:</label>
+      <input type="url" name="fb_url" id="fb_url" value="{{ form.fb_url or '' }}" placeholder="https://www.facebook.com/groups/12345">
+    </div>
+  </fieldset>
+
+  <!-- Merge -->
+  <fieldset id="config-merge" class="type-config">
+    <legend>Merge Configuration</legend>
+    <div class="form-group">
+      <label for="merge_sources">Source Feed IDs:</label>
+      <input type="text" name="merge_sources" id="merge_sources" value="{{ form.merge_sources or '' }}" placeholder="feed1, feed2, feed3">
+      <div><small>(comma-separated list of feed IDs)</small></div>
+    </div>
+  </fieldset>
+
+  <!-- Digest -->
+  <fieldset id="config-digest" class="type-config">
+    <legend>Digest Configuration</legend>
+    <div class="form-group">
+      <label for="digest_source">Source Feed ID:</label>
+      <input type="text" name="digest_source" id="digest_source" value="{{ form.digest_source or '' }}" placeholder="merged-feed">
+    </div>
+    <div class="form-group">
+      <label for="digest_schedule">Digest Schedule (cron):</label>
+      <input type="text" name="digest_schedule" id="digest_schedule" value="{{ form.digest_schedule or '' }}" placeholder="0 0 * * 0">
+      <div><small>(required for digest, e.g., "0 0 * * 0" for weekly Sunday midnight)</small></div>
+    </div>
+  </fieldset>
+
+  <button type="submit">Create Feed</button>
+</form>
+
+
+{% endblock %}

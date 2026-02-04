@@ -123,10 +123,11 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
         if feed_config.cooldown_minutes is not None:
             config_dict["cooldown_minutes_explicit"] = feed_config.cooldown_minutes
 
+        if feed_config.schedule is not None:
+            config_dict["schedule"] = feed_config.schedule
+
         if isinstance(feed_config, RssFeedConfig):
             config_dict["url"] = feed_config.url
-        elif isinstance(feed_config, DigestFeedConfig):
-            config_dict["schedule"] = feed_config.schedule
         elif isinstance(feed_config, HackerNewsFeedConfig):
             config_dict["story_type"] = feed_config.story_type
         elif isinstance(feed_config, InstagramFeedConfig):
@@ -160,7 +161,6 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
             db_feed.cooldown_minutes = cooldown_minutes
             db_feed.enabled = feed_config.enabled
             db_feed.config = config_dict
-            db_feed.updated_at = datetime.now(timezone.utc)
 
             session.add(db_feed)
             stats["feeds_updated"] += 1
@@ -263,6 +263,10 @@ def get_current_config(session: Session) -> dict:
         if feed.config.get("cooldown_minutes_explicit") is not None:
             feed_dict["cooldown_minutes"] = feed.config["cooldown_minutes_explicit"]
 
+        # Restore schedule
+        if feed.config.get("schedule") is not None:
+            feed_dict["schedule"] = feed.config.get("schedule", None)
+
         if feed.type == "rss":
             feed_dict["url"] = feed.config.get("url", "")
         elif feed.type == "merge":
@@ -283,7 +287,6 @@ def get_current_config(session: Session) -> dict:
             ).first()
             source = rel.child_feed_id if rel else ""
             feed_dict["source"] = source
-            feed_dict["schedule"] = feed.config.get("schedule", "")
         elif feed.type == "hackernews":
             feed_dict["story_type"] = feed.config.get("story_type", "top")
         elif feed.type == "instagram":
