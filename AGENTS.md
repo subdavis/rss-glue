@@ -9,7 +9,7 @@ This is v2 of a project.  v1 is in the v1 directory included for reference, neve
 
 * all times must be STORED with timezone (UTC)
 
-## Frontent
+## Frontend
 
 css is in /static/style.css
 

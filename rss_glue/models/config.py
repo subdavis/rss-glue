@@ -147,6 +147,31 @@ class RedditFeedConfig(FeedConfigBase):
     )
 
 
+class WordPressMecEventsFeedConfig(FeedConfigBase):
+    """Configuration for WordPress pages using Modern Events Calendar plugin.
+
+    Extracts events from rendered HTML, filtering out recurring events
+    that appear on the page more than the threshold number of times.
+
+    Example:
+        {
+            "id": "bikemn",
+            "type": "wordpress_mec_events",
+            "name": "BikeMN Events",
+            "url": "https://www.bikemn.org/wp-json/wp/v2/pages/2454",
+            "recurring_threshold": 3
+        }
+    """
+
+    type: Literal["wordpress_mec_events"]
+    url: str = Field(..., pattern=r"^https?://")
+    recurring_threshold: int = Field(
+        default=3,
+        ge=2,
+        description="Titles appearing this many times or more are treated as recurring and excluded.",
+    )
+
+
 FeedConfig = Annotated[
     Union[
         RssFeedConfig,
@@ -156,6 +181,7 @@ FeedConfig = Annotated[
         InstagramFeedConfig,
         FacebookFeedConfig,
         RedditFeedConfig,
+        WordPressMecEventsFeedConfig,
     ],
     Field(discriminator="type"),
 ]

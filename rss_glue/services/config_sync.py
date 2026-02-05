@@ -14,6 +14,7 @@ from rss_glue.models.config import (
     MergeFeedConfig,
     RedditFeedConfig,
     RssFeedConfig,
+    WordPressMecEventsFeedConfig,
 )
 from rss_glue.models.db import Feed, FeedRelationship, FeedTag, SystemConfig, Tag
 
@@ -149,6 +150,13 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
                     "subreddit": feed_config.subreddit,
                     "listing_type": feed_config.listing_type,
                     "time_filter": feed_config.time_filter,
+                }
+            )
+        elif isinstance(feed_config, WordPressMecEventsFeedConfig):
+            config_dict.update(
+                {
+                    "url": feed_config.url,
+                    "recurring_threshold": feed_config.recurring_threshold,
                 }
             )
         elif isinstance(feed_config, MergeFeedConfig):
@@ -308,6 +316,9 @@ def get_current_config(session: Session) -> dict:
             feed_dict["subreddit"] = feed.config.get("subreddit", "")
             feed_dict["listing_type"] = feed.config.get("listing_type", "top")
             feed_dict["time_filter"] = feed.config.get("time_filter", "day")
+        elif feed.type == "wordpress_mec_events":
+            feed_dict["url"] = feed.config.get("url", "")
+            feed_dict["recurring_threshold"] = feed.config.get("recurring_threshold", 3)
 
         config["feeds"].append(feed_dict)
 

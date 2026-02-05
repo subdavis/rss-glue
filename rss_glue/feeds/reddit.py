@@ -38,7 +38,7 @@ class RedditFeedHandler(BaseFeedHandler):
 
         # Use robust HTTP client with Reddit-specific User-Agent
         with create_client(
-            extra_headers={"User-Agent": "rss-glue/2.0.0 (by /u/rss-glue-bot)"}
+            extra_headers={"User-Agent": "rss-glue/2.0.0 (Feed Aggregator)"}
         ) as client:
             response = client.get(url, params=params)
             response.raise_for_status()
