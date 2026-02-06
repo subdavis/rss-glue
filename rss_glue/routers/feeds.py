@@ -9,13 +9,14 @@ from rss_glue.database import get_session
 from rss_glue.models.db import Feed, Post, UpdateHistory
 from rss_glue.models.user import User
 from rss_glue.services.auth import require_auth
+from rss_glue.services.background_worker import get_next_update
 from rss_glue.services.config_sync import get_current_config
 from rss_glue.services.media_cache import MEDIA_DIR, expand_placeholders
 from rss_glue.services.rss_output import generate_rss
 from rss_glue.services.update import reset_feed, update_all_feeds, update_feed
 from rss_glue.templates import templates
 
-router = APIRouter()
+router = APIRouter(include_in_schema=False)
 
 
 def get_source_feed_ids(feed: Feed, session: Session) -> list[str]:
@@ -190,9 +191,10 @@ def get_feed_html(
         for enc in post.get("enclosures", []):
             enc["url"] = expand_placeholders(enc["url"], base_url)
 
+    next_update = get_next_update(feed, session)
     return templates.TemplateResponse(
         "feed.html",
-        {"request": request, "feed": feed, "posts": posts, "message": message},
+        {"request": request, "feed": feed, "posts": posts, "message": message, "next_update": next_update},
     )
 
 
@@ -303,11 +305,13 @@ def _render_update_history(
     # Determine pagination base URL
     pagination_base_url = f"/feed/{feed.id}/history" if feed else "/update-history"
 
+    next_update = get_next_update(feed, session) if feed else None
     return templates.TemplateResponse(
         "update_history.html",
         {
             "request": request,
             "feed": feed,
+            "next_update": next_update,
             "history_data": history_data,
             "pagination_base_url": pagination_base_url,
             "current_page": page,
@@ -396,11 +400,13 @@ def get_feed_gallery(
                 }
             )
 
+    next_update = get_next_update(feed, session)
     return templates.TemplateResponse(
         "gallery.html",
         {
             "request": request,
             "feed": feed,
+            "next_update": next_update,
             "gallery_data": gallery_data,
             "pagination_base_url": f"/feed/{feed_id}/gallery",
             "current_page": page,

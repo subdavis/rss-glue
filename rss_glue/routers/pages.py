@@ -15,7 +15,7 @@ from rss_glue.services.background_worker import get_next_update
 from rss_glue.services.config_sync import get_current_config
 from rss_glue.templates import templates
 
-router = APIRouter()
+router = APIRouter(include_in_schema=False)
 
 
 @router.get("/")

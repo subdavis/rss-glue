@@ -13,6 +13,7 @@ from rss_glue.models.db import (
     Post,
     UTCDateTime,
 )
+from rss_glue.services.timezone import get_display_timezone
 from rss_glue.templates import templates
 
 
@@ -118,22 +119,29 @@ def calculate_missing_periods(
 ) -> list[tuple[datetime, datetime]]:
     """Calculate digest periods that need to be created.
 
-    Returns list of (period_start, period_end) tuples.
+    Cron schedule is interpreted in the display timezone.
+    All input/output datetimes are UTC.
+
+    Returns list of (period_start, period_end) tuples in UTC.
     """
+    display_tz = get_display_timezone()
+    now_local = now.astimezone(display_tz)
+
     if last_issue_end is None:
         # No previous issues - start from one period ago
-        cron = croniter(schedule, now)
+        cron = croniter(schedule, now_local)
         cron.get_prev(datetime)  # Go back one period
         start_time = cron.get_prev(datetime)  # And one more to get start
         cron = croniter(schedule, start_time)
     else:
         # Start from the last issue end time
-        cron = croniter(schedule, last_issue_end)
+        last_end_local = last_issue_end.astimezone(display_tz)
+        cron = croniter(schedule, last_end_local)
 
     periods = []
     while True:
-        period_start = cron.get_current(datetime)
-        period_end = cron.get_next(datetime)
+        period_start = cron.get_current(datetime).astimezone(timezone.utc)
+        period_end = cron.get_next(datetime).astimezone(timezone.utc)
 
         # Only include complete periods (period_end <= now)
         if period_end > now:
@@ -255,27 +263,28 @@ class DigestFeedHandler:
             return None  # Manual-only
 
         try:
+            # Cron schedule is interpreted in the display timezone
+            display_tz = get_display_timezone()
+
             # Get the latest digest issue to find where we left off
             latest_issue = get_latest_digest_issue(feed.id, session)
 
             if latest_issue is None:
                 # No previous issues - calculate from one period ago
-                now = datetime.now(timezone.utc)
-                cron = croniter(schedule, now)
+                now_local = datetime.now(display_tz)
+                cron = croniter(schedule, now_local)
                 # Go back one period to find the closing time of the first issue
                 next_time = cron.get_prev(datetime)
             else:
                 # Start from the last issue end time plus one second (to avoid confusion with exact matches)
-                cron = croniter(
-                    schedule, latest_issue.period_end + timedelta(seconds=1)
-                )
+                last_end_local = (
+                    latest_issue.period_end + timedelta(seconds=1)
+                ).astimezone(display_tz)
+                cron = croniter(schedule, last_end_local)
                 # The next issue end time is the next scheduled time
                 next_time = cron.get_next(datetime)
 
-            # Ensure timezone-aware
-            if next_time.tzinfo is None:
-                next_time = next_time.replace(tzinfo=timezone.utc)
-            return next_time
+            return next_time.astimezone(timezone.utc)
         except (ValueError, KeyError):
             return None  # Invalid cron schedule
 

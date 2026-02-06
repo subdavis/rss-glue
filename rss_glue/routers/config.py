@@ -15,7 +15,7 @@ from rss_glue.services.auth import require_auth
 from rss_glue.services.config_sync import get_current_config, sync_config_to_db
 from rss_glue.templates import templates
 
-router = APIRouter()
+router = APIRouter(include_in_schema=False)
 
 
 @router.post("")

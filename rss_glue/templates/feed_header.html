@@ -3,13 +3,32 @@
     <strong>ID:</strong> {{ feed.id }} |
     <strong>Type:</strong> {{ feed.type }} |
     <strong>Limit:</strong> {{ feed.limit }} |
-    <strong>Status:</strong> {% if feed.enabled %}<span class="status-enabled">Enabled</span>{% else %}<span class="status-disabled">Disabled</span>{% endif %}
+    <strong>Status:</strong> {% if feed.enabled %}<span class="status-enabled">Enabled</span>{% else %}<span
+        class="status-disabled">Disabled</span>{% endif %}
+</p>
+<p class="feed-meta">
+    <strong>Last Update:</strong>
+    {% if feed.updated_at %}
+    <span data-utc-time="{{ feed.updated_at.isoformat() }}" data-format="relative"
+        title="{{ feed.updated_at | localtime('tooltip') }}">
+        {{ feed.updated_at | localtime("relative") }}
+    </span>
+    {% else %}Never{% endif %}
+    |
+    <strong>Next Update:</strong>
+    {% if next_update %}
+    <span data-utc-time="{{ next_update.isoformat() }}" data-format="relative"
+        title="{{ next_update | localtime('tooltip') }}">
+        {{ next_update | localtime("relative") }}
+    </span>
+    {% else %}Manual{% endif %}
 </p>
 <div class="feed-actions">
     <a href="/feed/{{ feed.id }}/html">Posts</a>
     <a href="/feed/{{ feed.id }}/history">History</a>
     <a href="/feed/{{ feed.id }}/gallery">Gallery</a>
     <a href="/feed/{{ feed.id }}/rss">RSS</a>
+    <a href="/api/posts?feed_id={{ feed.id }}">JSON</a>
 
     {% if request.cookies.get('session') %}
     <form action="/feed/{{ feed.id }}/update" method="post">

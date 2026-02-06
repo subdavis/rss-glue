@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from rss_glue.database import get_session
-from rss_glue.models.db import Feed, Post
+from rss_glue.feeds.registry import FeedRegistry
+from rss_glue.models.db import Feed
 from rss_glue.services.config_sync import get_current_config
 from rss_glue.services.media_cache import expand_placeholders
 
@@ -36,30 +37,28 @@ def list_posts(
     session: Session = Depends(get_session),
 ):
     """List posts, optionally filtered by feed."""
-    if feed_id:
-        feed = session.get(Feed, feed_id)
-        if not feed:
-            raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
+    if not feed_id:
+        raise HTTPException(status_code=400, detail="feed_id is required")
 
-    query = select(Post).order_by(Post.published_at.desc()).limit(limit)  # type: ignore[union-attr]
-    if feed_id:
-        query = query.where(Post.feed_id == feed_id)
-    posts = session.exec(query).all()
+    feed = session.get(Feed, feed_id)
+    if not feed:
+        raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
 
     config = get_current_config(session)
     base_url = config["base_url"]
 
+    handler = FeedRegistry.get_handler(feed.type)
+    posts = handler.get_posts(feed_id, limit, session, base_url)
+
     return [
         {
-            "id": post.id,
-            "feed_id": post.feed_id,
-            "external_id": post.external_id,
-            "title": post.title,
-            "link": post.link,
-            "author": post.author,
-            "published_at": post.published_at.isoformat(),
-            "content": expand_placeholders(post.content, base_url)
-            if post.content
+            "id": post["id"],
+            "title": post["title"],
+            "link": post["link"],
+            "author": post.get("author"),
+            "published_at": post["published_at"].isoformat(),
+            "content": expand_placeholders(post["content"], base_url)
+            if post.get("content")
             else None,
         }
         for post in posts

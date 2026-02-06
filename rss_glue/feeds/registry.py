@@ -7,6 +7,7 @@ from croniter import croniter
 from sqlmodel import Session, select
 
 from rss_glue.models.db import MediaCache, Post
+from rss_glue.services.timezone import get_display_timezone
 
 if TYPE_CHECKING:
     from rss_glue.models.db import Feed
@@ -167,13 +168,14 @@ class BaseFeedHandler:
             cooldown_time = None
 
         # Calculate schedule-based next time
+        # Cron schedule is interpreted in the display timezone
         schedule_time: datetime | None = None
         if schedule:
             try:
-                cron = croniter(schedule, feed.updated_at)
-                schedule_time = cron.get_next(datetime)
-                if schedule_time.tzinfo is None:
-                    schedule_time = schedule_time.replace(tzinfo=timezone.utc)
+                display_tz = get_display_timezone()
+                updated_local = feed.updated_at.astimezone(display_tz)
+                cron = croniter(schedule, updated_local)
+                schedule_time = cron.get_next(datetime).astimezone(timezone.utc)
             except (ValueError, KeyError):
                 schedule_time = None
 

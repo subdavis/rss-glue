@@ -14,7 +14,7 @@ from rss_glue.services.auth import (
 )
 from rss_glue.templates import templates
 
-router = APIRouter()
+router = APIRouter(include_in_schema=False)
 
 
 @router.get("/login")
