@@ -1,20 +1,57 @@
 """Digest feed handler - creates periodic rollups based on cron schedule."""
 
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Optional
 
 from croniter import croniter
-from sqlmodel import Session, and_, select
+from sqlmodel import Field, Session, and_, select, SQLModel, Column, Relationship
 
 from rss_glue.feeds.registry import FeedRegistry, PostDict
 from rss_glue.models.db import (
-    DigestIssue,
-    DigestIssuePost,
     Feed,
     FeedRelationship,
     Post,
+    UTCDateTime,
 )
 from rss_glue.templates import templates
+
+
+class DigestIssue(SQLModel, table=True):
+    """A digest issue representing a rollup of posts for a time period."""
+
+    __tablename__ = "digest_issue"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    feed_id: str = Field(foreign_key="feed.id", index=True)
+    period_start: datetime = Field(
+        sa_column=Column(UTCDateTime, index=True, nullable=False)
+    )
+    period_end: datetime = Field(
+        sa_column=Column(UTCDateTime, index=True, nullable=False)
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(UTCDateTime, nullable=False),
+    )
+
+    posts: list["DigestIssuePost"] = Relationship(
+        back_populates="digest_issue",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+
+class DigestIssuePost(SQLModel, table=True):
+    """Link between digest issue and posts included in it."""
+
+    __tablename__ = "digest_issue_post"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    digest_issue_id: int = Field(foreign_key="digest_issue.id", index=True)
+    post_id: int = Field(foreign_key="post.id", index=True)
+    position: int = Field(default=0)
+
+    digest_issue: DigestIssue = Relationship(back_populates="posts")
+    post: Post = Relationship()
 
 
 def get_source_feed_id(feed_id: str, session: Session) -> str | None:

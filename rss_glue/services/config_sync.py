@@ -1,7 +1,5 @@
 """JSON config to database synchronization."""
 
-from datetime import datetime, timezone
-
 from sqlalchemy import text
 from sqlmodel import Session, select
 
@@ -223,7 +221,7 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
                     session.flush()
                     session.refresh(new_tag)
                     existing_tags[tag_name] = new_tag
-                
+
                 tag_obj = existing_tags[tag_name]
                 # Check if link exists? No, we cleared all feed_tags
                 session.add(FeedTag(feed_id=feed_config.id, tag_id=tag_obj.id))

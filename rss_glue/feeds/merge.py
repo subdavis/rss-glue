@@ -1,7 +1,7 @@
 """Merge feed handler."""
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from sqlmodel import Session, select
 
@@ -24,9 +24,7 @@ def get_merge_source_ids(feed_id: str, session: Session) -> set[str]:
         return set()
 
     stmt = (
-        select(FeedTag.feed_id)
-        .join(Tag)
-        .where(Tag.name.in_(include_tags))  # type: ignore[attr-defined]
+        select(FeedTag.feed_id).join(Tag).where(Tag.name.in_(include_tags))  # type: ignore[attr-defined]
     )
     return set(session.exec(stmt).all())
 

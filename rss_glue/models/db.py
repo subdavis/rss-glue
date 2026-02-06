@@ -172,44 +172,6 @@ class SystemConfig(SQLModel, table=True):
     value: str
 
 
-class DigestIssue(SQLModel, table=True):
-    """A digest issue representing a rollup of posts for a time period."""
-
-    __tablename__ = "digest_issue"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    feed_id: str = Field(foreign_key="feed.id", index=True)
-    period_start: datetime = Field(
-        sa_column=Column(UTCDateTime, index=True, nullable=False)
-    )
-    period_end: datetime = Field(
-        sa_column=Column(UTCDateTime, index=True, nullable=False)
-    )
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(UTCDateTime, nullable=False),
-    )
-
-    posts: list["DigestIssuePost"] = Relationship(
-        back_populates="digest_issue",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
-    )
-
-
-class DigestIssuePost(SQLModel, table=True):
-    """Link between digest issue and posts included in it."""
-
-    __tablename__ = "digest_issue_post"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    digest_issue_id: int = Field(foreign_key="digest_issue.id", index=True)
-    post_id: int = Field(foreign_key="post.id", index=True)
-    position: int = Field(default=0)
-
-    digest_issue: DigestIssue = Relationship(back_populates="posts")
-    post: Post = Relationship()
-
-
 class Enclosure(SQLModel, table=True):
     """RSS enclosures (attachments) for posts."""
 

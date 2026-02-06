@@ -142,7 +142,7 @@ def update_feed(
                 if enclosures_data:
                     new_post_enclosures.append((post, enclosures_data))
                 posts_added += 1
-            
+
             elif post_data.get("score"):
                 # Update score for existing post if provided
                 # Helpful because scores generally go up over time.

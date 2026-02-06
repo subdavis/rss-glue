@@ -17,6 +17,7 @@ def generate_rss(feed_id: str, session: Session, base_url: str) -> str:
         raise ValueError(f"Feed not found: {feed_id}")
 
     fg = FeedGenerator()
+    fg.load_extension("dc")
     fg.title(feed.name)
     fg.link(href=f"{base_url}feed/{feed_id}/rss", rel="self")
     fg.description(f"RSS feed: {feed.name}")
@@ -38,7 +39,7 @@ def generate_rss(feed_id: str, session: Session, base_url: str) -> str:
             entry.description(content_with_urls)
 
         if post.get("author"):
-            entry.author(name=post["author"])
+            entry.dc.dc_creator(post["author"])
 
         # Ensure timezone awareness for feedgen
         pub_date = post["published_at"]

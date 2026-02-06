@@ -15,9 +15,7 @@ def migrate(engine):
             )
         """)
         )
-        session.exec(
-            text("CREATE INDEX IF NOT EXISTS ix_tag_name ON tag (name)")
-        )
+        session.exec(text("CREATE INDEX IF NOT EXISTS ix_tag_name ON tag (name)"))
 
         # Create feed_tag table
         session.exec(

@@ -58,7 +58,9 @@ def list_posts(
             "link": post.link,
             "author": post.author,
             "published_at": post.published_at.isoformat(),
-            "content": expand_placeholders(post.content, base_url) if post.content else None,
+            "content": expand_placeholders(post.content, base_url)
+            if post.content
+            else None,
         }
         for post in posts
     ]

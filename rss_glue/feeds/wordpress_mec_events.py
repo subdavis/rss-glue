@@ -29,9 +29,7 @@ class WordPressMecEventsFeedHandler(BaseFeedHandler):
         recurring_threshold = config.get("recurring_threshold", 3)
 
         # Fetch WordPress REST API response
-        headers = {
-            "User-Agent": "RSS-Glue/2.0 (Feed Aggregator)"
-        }
+        headers = {"User-Agent": "RSS-Glue/2.0 (Feed Aggregator)"}
         response = httpx.get(url, timeout=30.0, headers=headers)
         response.raise_for_status()
         data = response.json()
@@ -60,7 +58,9 @@ class WordPressMecEventsFeedHandler(BaseFeedHandler):
 
         # Build exclusion set for recurring events
         recurring_titles = {
-            title for title, count in title_counts.items() if count >= recurring_threshold
+            title
+            for title, count in title_counts.items()
+            if count >= recurring_threshold
         }
 
         # Second pass: extract non-recurring events
@@ -214,6 +214,8 @@ class WordPressMecEventsFeedHandler(BaseFeedHandler):
             parts.append(f"<p><strong>Categories:</strong> {cats}</p>")
 
         if event_data.get("link"):
-            parts.append(f'<p><a href="{event_data["link"]}">View Event Details</a></p>')
+            parts.append(
+                f'<p><a href="{event_data["link"]}">View Event Details</a></p>'
+            )
 
         return "\n".join(parts)
