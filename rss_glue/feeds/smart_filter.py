@@ -7,7 +7,6 @@ from typing import Any, Optional
 from sqlmodel import Column, Field, Session, SQLModel, select
 
 from rss_glue.feeds.registry import (
-    BaseFeedHandler,
     EnclosureDict,
     FeedRegistry,
     PostDict,
@@ -201,8 +200,24 @@ class SmartFilterFeedHandler:
 
     @staticmethod
     def next_update(feed: Feed, session: Session) -> datetime | None:
-        """Use default cooldown/schedule-based scheduling."""
-        return BaseFeedHandler.next_update(feed, session)
+        """Return now if there are unevaluated posts, otherwise None.
+
+        Smart filter is purely reactive - it only needs to run when the
+        source has new posts that haven't been evaluated yet.
+        """
+        source_id = get_source_feed_id(feed.id, session)
+        if not source_id:
+            return None
+
+        source_ids = _get_all_source_ids(source_id, session)
+        if not source_ids:
+            return None
+
+        unevaluated = get_unevaluated_posts(feed.id, source_ids, session)
+        if unevaluated:
+            return datetime.now(timezone.utc)
+
+        return None
 
     @staticmethod
     def reset(feed_id: str, session: Session) -> dict[str, int]:
