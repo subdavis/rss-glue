@@ -7,6 +7,7 @@ from typing import Any, Optional
 from sqlmodel import Column, Field, Session, SQLModel, select
 
 from rss_glue.feeds.registry import (
+    BaseFeedHandler,
     EnclosureDict,
     FeedRegistry,
     PostDict,
@@ -137,7 +138,7 @@ def evaluate_post(
 
 
 @FeedRegistry.register("smart_filter")
-class SmartFilterFeedHandler:
+class SmartFilterFeedHandler(BaseFeedHandler):
     """Handler for smart filter feeds - filters source posts using LLM."""
 
     @staticmethod
