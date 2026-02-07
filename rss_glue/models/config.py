@@ -172,11 +172,42 @@ class WordPressMecEventsFeedConfig(FeedConfigBase):
     )
 
 
+class SmartFilterFeedConfig(FeedConfigBase):
+    """Configuration for a smart filter feed that uses an LLM to filter posts.
+
+    Evaluates each post from the source feed against a prompt using the
+    Anthropic API, keeping only posts that match the criteria.
+
+    Example:
+        {
+            "id": "events-filter",
+            "type": "smart_filter",
+            "name": "Event Announcements",
+            "source": "all-news",
+            "prompt": "Is this post announcing an event I could attend?",
+            "model": "claude-haiku-4-0"
+        }
+    """
+
+    type: Literal["smart_filter"]
+    source: str = Field(..., min_length=1, description="Single source feed ID")
+    prompt: str = Field(
+        ...,
+        min_length=1,
+        description="The filtering question to evaluate each post against",
+    )
+    model: str = Field(
+        default="claude-haiku-4-0",
+        description="Anthropic model to use for evaluation",
+    )
+
+
 FeedConfig = Annotated[
     Union[
         RssFeedConfig,
         MergeFeedConfig,
         DigestFeedConfig,
+        SmartFilterFeedConfig,
         HackerNewsFeedConfig,
         InstagramFeedConfig,
         FacebookFeedConfig,
@@ -210,6 +241,10 @@ class AppConfig(BaseModel):
         default=None,
         description="API Key for ScrapeCreators service (required for Instagram/Facebook).",
     )
+    anthropic_api_key: str | None = Field(
+        default=None,
+        description="API Key for Anthropic (required for smart_filter feeds).",
+    )
     default_cooldown_minutes: int = Field(
         default=15,
         ge=0,
@@ -238,27 +273,27 @@ class AppConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_references(self) -> "AppConfig":
-        """Validate that digest feeds only reference existing feed IDs."""
+        """Validate that digest and smart_filter feeds reference existing feed IDs."""
         feed_ids = {feed.id for feed in self.feeds}
 
         for feed in self.feeds:
-            if isinstance(feed, DigestFeedConfig):
+            if isinstance(feed, (DigestFeedConfig, SmartFilterFeedConfig)):
                 if feed.source not in feed_ids:
                     raise ValueError(
-                        f"Digest feed '{feed.id}' references unknown feed '{feed.source}'"
+                        f"{feed.type} feed '{feed.id}' references unknown feed '{feed.source}'"
                     )
         return self
 
     @model_validator(mode="after")
     def validate_no_cycles(self) -> "AppConfig":
-        """Detect circular dependencies in digest feeds.
+        """Detect circular dependencies in digest and smart_filter feeds.
 
         Note: Merge feeds use tag-based sources which are resolved at runtime,
         so cycle detection for them happens at the database level.
         """
         deps: dict[str, set[str]] = {}
         for feed in self.feeds:
-            if isinstance(feed, DigestFeedConfig):
+            if isinstance(feed, (DigestFeedConfig, SmartFilterFeedConfig)):
                 deps[feed.id] = {feed.source}
             else:
                 deps[feed.id] = set()
