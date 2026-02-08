@@ -15,7 +15,11 @@ from rss_glue.models.db import (
     Post,
     UpdateHistory,
 )
-from rss_glue.services.media_cache import cache_enclosure, process_post_media
+from rss_glue.services.media_cache import (
+    cache_enclosure,
+    process_post_media,
+    sanitize_html,
+)
 
 
 def topological_sort_feeds(session: Session) -> list[str]:
@@ -135,6 +139,8 @@ def update_feed(
             if not existing:
                 # Extract enclosures before creating Post (not a column field)
                 enclosures_data = post_data.pop("enclosures", [])
+                # Sanitize HTML content to prevent stored XSS
+                post_data["content"] = sanitize_html(post_data.get("content"))
                 post = Post(feed_id=feed_id, **post_data)
                 session.add(post)
                 session.flush()  # Get the post ID

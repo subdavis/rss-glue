@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urljoin, urlparse
 
+import nh3
+
 import httpx
 from sqlmodel import Session, select
 
@@ -38,6 +40,55 @@ MEDIA_EXTENSIONS = {
     ".mp3": "audio/mpeg",
     ".wav": "audio/wav",
 }
+
+
+# HTML tags and attributes allowed in sanitized feed content
+ALLOWED_TAGS = {
+    # Structure
+    "p", "br", "div", "span", "section", "article", "header", "footer",
+    # Text formatting
+    "b", "i", "em", "strong", "small", "sub", "sup", "mark", "del", "ins",
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    # Links and media
+    "a", "img", "audio", "video", "source", "figure", "figcaption", "picture",
+    # Lists
+    "ul", "ol", "li", "dl", "dt", "dd",
+    # Tables
+    "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col",
+    # Code
+    "pre", "code", "blockquote", "hr",
+    # Details
+    "details", "summary",
+}
+ALLOWED_ATTRIBUTES = {
+    "a": {"href", "title"},
+    "img": {"src", "alt", "title", "width", "height", "loading"},
+    "video": {"src", "controls", "width", "height", "poster", "preload"},
+    "audio": {"src", "controls", "preload"},
+    "source": {"src", "type"},
+    "td": {"colspan", "rowspan"},
+    "th": {"colspan", "rowspan", "scope"},
+    "col": {"span"},
+    "colgroup": {"span"},
+    "ol": {"start", "type"},
+    "details": {"open"},
+}
+
+
+def sanitize_html(content: str | None) -> str | None:
+    """Sanitize HTML content, stripping dangerous tags and attributes.
+
+    Allows common formatting, media, and structural tags while removing
+    script, iframe, object, embed, event handlers, and javascript: URLs.
+    """
+    if not content:
+        return content
+    return nh3.clean(
+        content,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRIBUTES,
+        url_schemes={"http", "https", "mailto"},
+    )
 
 
 def ensure_media_dir() -> Path:
