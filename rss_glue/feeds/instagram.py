@@ -30,22 +30,6 @@ class InstagramFeedHandler(BaseFeedHandler):
         type: Literal["instagram"]
         username: str = Field(..., min_length=1)
 
-        @classmethod
-        def sample_config(cls) -> dict:
-            return cls._sample(
-                type="instagram",
-                username="example_user",
-            )
-
-        @classmethod
-        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
-            return super().db_hydrate(
-                feed,
-                session=session,
-                username=feed.config.get("username", ""),
-                **kwargs,
-            )
-
         def extra_config(self) -> dict:
             """Return any additional config fields needed for DB storage."""
             return {

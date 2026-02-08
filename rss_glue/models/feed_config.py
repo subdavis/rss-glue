@@ -68,44 +68,21 @@ class FeedConfigBase(BaseModel):
     def db_hydrate(
         cls, feed: Feed, session: "Session | None" = None, **kwargs
     ) -> "FeedConfigBase":
-        config_obj = cls(
+        return cls(
             id=feed.id,
             name=feed.name,
             limit=feed.limit,
             type=feed.type,
             enabled=feed.enabled,
+            cache_media=feed.cache_media,
+            cooldown_minutes=feed.cooldown_minutes,
+            tags=[tag.name for tag in feed.tags] if feed.tags else [],
             **kwargs,
         )
-
-        # Restore tags from DB
-        if feed.tags:
-            config_obj.tags = [tag.name for tag in feed.tags]
-
-        # Restore explicit cache_media setting
-        if feed.config.get("cache_media_explicit") is not None:
-            config_obj.cache_media = feed.config["cache_media_explicit"]
-
-        # Restore explicit cooldown_minutes setting
-        if feed.config.get("cooldown_minutes_explicit") is not None:
-            config_obj.cooldown_minutes = feed.config["cooldown_minutes_explicit"]
-
-        # Restore schedule
-        if feed.config.get("schedule") is not None:
-            config_obj.schedule = feed.config.get("schedule", None)
-
-        return config_obj
 
     def extra_config(self) -> dict:
         """Return any additional config fields that should be stored in the DB."""
         config_dict = {}
-
-        # Store explicit cache_media setting if present
-        if self.cache_media is not None:
-            config_dict["cache_media_explicit"] = self.cache_media
-
-        # Store explicit cooldown_minutes setting if present
-        if self.cooldown_minutes is not None:
-            config_dict["cooldown_minutes_explicit"] = self.cooldown_minutes
 
         if self.schedule is not None:
             config_dict["schedule"] = self.schedule

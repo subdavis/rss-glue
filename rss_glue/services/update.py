@@ -15,6 +15,7 @@ from rss_glue.models.db import (
     Post,
     UpdateHistory,
 )
+from rss_glue.services.config_sync import resolve_feed_cache_media
 from rss_glue.services.media_cache import (
     cache_enclosure,
     process_post_media,
@@ -171,11 +172,11 @@ def update_feed(
                 session.flush()
 
                 # Cache enclosure if media caching is enabled
-                if feed.cache_media:
+                if resolve_feed_cache_media(feed, session):
                     cache_enclosure(enclosure, session)
 
         # Process media caching for new posts if enabled
-        if feed.cache_media and new_posts:
+        if resolve_feed_cache_media(feed, session) and new_posts:
             for post in new_posts:
                 new_content = process_post_media(post, session)
                 if new_content != post.content:

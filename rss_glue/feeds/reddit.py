@@ -36,26 +36,6 @@ class RedditFeedHandler(BaseFeedHandler):
             default="day"
         )
 
-        @classmethod
-        def sample_config(cls) -> dict:
-            return cls._sample(
-                type="reddit",
-                subreddit="technology",
-                listing_type="top",
-                time_filter="day",
-            )
-
-        @classmethod
-        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
-            return super().db_hydrate(
-                feed,
-                session=session,
-                subreddit=feed.config.get("subreddit", ""),
-                listing_type=feed.config.get("listing_type", "top"),
-                time_filter=feed.config.get("time_filter", "day"),
-                **kwargs,
-            )
-
         def extra_config(self) -> dict:
             """Return any additional config fields needed for DB storage."""
             return {

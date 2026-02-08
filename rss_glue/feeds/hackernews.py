@@ -37,22 +37,6 @@ class HackerNewsFeedHandler(BaseFeedHandler):
         type: Literal["hackernews"]
         story_type: Literal["top", "new", "best"] = Field(default="top")
 
-        @classmethod
-        def sample_config(cls) -> dict:
-            return cls._sample(
-                type="hackernews",
-                story_type="top",
-            )
-
-        @classmethod
-        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
-            return super().db_hydrate(
-                feed,
-                session=session,
-                story_type=feed.config.get("story_type", "top"),
-                **kwargs,
-            )
-
         def extra_config(self) -> dict:
             """Return any additional config fields needed for DB storage."""
             return {

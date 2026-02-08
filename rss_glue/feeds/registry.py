@@ -99,7 +99,9 @@ class BaseFeedHandler:
         If no schedule, uses cooldown-based scheduling.
         Returns None for manual-only feeds (no schedule and cooldown_minutes <= 0).
         """
-        cooldown_minutes = feed.cooldown_minutes or 0
+        from rss_glue.services.config_sync import resolve_feed_cooldown
+
+        cooldown_minutes = resolve_feed_cooldown(feed, session)
         schedule = feed.config.get("schedule")
 
         # Never updated - schedule immediately

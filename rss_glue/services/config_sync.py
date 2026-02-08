@@ -11,6 +11,22 @@ from rss_glue.models.config import AppConfig
 from rss_glue.models.db import Feed, FeedRelationship, FeedTag, SystemConfig, Tag
 
 
+def resolve_feed_cache_media(feed: Feed, session: Session) -> bool:
+    """Resolve effective cache_media: per-feed override or global default."""
+    if feed.cache_media is not None:
+        return feed.cache_media
+    system_config = session.get(SystemConfig, "cache_media")
+    return system_config.value == "true" if system_config else False
+
+
+def resolve_feed_cooldown(feed: Feed, session: Session) -> int:
+    """Resolve effective cooldown_minutes: per-feed override or global default."""
+    if feed.cooldown_minutes is not None:
+        return feed.cooldown_minutes
+    system_config = session.get(SystemConfig, "default_cooldown_minutes")
+    return int(system_config.value) if system_config else 15
+
+
 def sync_config_to_db(config: AppConfig, session: Session) -> dict:
     """Synchronize JSON config to database.
 
@@ -104,28 +120,14 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
 
     # Create/update feeds from config
     for feed_config in config.feeds:
-        # Determine cache_media setting
-        # Use per-feed setting if set, otherwise use global setting
-        if feed_config.cache_media is not None:
-            cache_media = feed_config.cache_media
-        else:
-            cache_media = config.cache_media
-
-        # Determine cooldown_minutes setting
-        # Use per-feed setting if set, otherwise use global setting
-        if feed_config.cooldown_minutes is not None:
-            cooldown_minutes = feed_config.cooldown_minutes
-        else:
-            cooldown_minutes = config.default_cooldown_minutes
-
         if feed_config.id in existing_feeds:
             # Update existing
             db_feed = existing_feeds[feed_config.id]
             db_feed.type = feed_config.type
             db_feed.name = feed_config.name
             db_feed.limit = feed_config.limit
-            db_feed.cache_media = cache_media
-            db_feed.cooldown_minutes = cooldown_minutes
+            db_feed.cache_media = feed_config.cache_media
+            db_feed.cooldown_minutes = feed_config.cooldown_minutes
             db_feed.enabled = feed_config.enabled
             db_feed.config = feed_config.extra_config()
 
@@ -138,8 +140,8 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
                 type=feed_config.type,
                 name=feed_config.name,
                 limit=feed_config.limit,
-                cache_media=cache_media,
-                cooldown_minutes=cooldown_minutes,
+                cache_media=feed_config.cache_media,
+                cooldown_minutes=feed_config.cooldown_minutes,
                 enabled=feed_config.enabled,
                 config=feed_config.extra_config(),
                 updated_at=None,  # Will be set when first updated
@@ -232,9 +234,9 @@ def get_current_config(session: Session) -> dict:
 
     for feed in feeds:
         feed_config_cls = FeedRegistry.get_handler(feed.type).Config
-        feed_dict = feed_config_cls.db_hydrate(feed, session=session).model_dump(
-            exclude_none=True
-        )
+        feed_dict = feed_config_cls.db_hydrate(
+            feed, session=session, **feed.config
+        ).model_dump(exclude_none=True)
         if len(feed_dict.get("tags", [])) == 0:
             del feed_dict["tags"]  # Don't include empty tags list in config
 

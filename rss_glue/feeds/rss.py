@@ -24,19 +24,6 @@ class RssFeedHandler(BaseFeedHandler):
         type: Literal["rss"]
         url: str = Field(..., pattern=r"^https?://")
 
-        @classmethod
-        def sample_config(cls) -> dict:
-            return cls._sample(
-                type="rss",
-                url="https://www.example.com/feed",
-            )
-
-        @classmethod
-        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
-            return super().db_hydrate(
-                feed, session=session, url=feed.config.get("url", ""), **kwargs
-            )
-
         def extra_config(self) -> dict:
             """Return any additional config fields needed for DB storage."""
             return {

@@ -220,13 +220,6 @@ class DigestFeedHandler(BaseFeedHandler):
         source: str = Field(..., min_length=1, description="Single source feed ID")
 
         @classmethod
-        def sample_config(cls) -> dict:
-            return cls._sample(
-                type="digest",
-                source="source_feed_id",
-            )
-
-        @classmethod
         def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
             """Return any additional fields needed for DB storage."""
             # Get source feed ID from FeedRelationship
@@ -240,11 +233,6 @@ class DigestFeedHandler(BaseFeedHandler):
                 source = rel.child_feed_id if rel else ""
 
             return super().db_hydrate(feed, session=session, source=source, **kwargs)
-
-        def extra_config(self) -> dict:
-            """Return any additional config fields needed for DB storage."""
-            # Note: source is NOT stored in config, it's stored in FeedRelationship table
-            return super().extra_config()
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> None | int:

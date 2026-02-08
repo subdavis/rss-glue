@@ -41,23 +41,6 @@ class MergeFeedHandler(BaseFeedHandler):
         type: Literal["merge"]
         include_tags: list[str] = Field(default_factory=list, min_length=1)
 
-        @classmethod
-        def sample_config(cls) -> dict:
-            return cls._sample(
-                type="merge",
-                include_tags=["tag1", "tag2"],
-            )
-
-        @classmethod
-        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
-            """Return any additional fields needed for DB storage."""
-            return super().db_hydrate(
-                feed,
-                session=session,
-                include_tags=feed.config.get("include_tags"),
-                **kwargs,
-            )
-
         def extra_config(self) -> dict:
             """Return any additional config fields needed for DB storage."""
             return {

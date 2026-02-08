@@ -31,25 +31,6 @@ class WordPressMecEventsFeedHandler(BaseFeedHandler):
         url: str = Field(..., pattern=r"^https?://")
         recurring_threshold: int = Field(default=3, ge=1)
 
-        @classmethod
-        def sample_config(cls) -> dict:
-            return cls._sample(
-                type="wordpress_mec_events",
-                url="https://www.example.com/wp-json/wp/v2/pages/123",
-                recurring_threshold=3,
-            )
-
-        @classmethod
-        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
-            """Return any additional fields needed for DB storage."""
-            return super().db_hydrate(
-                feed,
-                session=session,
-                url=feed.config.get("url", ""),
-                recurring_threshold=feed.config.get("recurring_threshold", 3),
-                **kwargs,
-            )
-
         def extra_config(self) -> dict:
             """Return any additional config fields needed for DB storage."""
             return {

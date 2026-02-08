@@ -66,7 +66,7 @@ class Feed(SQLModel, table=True):
     name: str
     config: dict = Field(default_factory=dict, sa_column=Column(JSON))
     limit: int = Field(default=50)
-    cache_media: bool = Field(default=False)
+    cache_media: Optional[bool] = Field(default=None)
     cooldown_minutes: Optional[int] = Field(default=None)
     enabled: bool = Field(default=True)
     created_at: datetime = Field(

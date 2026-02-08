@@ -71,15 +71,6 @@ block content %}
 
 <hr />
 
-<h2>Sample Feed Configurations</h2>
-<p>Copy and paste these examples into the Feeds Configuration JSON above, modifying values as needed.</p>
-
-{% for feed_type, sample_config in example_configs.items() %}
-<h3>{{ feed_type }}</h3>
-<pre>{{ sample_config | tojson(indent=2) }}</pre>
-{% endfor %}
-
-<hr />
 
 <h2>Change Password</h2>
 

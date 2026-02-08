@@ -155,15 +155,6 @@ class SmartFilterFeedHandler(BaseFeedHandler):
         source: str = Field(..., min_length=1, description="Single source feed ID")
 
         @classmethod
-        def sample_config(cls) -> dict:
-            return cls._sample(
-                type="smart_filter",
-                prompt="Does this post announce a local event?",
-                model="claude-haiku-4-0",
-                source="source_feed_id",
-            )
-
-        @classmethod
         def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
             """Return any additional fields needed for DB storage."""
             # Get source feed ID from FeedRelationship
@@ -179,8 +170,6 @@ class SmartFilterFeedHandler(BaseFeedHandler):
             return super().db_hydrate(
                 feed,
                 session=session,
-                prompt=feed.config.get("prompt", ""),
-                model=feed.config.get("model", "claude-haiku-4-0"),
                 source=source,
                 **kwargs,
             )
