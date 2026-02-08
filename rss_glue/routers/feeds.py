@@ -182,6 +182,7 @@ def get_feed_html(
 
     # Get handler and fetch posts using the standardized get_posts method
     handler = FeedRegistry.get_handler(feed.type)
+
     posts = handler.get_posts(feed_id, feed.limit, session, base_url)
 
     # Expand placeholders in post content and enclosure URLs for web display
@@ -194,7 +195,13 @@ def get_feed_html(
     next_update = get_next_update(feed, session)
     return templates.TemplateResponse(
         "feed.html",
-        {"request": request, "feed": feed, "posts": posts, "message": message, "next_update": next_update},
+        {
+            "request": request,
+            "feed": feed,
+            "posts": posts,
+            "message": message,
+            "next_update": next_update,
+        },
     )
 
 

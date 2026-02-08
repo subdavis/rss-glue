@@ -2,13 +2,16 @@
 
 import html
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from markupsafe import Markup
+from pydantic import Field
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
+from rss_glue.models.db import Feed
+from rss_glue.models.feed_config import FeedConfigBase
 from rss_glue.templates import templates
 
 
@@ -22,6 +25,45 @@ def deep_get(d: dict | None, *keys) -> Any:
 @FeedRegistry.register("reddit")
 class RedditFeedHandler(BaseFeedHandler):
     """Handler for Reddit feeds using their JSON API."""
+
+    class Config(FeedConfigBase):
+        """Configuration for a Reddit source feed."""
+
+        type: Literal["reddit"]
+        subreddit: str = Field(..., min_length=1)
+        listing_type: Literal["top", "hot", "new", "rising"] = Field(default="top")
+        time_filter: Literal["hour", "day", "week", "month", "year", "all"] = Field(
+            default="day"
+        )
+
+        @classmethod
+        def sample_config(cls) -> dict:
+            return cls._sample(
+                type="reddit",
+                subreddit="technology",
+                listing_type="top",
+                time_filter="day",
+            )
+
+        @classmethod
+        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
+            return super().db_hydrate(
+                feed,
+                session=session,
+                subreddit=feed.config.get("subreddit", ""),
+                listing_type=feed.config.get("listing_type", "top"),
+                time_filter=feed.config.get("time_filter", "day"),
+                **kwargs,
+            )
+
+        def extra_config(self) -> dict:
+            """Return any additional config fields needed for DB storage."""
+            return {
+                **super().extra_config(),
+                "subreddit": self.subreddit,
+                "listing_type": self.listing_type,
+                "time_filter": self.time_filter,
+            }
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:

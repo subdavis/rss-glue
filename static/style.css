@@ -30,6 +30,7 @@
     /* Forms */
     --input-background: #fff;
     --input-border-color: #ccc;
+    --input-border-color-dim: #eee;
     --input-focus-border-color: #52a8ec;
     --input-focus-shadow: rgba(82, 168, 236, 0.6);
     --input-color: #333;
@@ -289,25 +290,24 @@ small {
 
 .form-group {
     margin-bottom: var(--spacing-md);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
 }
 
 .form-group label {
-    flex: 0 0 200px;
+    display: block;
     margin-bottom: 0;
-    align-self: center;
 }
 
 .form-group small {
     display: block;
-    padding-left: 10px;
 }
 
-.form-stack {
-    display: flex;
-    flex-direction: column;
+.form-group input[type="text"],
+.form-group input[type="url"] {
+    width: 100%;
+}
+
+.form-stack button[type="submit"] {
+    margin-top: 10px;
 }
 
 .form-inline {
@@ -318,7 +318,7 @@ small {
 }
 
 fieldset {
-    border: 1px solid var(--input-border-color);
+    border: 1px solid var(--input-border-color-dim);
     border-radius: 4px;
     padding: var(--spacing-md);
     margin: var(--spacing-sm) 0;

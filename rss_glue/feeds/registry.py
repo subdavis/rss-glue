@@ -1,5 +1,7 @@
 """Feed type registry for extensibility."""
 
+from rss_glue.models.feed_config import FeedConfigBase
+
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Callable, Protocol, Type, TypedDict
 
@@ -29,73 +31,16 @@ class PostDict(TypedDict, total=False):
     title: str
     link: str
     published_at: datetime
-    content: str | None
+    content: str
     author: str | None
     enclosures: list[EnclosureDict]
 
 
-class FeedHandler(Protocol):
-    """Protocol for feed type handlers."""
-
-    @staticmethod
-    def fetch(
-        feed_id: str, config: dict[str, Any], session: Session
-    ) -> list[dict] | None | int:
-        """Fetch posts from the feed source.
-
-        Returns list of post dicts with keys:
-        - external_id: str
-        - title: str
-        - content: str | None
-        - link: str
-        - author: str | None
-        - published_at: datetime
-
-        If return is None, indicates no work was done, no history should be recorded (e.g., no new posts).
-        If return is int, indicates number of items created for reporting purposes (for digest feeds).
-        """
-        ...
-
-    @staticmethod
-    def get_posts(
-        feed_id: str, limit: int, session: Session, base_url: str = ""
-    ) -> list[PostDict]:
-        """Get posts for rendering HTML or RSS output.
-
-        Returns list of PostDict with standardized keys:
-        - id: str (unique identifier)
-        - title: str
-        - link: str
-        - published_at: datetime
-        - content: str | None
-        - author: str | None
-        """
-        ...
-
-    @staticmethod
-    def next_update(feed: "Feed", session: Session) -> datetime | None:
-        """Calculate when this feed should next be updated.
-
-        Returns:
-            datetime: Next scheduled update time (may be in past if overdue)
-            None: Feed is manual-only (no automatic updates)
-        """
-        ...
-
-    @staticmethod
-    def reset(feed_id: str, session: Session) -> dict[str, int]:
-        """Reset feed-specific data (posts, digest issues, etc).
-
-        Does NOT reset update history or updated_at - that's handled by the caller.
-
-        Returns:
-            Dict with counts of deleted items (posts_deleted, etc.)
-        """
-        ...
-
-
 class BaseFeedHandler:
     """Base class for feed handlers with default implementations."""
+
+    class Config(FeedConfigBase):
+        pass
 
     @staticmethod
     def fetch(
@@ -220,30 +165,30 @@ class BaseFeedHandler:
 class FeedRegistry:
     """Registry for feed type handlers."""
 
-    _handlers: dict[str, Type[FeedHandler]] = {}
+    _handlers: dict[str, Type[BaseFeedHandler]] = {}
 
     @classmethod
     def register(
         cls, feed_type: str
-    ) -> Callable[[Type[FeedHandler]], Type[FeedHandler]]:
+    ) -> Callable[[Type[BaseFeedHandler]], Type[BaseFeedHandler]]:
         """Decorator to register a feed handler.
 
         Usage:
-            @FeedRegistry.register("rss")
-            class RssFeedHandler:
+            @FeedRegistry.register("type")
+            class TypeFeedHandler:
                 @staticmethod
                 def fetch(feed_id, config, session):
                     ...
         """
 
-        def decorator(handler_cls: Type[FeedHandler]) -> Type[FeedHandler]:
+        def decorator(handler_cls: Type[BaseFeedHandler]) -> Type[BaseFeedHandler]:
             cls._handlers[feed_type] = handler_cls
             return handler_cls
 
         return decorator
 
     @classmethod
-    def get_handler(cls, feed_type: str) -> Type[FeedHandler]:
+    def get_handler(cls, feed_type: str) -> Type[BaseFeedHandler]:
         """Get handler for a feed type."""
         if feed_type not in cls._handlers:
             raise ValueError(f"Unknown feed type: {feed_type}")

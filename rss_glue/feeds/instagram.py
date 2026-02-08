@@ -3,14 +3,16 @@
 import hashlib
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from markupsafe import Markup
+from pydantic import Field
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
-from rss_glue.models.db import SystemConfig
+from rss_glue.models.db import Feed, SystemConfig
+from rss_glue.models.feed_config import FeedConfigBase
 from rss_glue.templates import templates
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,35 @@ SCRAPE_API_BASE = "https://api.scrapecreators.com/v2/instagram/user/posts"
 @FeedRegistry.register("instagram")
 class InstagramFeedHandler(BaseFeedHandler):
     """Handler for Instagram feeds using ScrapeCreators API."""
+
+    class Config(FeedConfigBase):
+        """Configuration for an Instagram source feed."""
+
+        type: Literal["instagram"]
+        username: str = Field(..., min_length=1)
+
+        @classmethod
+        def sample_config(cls) -> dict:
+            return cls._sample(
+                type="instagram",
+                username="example_user",
+            )
+
+        @classmethod
+        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
+            return super().db_hydrate(
+                feed,
+                session=session,
+                username=feed.config.get("username", ""),
+                **kwargs,
+            )
+
+        def extra_config(self) -> dict:
+            """Return any additional config fields needed for DB storage."""
+            return {
+                **super().extra_config(),
+                "username": self.username,
+            }
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:

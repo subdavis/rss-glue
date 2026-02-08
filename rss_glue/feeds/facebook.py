@@ -3,13 +3,15 @@
 import hashlib
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
+from pydantic import Field
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
-from rss_glue.models.db import SystemConfig
+from rss_glue.models.db import Feed, SystemConfig
+from rss_glue.models.feed_config import FeedConfigBase
 from rss_glue.templates import templates
 
 logger = logging.getLogger(__name__)
@@ -20,6 +22,32 @@ SCRAPE_API_BASE = "https://api.scrapecreators.com/v1/facebook/group/posts"
 @FeedRegistry.register("facebook")
 class FacebookFeedHandler(BaseFeedHandler):
     """Handler for Facebook Page/Group feeds using ScrapeCreators API."""
+
+    class Config(FeedConfigBase):
+        """Configuration for a Facebook source feed."""
+
+        type: Literal["facebook"]
+        url: str = Field(..., pattern=r"^https?://")
+
+        @classmethod
+        def sample_config(cls) -> dict:
+            return cls._sample(
+                type="facebook",
+                url="https://www.facebook.com/groups/example",
+            )
+
+        @classmethod
+        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
+            return super().db_hydrate(
+                feed, session=session, url=feed.config.get("url", ""), **kwargs
+            )
+
+        def extra_config(self) -> dict:
+            """Return any additional config fields needed for DB storage."""
+            return {
+                **super().extra_config(),
+                "url": self.url,
+            }
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:

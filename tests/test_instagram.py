@@ -54,7 +54,9 @@ class TestInstagramFetch:
 
         posts = InstagramFeedHandler.fetch(FEED_ID, FEED_CONFIG, db_session)
 
-        assert posts[0]["published_at"] == datetime(2023, 11, 14, 22, 13, 20, tzinfo=timezone.utc)
+        assert posts[0]["published_at"] == datetime(
+            2023, 11, 14, 22, 13, 20, tzinfo=timezone.utc
+        )
 
     def test_link_from_shortcode(self, db_session, mock_api):
         _setup_api_key(db_session)

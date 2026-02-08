@@ -49,21 +49,30 @@ INSTAGRAM_API_RESPONSE = {
                 {
                     "image_versions2": {
                         "candidates": [
-                            {"url": "https://cdn.instagram.com/carousel_1.jpg", "width": 1080},
+                            {
+                                "url": "https://cdn.instagram.com/carousel_1.jpg",
+                                "width": 1080,
+                            },
                         ]
                     }
                 },
                 {
                     "image_versions2": {
                         "candidates": [
-                            {"url": "https://cdn.instagram.com/carousel_2.jpg", "width": 1080},
+                            {
+                                "url": "https://cdn.instagram.com/carousel_2.jpg",
+                                "width": 1080,
+                            },
                         ]
                     }
                 },
                 {
                     "image_versions2": {
                         "candidates": [
-                            {"url": "https://cdn.instagram.com/carousel_3.jpg", "width": 1080},
+                            {
+                                "url": "https://cdn.instagram.com/carousel_3.jpg",
+                                "width": 1080,
+                            },
                         ]
                     }
                 },
@@ -85,7 +94,10 @@ INSTAGRAM_API_RESPONSE = {
             ],
             "image_versions2": {
                 "candidates": [
-                    {"url": "https://cdn.instagram.com/video1_poster.jpg", "width": 1080},
+                    {
+                        "url": "https://cdn.instagram.com/video1_poster.jpg",
+                        "width": 1080,
+                    },
                 ]
             },
         },

@@ -101,7 +101,7 @@ class Post(SQLModel, table=True):
     feed_id: str = Field(foreign_key="feed.id", index=True)
     external_id: str
     title: str
-    content: Optional[str] = None
+    content: str
     link: str
     author: Optional[str] = None
     score: Optional[int] = None

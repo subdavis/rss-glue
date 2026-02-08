@@ -4,13 +4,16 @@ import asyncio
 import hashlib
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from markupsafe import Markup
+from pydantic import Field
 from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_async_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
+from rss_glue.models.db import Feed
+from rss_glue.models.feed_config import FeedConfigBase
 from rss_glue.templates import templates
 
 logger = logging.getLogger(__name__)
@@ -27,6 +30,35 @@ STORY_ENDPOINTS = {
 @FeedRegistry.register("hackernews")
 class HackerNewsFeedHandler(BaseFeedHandler):
     """Handler for HackerNews feeds."""
+
+    class Config(FeedConfigBase):
+        """Configuration for a HackerNews source feed."""
+
+        type: Literal["hackernews"]
+        story_type: Literal["top", "new", "best"] = Field(default="top")
+
+        @classmethod
+        def sample_config(cls) -> dict:
+            return cls._sample(
+                type="hackernews",
+                story_type="top",
+            )
+
+        @classmethod
+        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
+            return super().db_hydrate(
+                feed,
+                session=session,
+                story_type=feed.config.get("story_type", "top"),
+                **kwargs,
+            )
+
+        def extra_config(self) -> dict:
+            """Return any additional config fields needed for DB storage."""
+            return {
+                **super().extra_config(),
+                "story_type": self.story_type,
+            }
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:

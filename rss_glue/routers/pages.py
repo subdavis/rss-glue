@@ -99,8 +99,18 @@ def config_page(
     user: User = Depends(require_auth),
 ):
     """Config editor page. Requires authentication."""
+    from rss_glue.feeds.registry import FeedRegistry
+
     config = get_current_config(session)
     feeds_json = json.dumps(config["feeds"], indent=2)
+
+    # Load example configs from all registered feed handlers
+    example_configs = {}
+    for feed_type in sorted(FeedRegistry.supported_types()):
+        handler = FeedRegistry.get_handler(feed_type)
+        if hasattr(handler, "Config") and hasattr(handler.Config, "sample_config"):
+            example_configs[feed_type] = handler.Config.sample_config()
+
     return templates.TemplateResponse(
         "config.html",
         {
@@ -110,6 +120,7 @@ def config_page(
             "error": None,
             "message": message,
             "password_error": None,
+            "example_configs": example_configs,
         },
     )
 

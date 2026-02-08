@@ -4,13 +4,16 @@ import hashlib
 import html
 from collections import Counter
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from bs4 import BeautifulSoup
+from pydantic import Field
 from sqlmodel import Session
 
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
+from rss_glue.models.db import Feed
+from rss_glue.models.feed_config import FeedConfigBase
 
 
 @FeedRegistry.register("wordpress_mec_events")
@@ -20,6 +23,40 @@ class WordPressMecEventsFeedHandler(BaseFeedHandler):
     Extracts events from rendered HTML and filters out recurring events
     (those appearing multiple times on the page).
     """
+
+    class Config(FeedConfigBase):
+        """Configuration for a WordPress MEC Events source feed."""
+
+        type: Literal["wordpress_mec_events"]
+        url: str = Field(..., pattern=r"^https?://")
+        recurring_threshold: int = Field(default=3, ge=1)
+
+        @classmethod
+        def sample_config(cls) -> dict:
+            return cls._sample(
+                type="wordpress_mec_events",
+                url="https://www.example.com/wp-json/wp/v2/pages/123",
+                recurring_threshold=3,
+            )
+
+        @classmethod
+        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
+            """Return any additional fields needed for DB storage."""
+            return super().db_hydrate(
+                feed,
+                session=session,
+                url=feed.config.get("url", ""),
+                recurring_threshold=feed.config.get("recurring_threshold", 3),
+                **kwargs,
+            )
+
+        def extra_config(self) -> dict:
+            """Return any additional config fields needed for DB storage."""
+            return {
+                **super().extra_config(),
+                "url": self.url,
+                "recurring_threshold": self.recurring_threshold,
+            }
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:

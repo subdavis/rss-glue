@@ -1,218 +1,31 @@
 """Pydantic models for JSON configuration validation."""
 
-from typing import Annotated, Literal, Union
+from rss_glue.feeds.merge import MergeFeedHandler
+from rss_glue.feeds.wordpress_mec_events import WordPressMecEventsFeedHandler
+from rss_glue.feeds.reddit import RedditFeedHandler
+from rss_glue.feeds.facebook import FacebookFeedHandler
+from rss_glue.feeds.instagram import InstagramFeedHandler
+from rss_glue.feeds.hackernews import HackerNewsFeedHandler
+from rss_glue.feeds.rss import RssFeedHandler
+from click.decorators import R
+from typing import Annotated, Union
 
-from croniter import croniter
-from pydantic import BaseModel, Field, field_validator, model_validator
+from rss_glue.feeds.smart_filter import SmartFilterFeedHandler
+from rss_glue.feeds.digest import DigestFeedHandler
 
-from rss_glue.models.feed_config import FeedConfigBase
-
-
-class RssFeedConfig(FeedConfigBase):
-    """Configuration for an RSS source feed."""
-
-    type: Literal["rss"]
-    url: str = Field(..., pattern=r"^https?://")
-
-
-class MergeFeedConfig(FeedConfigBase):
-    """Configuration for a merge feed that combines multiple sources by tags.
-
-    Example:
-        {
-            "id": "tech-news",
-            "type": "merge",
-            "name": "Tech News",
-            "include_tags": ["tech", "coding"],
-            "limit": 100
-        }
-    """
-
-    type: Literal["merge"]
-    include_tags: list[str] = Field(
-        ..., min_length=1, description="Include feeds that have any of these tags."
-    )
-
-
-class DigestFeedConfig(FeedConfigBase):
-    """Configuration for a digest feed that creates periodic rollups.
-
-    Example:
-        {
-            "id": "weekly-digest",
-            "type": "digest",
-            "name": "Weekly Digest",
-            "source": "tech-news",
-            "schedule": "0 0 * * 0",
-            "limit": 20
-        }
-    """
-
-    type: Literal["digest"]
-    source: str = Field(..., min_length=1, description="Single source feed ID")
-    schedule: str = Field(
-        ...,
-        min_length=1,
-        description="Cron expression like '0 0 * * 0' (weekly Sunday midnight)",
-    )
-
-    @field_validator("schedule")
-    @classmethod
-    def validate_cron_expression(cls, v: str) -> str:
-        """Validate that schedule is a valid cron expression."""
-        if not croniter.is_valid(v):
-            raise ValueError(f"Invalid cron expression: {v}")
-        return v
-
-
-class HackerNewsFeedConfig(FeedConfigBase):
-    """Configuration for a HackerNews feed.
-
-    Example:
-        {
-            "id": "hn",
-            "type": "hackernews",
-            "name": "HN",
-            "story_type": "top",
-            "limit": 30
-        }
-    """
-
-    type: Literal["hackernews"]
-    story_type: Literal["top", "new", "best"] = Field(default="top")
-
-
-class InstagramFeedConfig(FeedConfigBase):
-    """Configuration for an Instagram feed.
-
-    Uses ScrapeCreators API.
-    Requires `scrape_creators_key` to be set in AppConfig.
-
-    Example:
-        {
-            "id": "ig",
-            "type": "instagram",
-            "name": "My Instagram",
-            "username": "natgeo",
-            "limit": 20
-        }
-    """
-
-    type: Literal["instagram"]
-    username: str = Field(
-        ..., min_length=1, description="Instagram username (without @)"
-    )
-
-
-class FacebookFeedConfig(FeedConfigBase):
-    """Configuration for a Facebook page/group feed.
-
-    Uses ScrapeCreators API.
-    Requires `scrape_creators_key` to be set in AppConfig.
-
-    Example:
-        {
-            "id": "fb",
-            "type": "facebook",
-            "name": "My FB Page",
-            "url": "https://www.facebook.com/groups/12345",
-            "limit": 20
-        }
-    """
-
-    type: Literal["facebook"]
-    url: str = Field(..., min_length=1, description="Facebook Page or Group URL")
-
-
-class RedditFeedConfig(FeedConfigBase):
-    """Configuration for a Reddit feed.
-
-    Example:
-        {
-            "id": "reddit-selfhosted",
-            "type": "reddit",
-            "name": "r/selfhosted",
-            "subreddit": "selfhosted",
-            "listing_type": "top",
-            "time_filter": "week",
-            "limit": 20
-        }
-    """
-
-    type: Literal["reddit"]
-    subreddit: str = Field(..., min_length=1)
-    listing_type: Literal["hot", "new", "top", "rising"] = Field(default="top")
-    time_filter: Literal["hour", "day", "week", "month", "year", "all"] | None = Field(
-        default="day", description="Only used for 'top' listing"
-    )
-
-
-class WordPressMecEventsFeedConfig(FeedConfigBase):
-    """Configuration for WordPress pages using Modern Events Calendar plugin.
-
-    Extracts events from rendered HTML, filtering out recurring events
-    that appear on the page more than the threshold number of times.
-
-    Example:
-        {
-            "id": "bikemn",
-            "type": "wordpress_mec_events",
-            "name": "BikeMN Events",
-            "url": "https://www.bikemn.org/wp-json/wp/v2/pages/2454",
-            "recurring_threshold": 3
-        }
-    """
-
-    type: Literal["wordpress_mec_events"]
-    url: str = Field(..., pattern=r"^https?://")
-    recurring_threshold: int = Field(
-        default=3,
-        ge=2,
-        description="Titles appearing this many times or more are treated as recurring and excluded.",
-    )
-
-
-class SmartFilterFeedConfig(FeedConfigBase):
-    """Configuration for a smart filter feed that uses an LLM to filter posts.
-
-    Evaluates each post from the source feed against a prompt using the
-    Anthropic API, keeping only posts that match the criteria.
-
-    Example:
-        {
-            "id": "events-filter",
-            "type": "smart_filter",
-            "name": "Event Announcements",
-            "source": "all-news",
-            "prompt": "Is this post announcing an event I could attend?",
-            "model": "claude-haiku-4-0"
-        }
-    """
-
-    type: Literal["smart_filter"]
-    source: str = Field(..., min_length=1, description="Single source feed ID")
-    prompt: str = Field(
-        ...,
-        min_length=1,
-        description="The filtering question to evaluate each post against",
-    )
-    model: str = Field(
-        default="claude-haiku-4-0",
-        description="Anthropic model to use for evaluation",
-    )
-
+from pydantic import BaseModel, Field, model_validator
 
 FeedConfig = Annotated[
     Union[
-        RssFeedConfig,
-        MergeFeedConfig,
-        DigestFeedConfig,
-        SmartFilterFeedConfig,
-        HackerNewsFeedConfig,
-        InstagramFeedConfig,
-        FacebookFeedConfig,
-        RedditFeedConfig,
-        WordPressMecEventsFeedConfig,
+        SmartFilterFeedHandler.Config,
+        DigestFeedHandler.Config,
+        RssFeedHandler.Config,
+        HackerNewsFeedHandler.Config,
+        InstagramFeedHandler.Config,
+        FacebookFeedHandler.Config,
+        RedditFeedHandler.Config,
+        WordPressMecEventsFeedHandler.Config,
+        MergeFeedHandler.Config,
     ],
     Field(discriminator="type"),
 ]
@@ -277,7 +90,9 @@ class AppConfig(BaseModel):
         feed_ids = {feed.id for feed in self.feeds}
 
         for feed in self.feeds:
-            if isinstance(feed, (DigestFeedConfig, SmartFilterFeedConfig)):
+            if isinstance(
+                feed, (DigestFeedHandler.Config, SmartFilterFeedHandler.Config)
+            ):
                 if feed.source not in feed_ids:
                     raise ValueError(
                         f"{feed.type} feed '{feed.id}' references unknown feed '{feed.source}'"
@@ -293,7 +108,9 @@ class AppConfig(BaseModel):
         """
         deps: dict[str, set[str]] = {}
         for feed in self.feeds:
-            if isinstance(feed, (DigestFeedConfig, SmartFilterFeedConfig)):
+            if isinstance(
+                feed, (DigestFeedHandler.Config, SmartFilterFeedHandler.Config)
+            ):
                 deps[feed.id] = {feed.source}
             else:
                 deps[feed.id] = set()

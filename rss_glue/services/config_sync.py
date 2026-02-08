@@ -1,20 +1,13 @@
 """JSON config to database synchronization."""
 
+from rss_glue.feeds.smart_filter import SmartFilterFeedHandler
+from rss_glue.feeds.digest import DigestFeedHandler
+
 from sqlalchemy import text
 from sqlmodel import Session, select
 
-from rss_glue.models.config import (
-    AppConfig,
-    DigestFeedConfig,
-    FacebookFeedConfig,
-    HackerNewsFeedConfig,
-    InstagramFeedConfig,
-    MergeFeedConfig,
-    RedditFeedConfig,
-    RssFeedConfig,
-    SmartFilterFeedConfig,
-    WordPressMecEventsFeedConfig,
-)
+from rss_glue.feeds import FeedRegistry
+from rss_glue.models.config import AppConfig
 from rss_glue.models.db import Feed, FeedRelationship, FeedTag, SystemConfig, Tag
 
 
@@ -125,58 +118,6 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
         else:
             cooldown_minutes = config.default_cooldown_minutes
 
-        # Build config dict based on feed type
-        config_dict: dict = {}
-
-        # Store explicit cache_media setting if present
-        if feed_config.cache_media is not None:
-            config_dict["cache_media_explicit"] = feed_config.cache_media
-
-        # Store explicit cooldown_minutes setting if present
-        if feed_config.cooldown_minutes is not None:
-            config_dict["cooldown_minutes_explicit"] = feed_config.cooldown_minutes
-
-        if feed_config.schedule is not None:
-            config_dict["schedule"] = feed_config.schedule
-
-        if isinstance(feed_config, RssFeedConfig):
-            config_dict["url"] = feed_config.url
-        elif isinstance(feed_config, HackerNewsFeedConfig):
-            config_dict["story_type"] = feed_config.story_type
-        elif isinstance(feed_config, InstagramFeedConfig):
-            config_dict.update(
-                {
-                    "username": feed_config.username,
-                }
-            )
-        elif isinstance(feed_config, FacebookFeedConfig):
-            config_dict.update(
-                {
-                    "url": feed_config.url,
-                }
-            )
-        elif isinstance(feed_config, RedditFeedConfig):
-            config_dict.update(
-                {
-                    "subreddit": feed_config.subreddit,
-                    "listing_type": feed_config.listing_type,
-                    "time_filter": feed_config.time_filter,
-                }
-            )
-        elif isinstance(feed_config, WordPressMecEventsFeedConfig):
-            config_dict.update(
-                {
-                    "url": feed_config.url,
-                    "recurring_threshold": feed_config.recurring_threshold,
-                }
-            )
-        elif isinstance(feed_config, MergeFeedConfig):
-            if feed_config.include_tags:
-                config_dict["include_tags"] = feed_config.include_tags
-        elif isinstance(feed_config, SmartFilterFeedConfig):
-            config_dict["prompt"] = feed_config.prompt
-            config_dict["model"] = feed_config.model
-
         if feed_config.id in existing_feeds:
             # Update existing
             db_feed = existing_feeds[feed_config.id]
@@ -186,7 +127,7 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
             db_feed.cache_media = cache_media
             db_feed.cooldown_minutes = cooldown_minutes
             db_feed.enabled = feed_config.enabled
-            db_feed.config = config_dict
+            db_feed.config = feed_config.extra_config()
 
             session.add(db_feed)
             stats["feeds_updated"] += 1
@@ -200,7 +141,7 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
                 cache_media=cache_media,
                 cooldown_minutes=cooldown_minutes,
                 enabled=feed_config.enabled,
-                config=config_dict,
+                config=feed_config.extra_config(),
                 updated_at=None,  # Will be set when first updated
             )
             session.add(db_feed)
@@ -216,7 +157,9 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
 
     # Create relationships for digest and smart_filter feeds (merge feeds use tags instead)
     for feed_config in config.feeds:
-        if isinstance(feed_config, (DigestFeedConfig, SmartFilterFeedConfig)):
+        if isinstance(
+            feed_config, (DigestFeedHandler.Config, SmartFilterFeedHandler.Config)
+        ):
             rel = FeedRelationship(
                 parent_feed_id=feed_config.id,
                 child_feed_id=feed_config.source,
@@ -288,68 +231,12 @@ def get_current_config(session: Session) -> dict:
         config["anthropic_api_key"] = anthropic_api_key
 
     for feed in feeds:
-        feed_dict = {
-            "id": feed.id,
-            "type": feed.type,
-            "name": feed.name,
-            "limit": feed.limit,
-            "enabled": feed.enabled,
-        }
-
-        # Restore tags
-        if feed.tags:
-            feed_dict["tags"] = [t.name for t in feed.tags]
-
-        # Restore explicit cache_media setting
-        if feed.config.get("cache_media_explicit") is not None:
-            feed_dict["cache_media"] = feed.config["cache_media_explicit"]
-
-        # Restore explicit cooldown_minutes setting
-        if feed.config.get("cooldown_minutes_explicit") is not None:
-            feed_dict["cooldown_minutes"] = feed.config["cooldown_minutes_explicit"]
-
-        # Restore schedule
-        if feed.config.get("schedule") is not None:
-            feed_dict["schedule"] = feed.config.get("schedule", None)
-
-        if feed.type == "rss":
-            feed_dict["url"] = feed.config.get("url", "")
-        elif feed.type == "merge":
-            # Restore include_tags
-            if feed.config.get("include_tags"):
-                feed_dict["include_tags"] = feed.config["include_tags"]
-        elif feed.type == "digest":
-            # Get source ID (digest has a single source)
-            rel = session.exec(
-                select(FeedRelationship).where(
-                    FeedRelationship.parent_feed_id == feed.id
-                )
-            ).first()
-            source = rel.child_feed_id if rel else ""
-            feed_dict["source"] = source
-        elif feed.type == "smart_filter":
-            rel = session.exec(
-                select(FeedRelationship).where(
-                    FeedRelationship.parent_feed_id == feed.id
-                )
-            ).first()
-            source = rel.child_feed_id if rel else ""
-            feed_dict["source"] = source
-            feed_dict["prompt"] = feed.config.get("prompt", "")
-            feed_dict["model"] = feed.config.get("model", "claude-haiku-4-0")
-        elif feed.type == "hackernews":
-            feed_dict["story_type"] = feed.config.get("story_type", "top")
-        elif feed.type == "instagram":
-            feed_dict["username"] = feed.config.get("username", "")
-        elif feed.type == "facebook":
-            feed_dict["url"] = feed.config.get("url", "")
-        elif feed.type == "reddit":
-            feed_dict["subreddit"] = feed.config.get("subreddit", "")
-            feed_dict["listing_type"] = feed.config.get("listing_type", "top")
-            feed_dict["time_filter"] = feed.config.get("time_filter", "day")
-        elif feed.type == "wordpress_mec_events":
-            feed_dict["url"] = feed.config.get("url", "")
-            feed_dict["recurring_threshold"] = feed.config.get("recurring_threshold", 3)
+        feed_config_cls = FeedRegistry.get_handler(feed.type).Config
+        feed_dict = feed_config_cls.db_hydrate(feed, session=session).model_dump(
+            exclude_none=True
+        )
+        if len(feed_dict.get("tags", [])) == 0:
+            del feed_dict["tags"]  # Don't include empty tags list in config
 
         config["feeds"].append(feed_dict)
 

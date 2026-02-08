@@ -1,18 +1,19 @@
 """Digest feed handler - creates periodic rollups based on cron schedule."""
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from croniter import croniter
 from sqlmodel import Field, Session, and_, select, SQLModel, Column, Relationship
 
-from rss_glue.feeds.registry import FeedRegistry, PostDict
+from rss_glue.feeds.registry import FeedRegistry, PostDict, BaseFeedHandler
 from rss_glue.models.db import (
     Feed,
     FeedRelationship,
     Post,
     UTCDateTime,
 )
+from rss_glue.models.feed_config import FeedConfigBase
 from rss_glue.services.timezone import get_display_timezone
 from rss_glue.templates import templates
 
@@ -206,8 +207,44 @@ def format_digest_issue_content(posts: list[Post], base_url: str) -> str:
 
 
 @FeedRegistry.register("digest")
-class DigestFeedHandler:
+class DigestFeedHandler(BaseFeedHandler):
     """Handler for digest feeds - creates periodic rollups of source feed posts."""
+
+    class Config(FeedConfigBase):
+        """Configuration for a digest feed.
+
+        Note: source_id is stored via FeedRelationship, not in config.
+        """
+
+        type: Literal["digest"]
+        source: str = Field(..., min_length=1, description="Single source feed ID")
+
+        @classmethod
+        def sample_config(cls) -> dict:
+            return cls._sample(
+                type="digest",
+                source="source_feed_id",
+            )
+
+        @classmethod
+        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
+            """Return any additional fields needed for DB storage."""
+            # Get source feed ID from FeedRelationship
+            source = ""
+            if session:
+                rel = session.exec(
+                    select(FeedRelationship).where(
+                        FeedRelationship.parent_feed_id == feed.id
+                    )
+                ).first()
+                source = rel.child_feed_id if rel else ""
+
+            return super().db_hydrate(feed, session=session, source=source, **kwargs)
+
+        def extra_config(self) -> dict:
+            """Return any additional config fields needed for DB storage."""
+            # Note: source is NOT stored in config, it's stored in FeedRelationship table
+            return super().extra_config()
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> None | int:

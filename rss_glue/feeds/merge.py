@@ -1,12 +1,14 @@
 """Merge feed handler."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
+from pydantic import Field
 from sqlmodel import Session, select
 
-from rss_glue.feeds.registry import FeedRegistry, PostDict
+from rss_glue.feeds.registry import FeedRegistry, PostDict, BaseFeedHandler
 from rss_glue.models.db import Feed, FeedTag, Post, Tag
+from rss_glue.models.feed_config import FeedConfigBase
 
 
 def get_merge_source_ids(feed_id: str, session: Session) -> set[str]:
@@ -30,8 +32,38 @@ def get_merge_source_ids(feed_id: str, session: Session) -> set[str]:
 
 
 @FeedRegistry.register("merge")
-class MergeFeedHandler:
+class MergeFeedHandler(BaseFeedHandler):
     """Handler for merge feeds - combines posts from sources matching tags."""
+
+    class Config(FeedConfigBase):
+        """Configuration for a merge feed."""
+
+        type: Literal["merge"]
+        include_tags: list[str] = Field(default_factory=list, min_length=1)
+
+        @classmethod
+        def sample_config(cls) -> dict:
+            return cls._sample(
+                type="merge",
+                include_tags=["tag1", "tag2"],
+            )
+
+        @classmethod
+        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
+            """Return any additional fields needed for DB storage."""
+            return super().db_hydrate(
+                feed,
+                session=session,
+                include_tags=feed.config.get("include_tags"),
+                **kwargs,
+            )
+
+        def extra_config(self) -> dict:
+            """Return any additional config fields needed for DB storage."""
+            return {
+                **super().extra_config(),
+                "include_tags": self.include_tags,
+            }
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:

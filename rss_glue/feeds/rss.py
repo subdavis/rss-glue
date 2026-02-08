@@ -1,8 +1,12 @@
 """RSS feed handler."""
 
+from rss_glue.models.db import Feed
+from pydantic import Field
+from rss_glue.models.feed_config import FeedConfigBase
+
 import hashlib
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 import feedparser
 from sqlmodel import Session
@@ -13,6 +17,32 @@ from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 @FeedRegistry.register("rss")
 class RssFeedHandler(BaseFeedHandler):
     """Handler for RSS/Atom feeds."""
+
+    class Config(FeedConfigBase):
+        """Configuration for an RSS source feed."""
+
+        type: Literal["rss"]
+        url: str = Field(..., pattern=r"^https?://")
+
+        @classmethod
+        def sample_config(cls) -> dict:
+            return cls._sample(
+                type="rss",
+                url="https://www.example.com/feed",
+            )
+
+        @classmethod
+        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
+            return super().db_hydrate(
+                feed, session=session, url=feed.config.get("url", ""), **kwargs
+            )
+
+        def extra_config(self) -> dict:
+            """Return any additional config fields needed for DB storage."""
+            return {
+                **super().extra_config(),
+                "url": self.url,
+            }
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:

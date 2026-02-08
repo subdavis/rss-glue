@@ -1,92 +1,85 @@
-{% extends "base.html" %}
-{% block title %}Config - RSS Glue{% endblock %}
-{% block content %}
+{% extends "base.html" %} {% block title %}Config - RSS Glue{% endblock %} {%
+block content %}
 <h2>Configuration</h2>
 
 {% if message %}
 <p><strong>{{ message }}</strong></p>
-{% endif %}
-
-{% if error %}
+{% endif %} {% if error %}
 <pre class="error-box">Error: {{ error }}</pre>
 {% endif %}
 
 <form method="post" action="/config" class="form-stack">
-  <div class="form-group">
-    <label>
-      <input type="checkbox" name="cache_media" {% if config.cache_media %}checked{% endif %}>
-      Cache Embedded Media (Global)
-    </label>
-    
-  </div>
+  <fieldset>
+    <legend>Global Settings</legend>
 
-  <div class="form-group">
-    <label>
-      ScrapeCreators API Key (for Instagram/Facebook):
-      
-    </label>
-    <input type="text" name="scrape_creators_key" value="{{ config.scrape_creators_key or '' }}">
-  </div>
+    <div class="form-group">
+      <label> ScrapeCreators API Key (for Instagram/Facebook): </label>
+      <input
+        type="text"
+        name="scrape_creators_key"
+        value="{{ config.scrape_creators_key or '' }}"
+      />
+    </div>
 
-  <div class="form-group">
-    <label>
-      Default Fetch Interval (minutes):
-      
-    </label>
-    <input type="number" name="default_cooldown_minutes" value="{{ config.default_cooldown_minutes or 15 }}" min="0"
-        max="10080">
+    <div class="form-group">
+      <label> Default Fetch Interval (minutes): </label>
+      <input
+        type="number"
+        name="default_cooldown_minutes"
+        value="{{ config.default_cooldown_minutes or 15 }}"
+        min="0"
+        max="10080"
+      />
       <small>(0 = no cooldown, max 7 days)</small>
-  </div>
+    </div>
 
-  <div class="form-group">
-    <label>
-      Base URL for RSS feeds:
-      
-    </label>
-    <input type="url" name="base_url" value="{{ config.base_url or 'http://localhost:8000' }}" required>
-      <small>(Used for generating absolute URLs in RSS output)</small>
-  </div>
+    <div class="form-group">
+      <label> Server Base Url: </label>
+      <input
+        type="url"
+        name="base_url"
+        value="{{ config.base_url or 'http://localhost:8000' }}"
+        required
+      />
+      <small>(must include protocol, e.g., http:// or https://)</small>
+    </div>
 
-  <label>Feeds Configuration (JSON):</label>
-  <textarea name="feeds_json" rows="30" cols="80">{{ feeds_json }}</textarea>
+    <div class="form-group">
+      <label>
+        <input
+          type="checkbox"
+          name="cache_media"
+          {%
+          if
+          config.cache_media
+          %}checked{%
+          endif
+          %}
+        />
+        Cache Embedded Media (Global)
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Feeds Configuration</legend>
+    <textarea name="feeds_json" rows="30" cols="80">{{ feeds_json }}</textarea>
+  </fieldset>
 
   <button type="submit">Save Configuration</button>
 </form>
 
-<h3>Config Format</h3>
-<p>Enter a list of feed objects:</p>
-<pre>
-[
-  {
-    "id": "unique-id",
-    "type": "rss",
-    "name": "Feed Name",
-    "url": "https://example.com/feed.xml",
-    "limit": 50,
-    "cooldown_minutes": 30,
-    "tags": ["tech", "news"]
-  },
-  {
-    "id": "merged-feed",
-    "type": "merge",
-    "name": "Combined Feed",
-    "include_tags": ["tech"],
-    "limit": 100
-  },
-  {
-    "id": "reddit-feed",
-    "type": "reddit",
-    "name": "r/selfhosted",
-    "subreddit": "selfhosted",
-    "listing_type": "top",
-    "time_filter": "week",
-    "limit": 20,
-    "tags": ["tech"]
-  }
-]
-</pre>
+<hr />
 
-<hr>
+<h2>Sample Feed Configurations</h2>
+<p>Copy and paste these examples into the Feeds Configuration JSON above, modifying values as needed.</p>
+
+{% for feed_type, sample_config in example_configs.items() %}
+<h3>{{ feed_type }}</h3>
+<pre>{{ sample_config | tojson(indent=2) }}</pre>
+{% endfor %}
+
+<hr />
 
 <h2>Change Password</h2>
 
@@ -96,29 +89,21 @@
 
 <form method="post" action="/config/password" class="form-stack">
   <div class="form-group">
-    <label>
-      Current Password:
-      
-    </label>
-    <input type="password" name="current_password" required>
+    <label> Current Password: </label>
+    <input type="password" name="current_password" required />
   </div>
 
   <div class="form-group">
-    <label>
-      New Password:
-      
-    </label>
-    <input type="password" name="new_password" required minlength="8">
+    <label> New Password: </label>
+    <input type="password" name="new_password" required minlength="8" />
   </div>
 
   <div class="form-group">
-    <label>
-      Confirm New Password:
-      
-    </label>
-    <input type="password" name="confirm_password" required minlength="8">
+    <label> Confirm New Password: </label>
+    <input type="password" name="confirm_password" required minlength="8" />
   </div>
 
   <button type="submit">Update Password</button>
 </form>
+
 {% endblock %}

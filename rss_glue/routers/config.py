@@ -52,7 +52,7 @@ def save_config(
         # Sync to database
         sync_config_to_db(app_config, session)
 
-        return RedirectResponse(url="/", status_code=303)
+        return RedirectResponse(url="/config", status_code=303)
 
     except json.JSONDecodeError as e:
         config_context = {

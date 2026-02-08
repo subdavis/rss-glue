@@ -2,8 +2,9 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
+from pydantic import Field as PydanticField
 from sqlmodel import Column, Field, Session, SQLModel, select
 
 from rss_glue.feeds.registry import (
@@ -19,6 +20,7 @@ from rss_glue.models.db import (
     SystemConfig,
     UTCDateTime,
 )
+from rss_glue.models.feed_config import FeedConfigBase
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +142,57 @@ def evaluate_post(
 @FeedRegistry.register("smart_filter")
 class SmartFilterFeedHandler(BaseFeedHandler):
     """Handler for smart filter feeds - filters source posts using LLM."""
+
+    class Config(FeedConfigBase):
+        """Configuration for a smart filter feed.
+
+        Note: source_id is stored via FeedRelationship, not in config.
+        """
+
+        type: Literal["smart_filter"]
+        prompt: str = PydanticField(..., min_length=1)
+        model: str = PydanticField(default="claude-haiku-4-0")
+        source: str = Field(..., min_length=1, description="Single source feed ID")
+
+        @classmethod
+        def sample_config(cls) -> dict:
+            return cls._sample(
+                type="smart_filter",
+                prompt="Does this post announce a local event?",
+                model="claude-haiku-4-0",
+                source="source_feed_id",
+            )
+
+        @classmethod
+        def db_hydrate(cls, feed: Feed, session: Session | None = None, **kwargs):
+            """Return any additional fields needed for DB storage."""
+            # Get source feed ID from FeedRelationship
+            source = ""
+            if session:
+                rel = session.exec(
+                    select(FeedRelationship).where(
+                        FeedRelationship.parent_feed_id == feed.id
+                    )
+                ).first()
+                source = rel.child_feed_id if rel else ""
+
+            return super().db_hydrate(
+                feed,
+                session=session,
+                prompt=feed.config.get("prompt", ""),
+                model=feed.config.get("model", "claude-haiku-4-0"),
+                source=source,
+                **kwargs,
+            )
+
+        def extra_config(self) -> dict:
+            """Return any additional config fields needed for DB storage."""
+            # Note: source is NOT stored in config, it's stored in FeedRelationship table
+            return {
+                **super().extra_config(),
+                "prompt": self.prompt,
+                "model": self.model,
+            }
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> None | int:
