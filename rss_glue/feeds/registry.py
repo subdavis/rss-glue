@@ -98,7 +98,9 @@ class BaseFeedHandler:
     """Base class for feed handlers with default implementations."""
 
     @staticmethod
-    def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:
+    def fetch(
+        feed_id: str, config: dict[str, Any], session: Session
+    ) -> list[dict] | None | int:
         """Fetch posts from the feed source. Must be overridden."""
         raise NotImplementedError("Subclass must implement fetch()")
 

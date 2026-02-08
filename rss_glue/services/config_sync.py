@@ -12,6 +12,7 @@ from rss_glue.models.config import (
     MergeFeedConfig,
     RedditFeedConfig,
     RssFeedConfig,
+    SmartFilterFeedConfig,
     WordPressMecEventsFeedConfig,
 )
 from rss_glue.models.db import Feed, FeedRelationship, FeedTag, SystemConfig, Tag
@@ -64,6 +65,18 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
         # Actually, let's keep it simple: if provided, update. If not provided (None), do nothing (or delete?).
         # Given this is a full config sync, we should probably match the state.
         pass
+
+    # Save Anthropic API key
+    if config.anthropic_api_key:
+        system_config_anthropic = session.get(SystemConfig, "anthropic_api_key")
+        if not system_config_anthropic:
+            system_config_anthropic = SystemConfig(
+                key="anthropic_api_key", value=config.anthropic_api_key
+            )
+            session.add(system_config_anthropic)
+        else:
+            system_config_anthropic.value = config.anthropic_api_key
+            session.add(system_config_anthropic)
 
     # Save default cooldown
     system_config_cooldown = session.get(SystemConfig, "default_cooldown_minutes")
@@ -160,6 +173,9 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
         elif isinstance(feed_config, MergeFeedConfig):
             if feed_config.include_tags:
                 config_dict["include_tags"] = feed_config.include_tags
+        elif isinstance(feed_config, SmartFilterFeedConfig):
+            config_dict["prompt"] = feed_config.prompt
+            config_dict["model"] = feed_config.model
 
         if feed_config.id in existing_feeds:
             # Update existing
@@ -198,10 +214,9 @@ def sync_config_to_db(config: AppConfig, session: Session) -> dict:
     session.exec(text("DELETE FROM feed_tag"))
     session.commit()
 
-    # Create relationships for digest feeds (merge feeds use tags instead)
+    # Create relationships for digest and smart_filter feeds (merge feeds use tags instead)
     for feed_config in config.feeds:
-        if isinstance(feed_config, DigestFeedConfig):
-            # Digest feeds have a single source
+        if isinstance(feed_config, (DigestFeedConfig, SmartFilterFeedConfig)):
             rel = FeedRelationship(
                 parent_feed_id=feed_config.id,
                 child_feed_id=feed_config.source,
@@ -253,6 +268,11 @@ def get_current_config(session: Session) -> dict:
         else "http://localhost:8000"
     )
 
+    system_config_anthropic = session.get(SystemConfig, "anthropic_api_key")
+    anthropic_api_key = (
+        system_config_anthropic.value if system_config_anthropic else None
+    )
+
     feeds = session.exec(select(Feed)).all()
     config: dict = {
         "cache_media": global_cache_media,
@@ -263,6 +283,9 @@ def get_current_config(session: Session) -> dict:
 
     if scrape_creators_key:
         config["scrape_creators_key"] = scrape_creators_key
+
+    if anthropic_api_key:
+        config["anthropic_api_key"] = anthropic_api_key
 
     for feed in feeds:
         feed_dict = {
@@ -304,6 +327,16 @@ def get_current_config(session: Session) -> dict:
             ).first()
             source = rel.child_feed_id if rel else ""
             feed_dict["source"] = source
+        elif feed.type == "smart_filter":
+            rel = session.exec(
+                select(FeedRelationship).where(
+                    FeedRelationship.parent_feed_id == feed.id
+                )
+            ).first()
+            source = rel.child_feed_id if rel else ""
+            feed_dict["source"] = source
+            feed_dict["prompt"] = feed.config.get("prompt", "")
+            feed_dict["model"] = feed.config.get("model", "claude-haiku-4-0")
         elif feed.type == "hackernews":
             feed_dict["story_type"] = feed.config.get("story_type", "top")
         elif feed.type == "instagram":
