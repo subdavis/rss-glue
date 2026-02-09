@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 
 from croniter import croniter
-from jinja2.filters import K
 from pydantic import BaseModel, Field, field_validator
 
 from rss_glue.models.db import Feed

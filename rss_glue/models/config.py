@@ -7,7 +7,6 @@ from rss_glue.feeds.facebook import FacebookFeedHandler
 from rss_glue.feeds.instagram import InstagramFeedHandler
 from rss_glue.feeds.hackernews import HackerNewsFeedHandler
 from rss_glue.feeds.rss import RssFeedHandler
-from click.decorators import R
 from typing import Annotated, Union
 
 from rss_glue.feeds.smart_filter import SmartFilterFeedHandler

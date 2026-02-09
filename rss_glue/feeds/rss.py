@@ -1,6 +1,5 @@
 """RSS feed handler."""
 
-from rss_glue.models.db import Feed
 from pydantic import Field
 from rss_glue.models.feed_config import FeedConfigBase
 

@@ -99,7 +99,6 @@ def config_page(
     user: User = Depends(require_auth),
 ):
     """Config editor page. Requires authentication."""
-    from rss_glue.feeds.registry import FeedRegistry
 
     config = get_current_config(session)
     feeds_json = json.dumps(config["feeds"], indent=2)

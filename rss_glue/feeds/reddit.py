@@ -10,7 +10,6 @@ from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
-from rss_glue.models.db import Feed
 from rss_glue.models.feed_config import FeedConfigBase
 from rss_glue.templates import templates
 

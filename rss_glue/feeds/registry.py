@@ -3,7 +3,7 @@
 from rss_glue.models.feed_config import FeedConfigBase
 
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Callable, Protocol, Type, TypedDict
+from typing import TYPE_CHECKING, Any, Callable, Type, TypedDict
 
 from croniter import croniter
 from sqlmodel import Session, select
