@@ -11,6 +11,7 @@
 
 {% if gallery_data %}
 <div class="gallery-grid" id="gallery-grid">
+    <div class="gallery-loading"><div class="gallery-loading-spinner"></div></div>
     {% for item in gallery_data %}
     <div class="gallery-item">
         <img src="{{ item.media_url }}" alt="Image from {{ item.feed.name }}" loading="lazy">
@@ -30,20 +31,23 @@
     const items = Array.from(grid.querySelectorAll('.gallery-item'));
     const gap = 16;
 
+    const minItemWidth = 200;
+
     function layout() {
         const containerWidth = grid.clientWidth;
-        const itemWidth = items[0]?.offsetWidth || 200;
-        const columns = Math.max(1, Math.floor((containerWidth + gap) / (itemWidth + gap)));
+        const columns = Math.max(1, Math.floor((containerWidth + gap) / (minItemWidth + gap)));
+        const itemWidth = (containerWidth - (columns - 1) * gap) / columns;
         const columnHeights = new Array(columns).fill(0);
-        const actualGap = (containerWidth - (columns * itemWidth)) / (columns - 1) || gap;
 
         items.forEach(item => {
+            item.style.width = itemWidth + 'px';
+
             // Find shortest column
             const minHeight = Math.min(...columnHeights);
             const columnIndex = columnHeights.indexOf(minHeight);
 
             // Position item
-            item.style.left = columnIndex * (itemWidth + actualGap) + 'px';
+            item.style.left = columnIndex * (itemWidth + gap) + 'px';
             item.style.top = minHeight + 'px';
 
             // Update column height
@@ -52,6 +56,7 @@
 
         // Set container height
         grid.style.height = Math.max(...columnHeights) + 'px';
+        grid.classList.add('loaded');
     }
 
     // Wait for images to load before layout
@@ -77,8 +82,12 @@
     // Handle empty gallery
     if (images.length === 0) layout();
 
-    // Relayout on resize
-    window.addEventListener('resize', layout);
+    // Relayout on resize (debounced)
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(layout, 150);
+    });
 })();
 </script>
 

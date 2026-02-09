@@ -8,7 +8,14 @@
 
 <h2>Update History</h2>
 
-<p>Showing {{ history_data|length }} of {{ total_count }} total update attempts</p>
+<p>
+    Showing {{ history_data|length }} of {{ total_count }} total update attempts
+    {% if worker_enabled %}
+    | <strong>Background Worker: ENABLED</strong>
+    {% else %}
+    | Background Worker: Disabled
+    {% endif %}
+</p>
 
 {% if history_data %}
 <table border="1">

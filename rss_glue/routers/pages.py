@@ -1,7 +1,6 @@
 """HTML page routes."""
 
 import json
-import os
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
@@ -68,13 +67,6 @@ def index(
 
     feed_schedules.sort(key=get_sort_key, reverse=(sort_order == "desc"))
 
-    # Check if worker is enabled
-    worker_enabled = os.getenv("ENABLE_BACKGROUND_WORKER", "").lower() in (
-        "true",
-        "1",
-        "yes",
-    )
-
     # Get current time for overdue check
     now = datetime.now(timezone.utc)
 
@@ -83,7 +75,6 @@ def index(
         {
             "request": request,
             "feed_schedules": feed_schedules,
-            "worker_enabled": worker_enabled,
             "sort_by": sort_by,
             "sort_order": sort_order,
             "now": now,

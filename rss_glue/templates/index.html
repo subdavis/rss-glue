@@ -3,14 +3,7 @@
 {% block content %}
 <h2>Configured Feeds</h2>
 
-<p>
-    Showing {{ feed_schedules|length }} feed(s)
-    {% if worker_enabled %}
-    | <strong>Background Worker: ENABLED</strong>
-    {% else %}
-    | Background Worker: Disabled
-    {% endif %}
-</p>
+<p>Showing {{ feed_schedules|length }} feed(s)</p>
 
 {% if request.cookies.get('session') %}
 <form action="/update" method="post">
@@ -32,16 +25,6 @@
             </a>
         </th>
         <th>
-            <a href="/?sort_by=limit&sort_order={% if sort_by == 'limit' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                Limit{% if sort_by == 'limit' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-            </a>
-        </th>
-        <th>
-            <a href="/?sort_by=status&sort_order={% if sort_by == 'status' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                Status{% if sort_by == 'status' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-            </a>
-        </th>
-        <th>
             <a href="/?sort_by=updated_at&sort_order={% if sort_by == 'updated_at' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
                 Last Updated{% if sort_by == 'updated_at' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
             </a>
@@ -54,19 +37,11 @@
     </tr>
     {% for item in feed_schedules %}
     {% set is_overdue = item.feed.enabled and item.next_update and item.next_update < now %}
-    <tr{% if is_overdue %} class="overdue"{% endif %}>
+    <tr{% if is_overdue %} class="overdue"{% elif not item.feed.enabled %} class="disabled"{% endif %}>
         <td>
             <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
         </td>
         <td>{{ item.feed.type }}</td>
-        <td>{{ item.feed.limit }}</td>
-        <td>
-            {% if item.feed.enabled %}
-            <span class="status-enabled">Enabled</span>
-            {% else %}
-            <span class="status-disabled">Disabled</span>
-            {% endif %}
-        </td>
         <td>
             {% if item.feed.updated_at %}
             <span data-utc-time="{{ item.feed.updated_at.isoformat() }}" data-format="relative" title="{{ item.feed.updated_at | localtime('tooltip') }}">

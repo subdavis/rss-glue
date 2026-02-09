@@ -1,5 +1,7 @@
 """Feed and update routes."""
 
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from sqlalchemy import text as sql_text
@@ -313,12 +315,18 @@ def _render_update_history(
     pagination_base_url = f"/feed/{feed.id}/history" if feed else "/update-history"
 
     next_update = get_next_update(feed, session) if feed else None
+    worker_enabled = os.getenv("ENABLE_BACKGROUND_WORKER", "").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
     return templates.TemplateResponse(
         "update_history.html",
         {
             "request": request,
             "feed": feed,
             "next_update": next_update,
+            "worker_enabled": worker_enabled,
             "history_data": history_data,
             "pagination_base_url": pagination_base_url,
             "current_page": page,

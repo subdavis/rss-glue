@@ -228,6 +228,10 @@ tr.overdue td {
     background-color: var(--table-overdue-background);
 }
 
+tr.disabled td {
+    background-color: #fde8e8;
+}
+
 /* ============================================
    Forms
    ============================================ */
@@ -434,9 +438,37 @@ article blockquote p:last-child {
     margin: var(--spacing-md) 0;
 }
 
+/* Gallery loading splash */
+.gallery-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 80px 0;
+}
+
+.gallery-loading-spinner {
+    width: 32px;
+    height: 32px;
+    background: #888;
+    animation: gallery-spin 1.2s ease-in-out infinite;
+}
+
+@keyframes gallery-spin {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(0.8); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+
+.gallery-grid.loaded .gallery-loading {
+    display: none;
+}
+
+.gallery-grid:not(.loaded) .gallery-item {
+    visibility: hidden;
+}
+
 .gallery-item {
     position: absolute;
-    width: 200px;
 }
 
 .gallery-item img {
@@ -547,7 +579,7 @@ article blockquote p:last-child {
         padding: var(--spacing-xs) var(--spacing-sm);
     }
 
-    .gallery-item {
-        width: 150px;
+    .gallery-item img {
+        border-radius: 2px;
     }
 }
