@@ -24,6 +24,7 @@ def save_config(
     feeds_json: str = Form(...),
     cache_media: bool = Form(False),
     scrape_creators_key: str | None = Form(None),
+    anthropic_api_key: str | None = Form(None),
     default_cooldown_minutes: int = Form(15),
     base_url: str = Form("http://localhost:8000"),
     session: Session = Depends(get_session),
@@ -32,6 +33,8 @@ def save_config(
     """Save config and sync to database."""
     if scrape_creators_key == "":
         scrape_creators_key = None
+    if anthropic_api_key == "":
+        anthropic_api_key = None
 
     try:
         # Parse JSON
@@ -41,6 +44,7 @@ def save_config(
         config_dict = {
             "cache_media": cache_media,
             "scrape_creators_key": scrape_creators_key,
+            "anthropic_api_key": anthropic_api_key,
             "default_cooldown_minutes": default_cooldown_minutes,
             "base_url": base_url,
             "feeds": feeds_list,
@@ -58,6 +62,7 @@ def save_config(
         config_context = {
             "cache_media": cache_media,
             "scrape_creators_key": scrape_creators_key,
+            "anthropic_api_key": anthropic_api_key,
             "default_cooldown_minutes": default_cooldown_minutes,
             "base_url": base_url,
             "feeds": [],
@@ -83,6 +88,7 @@ def save_config(
         config_context = {
             "cache_media": cache_media,
             "scrape_creators_key": scrape_creators_key,
+            "anthropic_api_key": anthropic_api_key,
             "default_cooldown_minutes": default_cooldown_minutes,
             "base_url": base_url,
             "feeds": feeds_list,

@@ -22,6 +22,15 @@ block content %}
     </div>
 
     <div class="form-group">
+      <label> Anthropic API Key (for Smart Filter): </label>
+      <input
+        type="text"
+        name="anthropic_api_key"
+        value="{{ config.anthropic_api_key or '' }}"
+      />
+    </div>
+
+    <div class="form-group">
       <label> Default Fetch Interval (minutes): </label>
       <input
         type="number"

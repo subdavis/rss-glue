@@ -151,7 +151,7 @@ class SmartFilterFeedHandler(BaseFeedHandler):
 
         type: Literal["smart_filter"]
         prompt: str = PydanticField(..., min_length=1)
-        model: str = PydanticField(default="claude-haiku-4-0")
+        model: str = PydanticField(default="claude-haiku-4-5")
         source: str = Field(..., min_length=1, description="Single source feed ID")
 
         @classmethod
@@ -187,7 +187,7 @@ class SmartFilterFeedHandler(BaseFeedHandler):
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> None | int:
         """Evaluate unevaluated source posts against the filter prompt."""
         prompt = config.get("prompt")
-        model = config.get("model", "claude-haiku-4-0")
+        model = config.get("model", "claude-haiku-4-5")
 
         if not prompt:
             logger.error("Smart filter feed %s has no prompt configured", feed_id)
