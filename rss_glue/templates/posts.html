@@ -2,46 +2,33 @@
 {% from "pagination.html" import render as render_pagination %}
 {% block title %}Posts - RSS Glue{% endblock %}
 {% block content %}
-<h2>All Posts</h2>
+<h2>Posts</h2>
+
+<div class="sub-nav">
+    <a href="/posts" {% if active_tab == 'new' %}class="active"{% endif %}>New</a>
+    <a href="/posts/best" {% if active_tab == 'best' %}class="active"{% endif %}>Best</a>
+</div>
 
 <p>Showing {{ posts_data|length }} of {{ total_count }} total posts (source feeds only)</p>
 
 {% if posts_data %}
-<table border="1">
-    <tr>
-        <th>Feed</th>
-        <th>Title</th>
-        <th>Published</th>
-        <th>Author</th>
-    </tr>
-    {% for item in posts_data %}
-    <tr>
-        <td>
-            <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
-        </td>
-        <td>
-            <a href="{{ item.post.link }}">{{ item.post.title }}</a>
-        </td>
-        <td>
-            <span data-utc-time="{{ item.post.published_at.isoformat() }}" data-format="relative" title="{{ item.post.published_at | localtime('tooltip') }}">
-                {{ item.post.published_at | localtime("relative") }}
-            </span>
-        </td>
-        <td>
-            {% if item.post.author %}
-            {{ item.post.author }}
-            {% else %}
-            -
-            {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+{% for item in posts_data %}
+<div>
+    <h4><a href="{{ item.post.link }}">{{ item.post.title }}</a></h4>
+    <div class="post-meta">
+        <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
+        · <span data-utc-time="{{ item.post.published_at.isoformat() }}" data-format="relative" title="{{ item.post.published_at | localtime('tooltip') }}">{{ item.post.published_at | localtime("relative") }}</span>
+        {% if item.post.author %}· {{ item.post.author }}{% endif %}
+        {% if item.post.score is not none %}· {{ item.post.score }} points{% endif %}
+        {% if item.percentile is defined %}· top {{ "%.0f"|format((1 - item.percentile) * 100) }}%{% endif %}
+    </div>
+</div>
+{% endfor %}
 
 {{ render_pagination("/posts", current_page, total_pages, has_prev, has_next, prev_page, next_page) }}
 
 {% else %}
-<p>No posts found. <a href="/">Update some feeds</a> to see posts here.</p>
+<p>No posts found.{% if active_tab == 'new' %} <a href="/">Update some feeds</a> to see posts here.{% endif %}</p>
 {% endif %}
 
 {% endblock %}

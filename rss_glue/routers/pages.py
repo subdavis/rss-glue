@@ -1,9 +1,10 @@
 """HTML page routes."""
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Request
+from sqlalchemy import text as sql_text
 from sqlmodel import Session, func, select
 
 from rss_glue.database import get_session
@@ -237,5 +238,83 @@ def posts_page(
             "has_next": page < total_pages,
             "prev_page": page - 1 if page > 1 else None,
             "next_page": page + 1 if page < total_pages else None,
+            "active_tab": "new",
+        },
+    )
+
+
+@router.get("/posts/best")
+def posts_best_page(
+    request: Request, session: Session = Depends(get_session)
+):
+    """Best posts from the last 2 days, ranked by percentile within each feed."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=2)
+
+    # Use PERCENT_RANK() over each feed's full scored history,
+    # then filter to recent posts. This ranks each post by how
+    # exceptional its score is relative to its own feed.
+    query = sql_text("""
+        SELECT
+            ranked.post_id,
+            ranked.feed_id,
+            ranked.percentile
+        FROM (
+            SELECT
+                p.id AS post_id,
+                p.feed_id,
+                p.published_at,
+                PERCENT_RANK() OVER (
+                    PARTITION BY p.feed_id ORDER BY p.score ASC
+                ) AS percentile
+            FROM post p
+            JOIN feed f ON p.feed_id = f.id
+            WHERE p.score IS NOT NULL
+              AND f.type NOT IN ('merge', 'digest')
+        ) ranked
+        WHERE ranked.published_at >= :cutoff
+        ORDER BY ranked.percentile DESC
+        LIMIT 100
+    """)
+
+    rows = session.exec(query, params={"cutoff": cutoff}).all()  # type: ignore[call-arg]
+
+    # Batch-load the Post and Feed objects
+    post_ids = [r[0] for r in rows]
+    percentiles = {r[0]: r[2] for r in rows}
+
+    if not post_ids:
+        posts_data: list = []
+    else:
+        records = session.exec(
+            select(Post, Feed)
+            .join(Feed, Post.feed_id == Feed.id)  # type: ignore[arg-type]
+            .where(Post.id.in_(post_ids))  # type: ignore[union-attr]
+        ).all()
+
+        record_map = {post.id: (post, feed) for post, feed in records}
+
+        posts_data = []
+        for post_id in post_ids:
+            if post_id in record_map:
+                post, feed = record_map[post_id]
+                posts_data.append({
+                    "post": post,
+                    "feed": feed,
+                    "percentile": percentiles[post_id],
+                })
+
+    return templates.TemplateResponse(
+        "posts.html",
+        {
+            "request": request,
+            "posts_data": posts_data,
+            "total_count": len(posts_data),
+            "current_page": 1,
+            "total_pages": 1,
+            "has_prev": False,
+            "has_next": False,
+            "prev_page": None,
+            "next_page": None,
+            "active_tab": "best",
         },
     )
