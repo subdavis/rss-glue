@@ -18,6 +18,7 @@ from rss_glue.templates import templates
 router = APIRouter(include_in_schema=False)
 
 
+
 @router.get("/")
 def index(
     request: Request,

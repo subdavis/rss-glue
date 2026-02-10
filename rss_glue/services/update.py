@@ -150,11 +150,12 @@ def update_feed(
                     new_post_enclosures.append((post, enclosures_data))
                 posts_added += 1
 
-            elif post_data.get("score"):
+            elif post_data.get("score") is not None:
                 # Update score for existing post if provided
                 # Helpful because scores generally go up over time.
                 existing.score = post_data["score"]
                 session.add(existing)
+                print(f"Updated score for existing post: {existing.external_id} to {existing.score}")
 
         # Create enclosure records for new posts
         for post, enclosures_data in new_post_enclosures:
