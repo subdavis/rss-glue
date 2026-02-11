@@ -16,8 +16,7 @@
         <a href="/update-history">Update</a> |
 
         {% if request.cookies.get('session') %}
-        <a href="/config">Config</a> |
-        <a href="/auth/logout">Logout</a>
+        <a href="/config">Config</a>
         {% else %}
         <a href="/auth/login">Login</a>
         {% endif %}

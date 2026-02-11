@@ -3,66 +3,72 @@
 {% block content %}
 <h2>Configured Feeds</h2>
 
-<p>Showing {{ feed_schedules|length }} feed(s)</p>
-
-{% if request.cookies.get('session') %}
-<form action="/update" method="post">
-    <button type="submit">Update All Feeds</button>
-</form>
-{% endif %}
+<div class="feed-toolbar">
+    <span>{{ feed_schedules|length }} feed(s)</span>
+    <span class="feed-toolbar-sort">
+        <select onchange="window.location='/?sort_by='+this.value+'&sort_order={{ sort_order }}'">
+            <option value="name"{% if sort_by == 'name' %} selected{% endif %}>Name</option>
+            <option value="type"{% if sort_by == 'type' %} selected{% endif %}>Type</option>
+            <option value="updated_at"{% if sort_by == 'updated_at' %} selected{% endif %}>Last Updated</option>
+            <option value="next_update"{% if sort_by == 'next_update' %} selected{% endif %}>Next Update</option>
+            <option value="status"{% if sort_by == 'status' %} selected{% endif %}>Status</option>
+            <option value="limit"{% if sort_by == 'limit' %} selected{% endif %}>Limit</option>
+        </select>
+        <a href="/?sort_by={{ sort_by }}&sort_order={% if sort_order == 'asc' %}desc{% else %}asc{% endif %}">{% if sort_order == 'asc' %}&#x2191;{% else %}&#x2193;{% endif %}</a>
+    </span>
+    {% if request.cookies.get('session') %}
+    <form action="/update" method="post" style="margin:0">
+        <button type="submit">Update All</button>
+    </form>
+    {% endif %}
+</div>
 
 {% if feed_schedules %}
-<table border="1">
-    <tr>
-        <th>
-            <a href="/?sort_by=name&sort_order={% if sort_by == 'name' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                Name{% if sort_by == 'name' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-            </a>
-        </th>
-        <th>
-            <a href="/?sort_by=type&sort_order={% if sort_by == 'type' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                Type{% if sort_by == 'type' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-            </a>
-        </th>
-        <th>
-            <a href="/?sort_by=updated_at&sort_order={% if sort_by == 'updated_at' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                Last Updated{% if sort_by == 'updated_at' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-            </a>
-        </th>
-        <th>
-            <a href="/?sort_by=next_update&sort_order={% if sort_by == 'next_update' and sort_order == 'asc' %}desc{% else %}asc{% endif %}">
-                Next Update{% if sort_by == 'next_update' %} {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-            </a>
-        </th>
-    </tr>
-    {% for item in feed_schedules %}
-    {% set is_overdue = item.feed.enabled and item.next_update and item.next_update < now %}
-    <tr{% if is_overdue %} class="overdue"{% elif not item.feed.enabled %} class="disabled"{% endif %}>
-        <td>
+{% for item in feed_schedules %}
+{% set is_overdue = item.feed.enabled and item.next_update and item.next_update < now %}
+<div class="feed-card{% if not item.feed.enabled %} feed-card--disabled{% elif is_overdue %} feed-card--overdue{% endif %}">
+    <span class="feed-card-status">
+        {% if not item.feed.enabled %}
+        <span class="badge badge--disabled" title="Disabled">&#x2715;</span>
+        {% elif is_overdue %}
+        <span class="badge badge--overdue" title="Overdue">&#x25cf;</span>
+        {% else %}
+        <span class="badge badge--ok" title="Enabled">&#x2713;</span>
+        {% endif %}
+    </span>
+    <div class="feed-card-body">
+        <div class="feed-card-line1">
             <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
-        </td>
-        <td>{{ item.feed.type }}</td>
-        <td>
-            {% if item.feed.updated_at %}
-            <span data-utc-time="{{ item.feed.updated_at.isoformat() }}" data-format="relative" title="{{ item.feed.updated_at | localtime('tooltip') }}">
-                {{ item.feed.updated_at | localtime("relative") }}
+            <span class="badge badge--type">{{ item.feed.type }}</span>
+        </div>
+        <div class="feed-card-line2">
+            <span>
+                {% if is_overdue or not item.feed.enabled %}
+                Updated
+                {% if item.feed.updated_at %}
+                <span data-utc-time="{{ item.feed.updated_at.isoformat() }}" data-format="relative" title="{{ item.feed.updated_at | localtime('tooltip') }}">{{ item.feed.updated_at | localtime("relative") }}</span>
+                {% else %}
+                never
+                {% endif %}
+                {% else %}
+                Next update
+                {% if item.next_update %}
+                <span data-utc-time="{{ item.next_update.isoformat() }}" data-format="relative" title="{{ item.next_update | localtime('tooltip') }}">{{ item.next_update | localtime("relative") }}</span>
+                {% else %}
+                -
+                {% endif %}
+                {% endif %}
+                · Limit {{ item.feed.limit }}
             </span>
-            {% else %}
-            Never
-            {% endif %}
-        </td>
-        <td>
-            {% if item.next_update %}
-            <span data-utc-time="{{ item.next_update.isoformat() }}" data-format="datetime" title="{{ item.next_update | localtime('tooltip') }}">
-                {{ item.next_update | localtime("relative") }}
+            {% if item.feed.tags %}
+            <span class="feed-card-tags">
+                {% for tag in item.feed.tags %}<span class="badge badge--tag">{{ tag.name }}</span>{% endfor %}
             </span>
-            {% else %}
-            -
             {% endif %}
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% else %}
 <p>No feeds configured. <a href="/config">Add some feeds</a>.</p>
 {% endif %}
