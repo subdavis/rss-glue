@@ -286,7 +286,17 @@ def get_update_history(
     session: Session = Depends(get_session),
 ):
     """Get paginated update history for all feeds."""
-    return _render_update_history(request, session, page, feed=None)
+    return _render_update_history(request, session, page, feed=None, new_only=False)
+
+
+@router.get("/update-history/new")
+def get_update_history_new(
+    request: Request,
+    page: int = 1,
+    session: Session = Depends(get_session),
+):
+    """Get paginated update history for all feeds, showing only updates with new posts."""
+    return _render_update_history(request, session, page, feed=None, new_only=True)
 
 
 @router.get("/feed/{feed_id}/history")
@@ -300,7 +310,21 @@ def get_feed_history(
     feed = session.get(Feed, feed_id)
     if not feed:
         raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
-    return _render_update_history(request, session, page, feed=feed)
+    return _render_update_history(request, session, page, feed=feed, new_only=False)
+
+
+@router.get("/feed/{feed_id}/history/new")
+def get_feed_history_new(
+    feed_id: str,
+    request: Request,
+    page: int = 1,
+    session: Session = Depends(get_session),
+):
+    """Get paginated update history for a specific feed, showing only updates with new posts."""
+    feed = session.get(Feed, feed_id)
+    if not feed:
+        raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
+    return _render_update_history(request, session, page, feed=feed, new_only=True)
 
 
 def _render_update_history(
@@ -308,6 +332,7 @@ def _render_update_history(
     session: Session,
     page: int,
     feed: Feed | None,
+    new_only: bool = False,
 ):
     """Render update history page for all feeds or a specific feed.
 
@@ -333,6 +358,10 @@ def _render_update_history(
         count_query = count_query.where(UpdateHistory.feed_id.in_(source_ids))  # type: ignore[union-attr]
         history_query = history_query.where(UpdateHistory.feed_id.in_(source_ids))  # type: ignore[union-attr]
 
+    if new_only:
+        count_query = count_query.where(UpdateHistory.posts_added > 0)  # type: ignore[union-attr]
+        history_query = history_query.where(UpdateHistory.posts_added > 0)  # type: ignore[union-attr]
+
     total_count = session.exec(count_query).first() or 0
     total_pages = (total_count + records_per_page - 1) // records_per_page
 
@@ -351,7 +380,8 @@ def _render_update_history(
         )
 
     # Determine pagination base URL
-    pagination_base_url = f"/feed/{feed.id}/history" if feed else "/update-history"
+    base_path = f"/feed/{feed.id}/history" if feed else "/update-history"
+    pagination_base_url = f"{base_path}/new" if new_only else base_path
 
     next_update = get_next_update(feed, session) if feed else None
     worker_enabled = os.getenv("ENABLE_BACKGROUND_WORKER", "").lower() in (
@@ -375,6 +405,8 @@ def _render_update_history(
             "has_next": page < total_pages,
             "prev_page": page - 1 if page > 1 else None,
             "next_page": page + 1 if page < total_pages else None,
+            "active_tab": "new" if new_only else "all",
+            "base_path": base_path,
         },
     )
 
