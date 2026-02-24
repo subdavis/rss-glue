@@ -60,6 +60,7 @@ def list_posts(
             "content": expand_placeholders(post["content"], base_url)
             if post.get("content")
             else None,
+            **({"metadata": post["metadata"]} if post.get("metadata") else {}),
         }
         for post in posts
     ]

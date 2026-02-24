@@ -28,12 +28,14 @@ class PostDict(TypedDict, total=False):
     """Standardized post dictionary for templates and RSS output."""
 
     id: str
+    post_id: int | None
     title: str
     link: str
     published_at: datetime
     content: str
     author: str | None
     enclosures: list[EnclosureDict]
+    metadata: dict
 
 
 class BaseFeedHandler:
@@ -51,24 +53,41 @@ class BaseFeedHandler:
 
     @staticmethod
     def get_posts(
-        feed_id: str, limit: int, session: Session, base_url: str = ""
+        feed_id: str,
+        limit: int,
+        session: Session,
+        base_url: str = "",
+        period_start: datetime | None = None,
+        period_end: datetime | None = None,
     ) -> list[PostDict]:
         """Default implementation: query posts from the database.
 
         This works for standard feeds (rss, hackernews, instagram, etc.)
         that store posts directly in the Post table.
+
+        Args:
+            limit: Max posts to return. 0 means no limit.
+            period_start: If set, only include posts published at or after this time.
+            period_end: If set, only include posts published before this time.
         """
-        stmt = (
-            select(Post)
-            .where(Post.feed_id == feed_id)
-            .order_by(Post.published_at.desc())  # type: ignore[union-attr]
-            .limit(limit)
-        )
+        from rss_glue.models.db import Feed
+
+        stmt = select(Post).where(Post.feed_id == feed_id)
+        if period_start is not None:
+            stmt = stmt.where(Post.published_at >= period_start)
+        if period_end is not None:
+            stmt = stmt.where(Post.published_at < period_end)
+        stmt = stmt.order_by(Post.published_at.desc())  # type: ignore[union-attr]
+        if limit > 0:
+            stmt = stmt.limit(limit)
         posts = list(session.exec(stmt).all())
+
+        # Look up feed type for metadata
+        feed = session.get(Feed, feed_id)
+        feed_type = feed.type if feed else "unknown"
 
         result = []
         for post in posts:
-            # Get enclosures for this post
             enclosures = [
                 EnclosureDict(
                     url=enc.url,
@@ -81,12 +100,18 @@ class BaseFeedHandler:
             result.append(
                 PostDict(
                     id=post.external_id,
+                    post_id=post.id,
                     title=post.title,
                     link=post.link,
                     published_at=post.published_at,
                     content=post.content,
                     author=post.author,
                     enclosures=enclosures,
+                    metadata={
+                        "score": post.score,
+                        "source_feed_id": feed_id,
+                        "source_feed_type": feed_type,
+                    },
                 )
             )
         return result

@@ -7,7 +7,7 @@ from pydantic import Field
 from sqlmodel import Session, select
 
 from rss_glue.feeds.registry import FeedRegistry, PostDict, BaseFeedHandler
-from rss_glue.models.db import Feed, FeedTag, Post, Tag
+from rss_glue.models.db import Feed, FeedTag, Tag
 from rss_glue.models.feed_config import FeedConfigBase
 
 
@@ -71,32 +71,40 @@ class MergeFeedHandler(BaseFeedHandler):
 
     @staticmethod
     def get_posts(
-        feed_id: str, limit: int, session: Session, base_url: str = ""
+        feed_id: str,
+        limit: int,
+        session: Session,
+        base_url: str = "",
+        period_start: datetime | None = None,
+        period_end: datetime | None = None,
     ) -> list[PostDict]:
-        """Get posts from all source feeds, sorted by published_at."""
+        """Get posts from all source feeds, sorted by published_at.
+
+        Calls each source feed handler's get_posts() instead of querying the
+        Post table directly. This enables arbitrary nesting (merges of merges,
+        merges of smart_filters, etc.) and preserves source metadata opaquely.
+        """
         source_ids = get_merge_source_ids(feed_id, session)
 
         if not source_ids:
             return []
 
-        # Query posts from all source feeds
-        stmt = (
-            select(Post)
-            .where(Post.feed_id.in_(source_ids))  # type: ignore[union-attr]
-            .order_by(Post.published_at.desc())  # type: ignore[union-attr]
-            .limit(limit)
-        )
-
-        posts = list(session.exec(stmt).all())
-
-        return [
-            PostDict(
-                id=post.external_id,
-                title=post.title,
-                link=post.link,
-                published_at=post.published_at,
-                content=post.content,
-                author=post.author,
+        all_posts: list[PostDict] = []
+        for source_id in source_ids:
+            source_feed = session.get(Feed, source_id)
+            if not source_feed:
+                continue
+            handler = FeedRegistry.get_handler(source_feed.type)
+            # Fetch all posts from source (no limit), apply our limit after merging
+            posts = handler.get_posts(
+                source_id, 0, session, base_url, period_start, period_end
             )
-            for post in posts
-        ]
+            all_posts.extend(posts)
+
+        # Sort merged posts by published_at descending
+        all_posts.sort(key=lambda p: p["published_at"], reverse=True)
+
+        if limit > 0:
+            all_posts = all_posts[:limit]
+
+        return all_posts
