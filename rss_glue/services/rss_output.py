@@ -6,6 +6,7 @@ from feedgen.feed import FeedGenerator
 from sqlmodel import Session
 
 from rss_glue.feeds.registry import FeedRegistry
+from rss_glue.feeds.rssglue_ext import RssGlueExtension, RssGlueEntryExtension
 from rss_glue.models.db import Feed
 from rss_glue.services.media_cache import expand_placeholders
 
@@ -18,6 +19,13 @@ def generate_rss(feed_id: str, session: Session, base_url: str) -> str:
 
     fg = FeedGenerator()
     fg.load_extension("dc")
+    fg.register_extension(
+        "rssglue",
+        extension_class_feed=RssGlueExtension,
+        extension_class_entry=RssGlueEntryExtension,
+        rss=True,
+        atom=False,
+    )
     fg.title(feed.name)
     fg.link(href=f"{base_url}feed/{feed_id}/rss", rel="self")
     fg.description(f"RSS feed: {feed.name}")
@@ -56,5 +64,10 @@ def generate_rss(feed_id: str, session: Session, base_url: str) -> str:
                 type=enc.get("mime_type") or "application/octet-stream",
                 length=str(enc.get("length") or 0),
             )
+
+        # Add custom metadata to RSS entry
+        metadata = post.get("metadata")
+        if metadata:
+            entry.rssglue.metadata(metadata)
 
     return fg.rss_str(pretty=True).decode("utf-8")

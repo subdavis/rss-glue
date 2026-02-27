@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Optional
 
 from croniter import croniter
-from sqlmodel import Field, Session, and_, select, SQLModel, Column, Relationship
+from sqlmodel import Field, Session, select, SQLModel, Column, Relationship
 
 from rss_glue.feeds.registry import FeedRegistry, PostDict, BaseFeedHandler
 from rss_glue.models.db import (
@@ -70,49 +70,32 @@ def get_posts_for_period(
     period_end: datetime,
     limit: int,
     session: Session,
-) -> list[Post]:
-    """Get posts from source feed within a time period."""
+) -> list[PostDict]:
+    """Get posts from source feed within a time period.
+
+    Uses source handler's get_posts() for composability instead of
+    querying the Post table directly. This enables digests of merges,
+    smart_filters, or any other feed type.
+    """
     source_feed = session.get(Feed, source_id)
     if not source_feed:
         return []
 
-    # Check if source is a merge feed - if so, get from all its sources
-    if source_feed.type == "merge":
-        source_ids = _get_all_source_ids(source_id, session)
-    else:
-        source_ids = [source_id]
-
-    stmt = (
-        select(Post)
-        .where(
-            and_(
-                Post.feed_id.in_(source_ids),  # type: ignore[union-attr]
-                Post.published_at >= period_start,
-                Post.published_at < period_end,
-            )
-        )
-        .order_by(Post.score.desc())  # type: ignore[union-attr]
-        .limit(limit)
+    handler = FeedRegistry.get_handler(source_feed.type)
+    posts = handler.get_posts(
+        source_id, 0, session, "", period_start, period_end
     )
 
-    return list(session.exec(stmt).all())
+    # Sort by score descending (digest shows best posts first)
+    posts.sort(
+        key=lambda p: (p.get("metadata", {}).get("score") or 0),
+        reverse=True,
+    )
 
+    if limit > 0:
+        posts = posts[:limit]
 
-def _get_all_source_ids(merge_feed_id: str, session: Session) -> list[str]:
-    """Recursively get all source feed IDs for a merge feed (using tags)."""
-    from rss_glue.feeds.merge import get_merge_source_ids
-
-    child_ids = get_merge_source_ids(merge_feed_id, session)
-
-    result = []
-    for child_id in child_ids:
-        child_feed = session.get(Feed, child_id)
-        if child_feed and child_feed.type == "merge":
-            result.extend(_get_all_source_ids(child_id, session))
-        else:
-            result.append(child_id)
-
-    return result
+    return posts
 
 
 def calculate_missing_periods(
@@ -172,9 +155,15 @@ def create_digest_issue(
     limit: int,
     session: Session,
 ) -> DigestIssue:
-    """Create a new digest issue for the given period."""
-    # Get posts for this period
-    posts = get_posts_for_period(source_id, period_start, period_end, limit, session)
+    """Create a new digest issue for the given period.
+
+    Uses source handler's get_posts() for composability. Links to Post
+    records via post_id from PostDict when available.
+    """
+    # Get posts for this period via source handler
+    post_dicts = get_posts_for_period(
+        source_id, period_start, period_end, limit, session
+    )
 
     # Create the digest issue
     issue = DigestIssue(
@@ -186,21 +175,23 @@ def create_digest_issue(
     session.commit()
     session.refresh(issue)
 
-    # Link posts to the issue
-    for position, post in enumerate(posts):
-        link = DigestIssuePost(
-            digest_issue_id=issue.id,
-            post_id=post.id,
-            position=position,
-        )
-        session.add(link)
+    # Link posts to the issue (only when post_id is available)
+    for position, post_dict in enumerate(post_dicts):
+        post_id = post_dict.get("post_id")
+        if post_id is not None:
+            link = DigestIssuePost(
+                digest_issue_id=issue.id,
+                post_id=post_id,
+                position=position,
+            )
+            session.add(link)
 
     session.commit()
     session.refresh(issue)
     return issue
 
 
-def format_digest_issue_content(posts: list[Post], base_url: str) -> str:
+def format_digest_issue_content(posts: list[PostDict]) -> str:
     """Generate HTML content for a digest issue with full article content."""
     template = templates.env.get_template("feeds/digest.html")
     return template.render(posts=posts)
@@ -328,7 +319,12 @@ class DigestFeedHandler(BaseFeedHandler):
 
     @staticmethod
     def get_posts(
-        feed_id: str, limit: int, session: Session, base_url: str = ""
+        feed_id: str,
+        limit: int,
+        session: Session,
+        base_url: str = "",
+        period_start: datetime | None = None,
+        period_end: datetime | None = None,
     ) -> list[PostDict]:
         """Get digest issues formatted as posts for RSS/HTML output."""
         # Get feed name for titles
@@ -336,12 +332,14 @@ class DigestFeedHandler(BaseFeedHandler):
         feed_name = feed.name if feed else feed_id
 
         # Get digest issues
-        stmt = (
-            select(DigestIssue)
-            .where(DigestIssue.feed_id == feed_id)
-            .order_by(DigestIssue.period_end.desc())  # type: ignore[union-attr]
-            .limit(limit)
-        )
+        stmt = select(DigestIssue).where(DigestIssue.feed_id == feed_id)
+        if period_start is not None:
+            stmt = stmt.where(DigestIssue.period_end >= period_start)
+        if period_end is not None:
+            stmt = stmt.where(DigestIssue.period_end < period_end)
+        stmt = stmt.order_by(DigestIssue.period_end.desc())  # type: ignore[union-attr]
+        if limit > 0:
+            stmt = stmt.limit(limit)
         issues = list(session.exec(stmt).all())
 
         result: list[PostDict] = []
@@ -351,7 +349,7 @@ class DigestFeedHandler(BaseFeedHandler):
 
             # Get posts for this issue
             issue_posts = DigestFeedHandler._get_issue_posts(issue.id, session)
-            content = format_digest_issue_content(issue_posts, base_url)
+            content = format_digest_issue_content(issue_posts)
 
             # Format the title with date range
             start_str = issue.period_start.strftime("%b %d")
@@ -371,12 +369,27 @@ class DigestFeedHandler(BaseFeedHandler):
         return result
 
     @staticmethod
-    def _get_issue_posts(issue_id: int, session: Session) -> list[Post]:
-        """Get posts for a specific digest issue in order."""
+    def _get_issue_posts(issue_id: int, session: Session) -> list[PostDict]:
+        """Get posts for a specific digest issue in order.
+
+        Returns PostDicts for template rendering.
+        """
         stmt = (
             select(Post)
             .join(DigestIssuePost, DigestIssuePost.post_id == Post.id)  # type: ignore[arg-type]
             .where(DigestIssuePost.digest_issue_id == issue_id)
             .order_by(DigestIssuePost.position)  # type: ignore[arg-type]
         )
-        return list(session.exec(stmt).all())
+        posts = list(session.exec(stmt).all())
+        return [
+            PostDict(
+                id=post.external_id,
+                post_id=post.id,
+                title=post.title,
+                link=post.link,
+                published_at=post.published_at,
+                content=post.content,
+                author=post.author,
+            )
+            for post in posts
+        ]
