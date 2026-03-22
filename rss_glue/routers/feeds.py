@@ -16,7 +16,7 @@ from rss_glue.services.background_worker import get_next_update
 from rss_glue.services.config_sync import get_current_config
 from rss_glue.services.media_cache import MEDIA_DIR, expand_placeholders
 from rss_glue.services.rss_output import generate_rss
-from rss_glue.services.update import reset_feed, update_all_feeds, update_feed
+from rss_glue.services.update import reset_feed, update_feed
 from rss_glue.templates import templates
 
 router = APIRouter(include_in_schema=False)
@@ -83,27 +83,6 @@ def _compute_score_stats(feed: Feed, session: Session) -> dict | None:
         "count": len(scores),
     }
 
-
-@router.post("/update")
-def trigger_update_all(
-    force: bool = False,
-    session: Session = Depends(get_session),
-    user: User = Depends(require_auth),
-):
-    """Update all feeds in topological order. Requires authentication."""
-    results = update_all_feeds(session, force)
-    return {
-        "updated": len(results),
-        "results": [
-            {
-                "feed_id": r.feed_id,
-                "status": r.status,
-                "posts_added": r.posts_added,
-                "error": r.error_message,
-            }
-            for r in results
-        ],
-    }
 
 
 @router.post("/feed/{feed_id}/update")

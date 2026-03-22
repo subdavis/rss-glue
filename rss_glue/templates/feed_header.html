@@ -60,7 +60,7 @@
     <a href="/api/posts?feed_id={{ feed.id }}">JSON</a>
 
     {% if request.cookies.get('session') %}
-    <form action="/feed/{{ feed.id }}/update" method="post">
+    <form action="/feed/{{ feed.id }}/update?force=true" method="post">
         <button type="submit">Update</button>
     </form>
 
