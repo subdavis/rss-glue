@@ -64,13 +64,3 @@ def list_posts(
         }
         for post in posts
     ]
-
-
-SENSITIVE_CONFIG_KEYS = {"scrape_creators_key", "api_key"}
-
-
-@router.get("/config")
-def get_config(session: Session = Depends(get_session)):
-    """Get current configuration (excluding sensitive values)."""
-    config = get_current_config(session)
-    return {k: v for k, v in config.items() if k not in SENSITIVE_CONFIG_KEYS}
