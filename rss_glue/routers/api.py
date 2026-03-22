@@ -66,7 +66,7 @@ def list_posts(
     ]
 
 
-SENSITIVE_CONFIG_KEYS = {"scrape_creators_key"}
+SENSITIVE_CONFIG_KEYS = {"scrape_creators_key", "api_key"}
 
 
 @router.get("/config")

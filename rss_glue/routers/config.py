@@ -11,7 +11,7 @@ from sqlmodel import Session
 from rss_glue.database import get_session
 from rss_glue.models.config import AppConfig
 from rss_glue.models.user import User
-from rss_glue.services.auth import require_auth
+from rss_glue.services.auth import get_or_create_api_key, regenerate_api_key, require_admin_auth
 from rss_glue.services.config_sync import get_current_config, sync_config_to_db
 from rss_glue.templates import templates
 
@@ -28,7 +28,7 @@ def save_config(
     default_cooldown_minutes: int = Form(15),
     base_url: str = Form("http://localhost:8000"),
     session: Session = Depends(get_session),
-    user: User = Depends(require_auth),
+    user: User = Depends(require_admin_auth),
 ):
     """Save config and sync to database."""
     if scrape_creators_key == "":
@@ -76,6 +76,7 @@ def save_config(
                 "error": f"Invalid JSON in feeds: {e}",
                 "message": None,
                 "password_error": None,
+                "api_key": get_or_create_api_key(session),
             },
             status_code=400,
         )
@@ -102,6 +103,7 @@ def save_config(
                 "error": str(e),
                 "message": None,
                 "password_error": None,
+                "api_key": get_or_create_api_key(session),
             },
             status_code=400,
         )
@@ -114,7 +116,7 @@ def update_password(
     new_password: str = Form(...),
     confirm_password: str = Form(...),
     session: Session = Depends(get_session),
-    user: User = Depends(require_auth),
+    user: User = Depends(require_admin_auth),
 ):
     """Update the current user's password."""
     config = get_current_config(session)
@@ -131,6 +133,7 @@ def update_password(
                 "error": None,
                 "message": None,
                 "password_error": error,
+                "api_key": get_or_create_api_key(session),
             },
             status_code=400,
         )
@@ -154,5 +157,18 @@ def update_password(
     # Redirect back to config with success message
     return RedirectResponse(
         url=f"/config?{urlencode({'message': 'Password updated successfully'})}",
+        status_code=303,
+    )
+
+
+@router.post("/api-key/regenerate")
+def regenerate_api_key_endpoint(
+    session: Session = Depends(get_session),
+    user: User = Depends(require_admin_auth),
+):
+    """Regenerate the API key."""
+    regenerate_api_key(session)
+    return RedirectResponse(
+        url=f"/config?{urlencode({'message': 'API key regenerated'})}",
         status_code=303,
     )

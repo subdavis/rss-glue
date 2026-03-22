@@ -10,7 +10,7 @@ from sqlmodel import Session, func, select
 from rss_glue.database import get_session
 from rss_glue.models.db import Feed, Post
 from rss_glue.models.user import User
-from rss_glue.services.auth import require_auth
+from rss_glue.services.auth import get_or_create_api_key, require_admin_auth
 from rss_glue.services.background_worker import get_next_update
 from rss_glue.services.config_sync import get_current_config
 from rss_glue.templates import templates
@@ -89,12 +89,13 @@ def config_page(
     request: Request,
     message: str | None = None,
     session: Session = Depends(get_session),
-    user: User = Depends(require_auth),
+    user: User = Depends(require_admin_auth),
 ):
-    """Config editor page. Requires authentication."""
+    """Config editor page. Requires session authentication (no API key)."""
 
     config = get_current_config(session)
     feeds_json = json.dumps(config["feeds"], indent=2)
+    api_key = get_or_create_api_key(session)
 
     return templates.TemplateResponse(
         "config.html",
@@ -105,6 +106,7 @@ def config_page(
             "error": None,
             "message": message,
             "password_error": None,
+            "api_key": api_key,
         },
     )
 

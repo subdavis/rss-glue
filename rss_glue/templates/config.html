@@ -71,6 +71,22 @@ block content %}
   </fieldset>
 
   <fieldset>
+    <legend>API Key</legend>
+    <p><small>Use this key to access authenticated endpoints (e.g. <code>POST /update</code>) without a browser session.</small></p>
+    <div class="form-group">
+      <label>API Key:</label>
+      <input type="text" value="{{ api_key }}" readonly style="font-family: monospace;" />
+    </div>
+    <div class="form-group">
+      <small>Example: <code>curl -X POST {{ config.base_url or 'http://localhost:8000' }}/update -H "X-API-Key: {{ api_key }}"</code></small>
+    </div>
+  </fieldset>
+
+  <form method="post" action="/config/api-key/regenerate" style="margin-bottom: 1em;">
+    <button type="submit" onclick="return confirm('Regenerate API key? The old key will stop working.')">Regenerate API Key</button>
+  </form>
+
+  <fieldset>
     <legend>Feeds Configuration</legend>
     <textarea name="feeds_json" rows="30" cols="80">{{ feeds_json }}</textarea>
   </fieldset>
