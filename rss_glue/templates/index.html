@@ -16,11 +16,6 @@
         </select>
         <a href="/?sort_by={{ sort_by }}&sort_order={% if sort_order == 'asc' %}desc{% else %}asc{% endif %}">{% if sort_order == 'asc' %}&#x2191;{% else %}&#x2193;{% endif %}</a>
     </span>
-    {% if request.cookies.get('session') %}
-    <form action="/update" method="post" style="margin:0">
-        <button type="submit">Update All</button>
-    </form>
-    {% endif %}
 </div>
 
 {% if feed_schedules %}
