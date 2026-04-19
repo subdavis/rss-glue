@@ -18,7 +18,6 @@ from rss_glue.templates import templates
 router = APIRouter(include_in_schema=False)
 
 
-
 @router.get("/")
 def index(
     request: Request,
@@ -247,9 +246,7 @@ def posts_page(
 
 
 @router.get("/posts/best")
-def posts_best_page(
-    request: Request, session: Session = Depends(get_session)
-):
+def posts_best_page(request: Request, session: Session = Depends(get_session)):
     """Best posts from the last 2 days, ranked by percentile within each feed."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=2)
 
@@ -300,11 +297,13 @@ def posts_best_page(
         for post_id in post_ids:
             if post_id in record_map:
                 post, feed = record_map[post_id]
-                posts_data.append({
-                    "post": post,
-                    "feed": feed,
-                    "percentile": percentiles[post_id],
-                })
+                posts_data.append(
+                    {
+                        "post": post,
+                        "feed": feed,
+                        "percentile": percentiles[post_id],
+                    }
+                )
 
     return templates.TemplateResponse(
         "posts.html",

@@ -29,9 +29,7 @@ def migrate(engine):
         """)
         )
         session.exec(
-            text(
-                "CREATE INDEX ix_filter_decision_feed_id ON filter_decision(feed_id)"
-            )
+            text("CREATE INDEX ix_filter_decision_feed_id ON filter_decision(feed_id)")
         )
         session.exec(
             text(

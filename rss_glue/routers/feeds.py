@@ -84,7 +84,6 @@ def _compute_score_stats(feed: Feed, session: Session) -> dict | None:
     }
 
 
-
 @router.post("/feed/{feed_id}/update")
 def trigger_update_feed(
     feed_id: str,

@@ -39,6 +39,6 @@ poe devworker
 * `schedule` will fetch a feed for a cron schedule
 * `cache_media` will toggle local media cache
 * `limit` limits number of posts per feed
-* `type` is one of `digest|facebook|hackernews|instagram|merge|reddit|rss|smart_filter|wordpress_mec_events`
+* `type` is one of `digest|facebook|hackernews|instagram|merge|reddit|rss|smart_filter|wordpress_mec_events|squareup_events`
 * `id` must be unique. Changing ID = erasing and recreating feed.
 * `tags` are useful for creating merge feeds

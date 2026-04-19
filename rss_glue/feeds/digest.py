@@ -82,9 +82,7 @@ def get_posts_for_period(
         return []
 
     handler = FeedRegistry.get_handler(source_feed.type)
-    posts = handler.get_posts(
-        source_id, 0, session, "", period_start, period_end
-    )
+    posts = handler.get_posts(source_id, 0, session, "", period_start, period_end)
 
     # Sort by score descending (digest shows best posts first)
     posts.sort(

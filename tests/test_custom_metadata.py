@@ -205,11 +205,27 @@ class TestMergeMetadataPreservation:
         session.add(FeedTag(feed_id="src-b", tag_id=tag.id))
         session.commit()
 
-        merge_feed = _make_feed(session, "merged", "merge", config={"include_tags": ["all"]})
+        merge_feed = _make_feed(
+            session, "merged", "merge", config={"include_tags": ["all"]}
+        )
 
         now = datetime.now(timezone.utc)
-        _make_post(session, "src-a", "a1", title="From A", score=10, published_at=now - timedelta(hours=2))
-        _make_post(session, "src-b", "b1", title="From B", score=20, published_at=now - timedelta(hours=1))
+        _make_post(
+            session,
+            "src-a",
+            "a1",
+            title="From A",
+            score=10,
+            published_at=now - timedelta(hours=2),
+        )
+        _make_post(
+            session,
+            "src-b",
+            "b1",
+            title="From B",
+            score=20,
+            published_at=now - timedelta(hours=1),
+        )
 
         return merge_feed
 
@@ -242,7 +258,9 @@ class TestMergeMetadataPreservation:
         now = datetime.now(timezone.utc)
         # Only get posts from the last 90 minutes (excludes src-a's post)
         posts = handler.get_posts(
-            "merged", 10, db_session,
+            "merged",
+            10,
+            db_session,
             period_start=now - timedelta(minutes=90),
         )
 
@@ -259,19 +277,41 @@ class TestSmartFilterMetadataPreservation:
     def _setup_smart_filter(self, session: Session):
         """Create a source feed + smart_filter feed with one approved post."""
         _make_feed(session, "src", "rss")
-        _make_feed(session, "filtered", "smart_filter", config={"prompt": "test", "model": "test"})
+        _make_feed(
+            session,
+            "filtered",
+            "smart_filter",
+            config={"prompt": "test", "model": "test"},
+        )
 
         # Link smart_filter -> source via FeedRelationship
         session.add(FeedRelationship(parent_feed_id="filtered", child_feed_id="src"))
         session.commit()
 
         now = datetime.now(timezone.utc)
-        post_a = _make_post(session, "src", "a1", title="Approved", score=99, published_at=now - timedelta(hours=1))
-        post_b = _make_post(session, "src", "b1", title="Rejected", score=5, published_at=now)
+        post_a = _make_post(
+            session,
+            "src",
+            "a1",
+            title="Approved",
+            score=99,
+            published_at=now - timedelta(hours=1),
+        )
+        post_b = _make_post(
+            session, "src", "b1", title="Rejected", score=5, published_at=now
+        )
 
         # Pre-create filter decisions
-        session.add(FilterDecision(feed_id="filtered", post_external_id="a1", approved=True, reason="yes"))
-        session.add(FilterDecision(feed_id="filtered", post_external_id="b1", approved=False, reason="no"))
+        session.add(
+            FilterDecision(
+                feed_id="filtered", post_external_id="a1", approved=True, reason="yes"
+            )
+        )
+        session.add(
+            FilterDecision(
+                feed_id="filtered", post_external_id="b1", approved=False, reason="no"
+            )
+        )
         session.commit()
 
     def test_smart_filter_preserves_metadata(self, db_session):
@@ -294,7 +334,9 @@ class TestSmartFilterMetadataPreservation:
         # Use a period that excludes the approved post
         far_future = datetime.now(timezone.utc) + timedelta(days=10)
         posts = handler.get_posts(
-            "filtered", 10, db_session,
+            "filtered",
+            10,
+            db_session,
             period_start=far_future,
         )
 
@@ -343,11 +385,13 @@ class TestRssGlueExtension:
         entry = fg.add_entry()
         entry.title("Post 1")
         entry.link(href="http://example.com/1")
-        entry.rssglue.metadata({
-            "score": 42,
-            "source_feed_id": "hn",
-            "source_feed_type": "hackernews",
-        })
+        entry.rssglue.metadata(
+            {
+                "score": 42,
+                "source_feed_id": "hn",
+                "source_feed_type": "hackernews",
+            }
+        )
 
         rss_xml = fg.rss_str(pretty=True).decode("utf-8")
 
@@ -379,11 +423,13 @@ class TestRssGlueExtension:
         entry = fg.add_entry()
         entry.title("Post 1")
         entry.link(href="http://example.com/1")
-        entry.rssglue.metadata({
-            "score": None,
-            "source_feed_id": "rss-1",
-            "source_feed_type": "rss",
-        })
+        entry.rssglue.metadata(
+            {
+                "score": None,
+                "source_feed_id": "rss-1",
+                "source_feed_type": "rss",
+            }
+        )
 
         rss_xml = fg.rss_str(pretty=True).decode("utf-8")
         root = ElementTree.fromstring(rss_xml)

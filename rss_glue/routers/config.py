@@ -11,7 +11,11 @@ from sqlmodel import Session
 from rss_glue.database import get_session
 from rss_glue.models.config import AppConfig
 from rss_glue.models.user import User
-from rss_glue.services.auth import get_or_create_api_key, regenerate_api_key, require_admin_auth
+from rss_glue.services.auth import (
+    get_or_create_api_key,
+    regenerate_api_key,
+    require_admin_auth,
+)
 from rss_glue.services.config_sync import get_current_config, sync_config_to_db
 from rss_glue.templates import templates
 
