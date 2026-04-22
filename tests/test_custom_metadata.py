@@ -18,7 +18,7 @@ import pytest
 # Import feed handler modules so they register with FeedRegistry
 import rss_glue.feeds.merge  # noqa: F401
 import rss_glue.feeds.smart_filter  # noqa: F401
-from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry, PostDict
+from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 from rss_glue.feeds.rssglue_ext import (
     RSSGLUE_NS,
     RssGlueEntryExtension,
@@ -289,7 +289,7 @@ class TestSmartFilterMetadataPreservation:
         session.commit()
 
         now = datetime.now(timezone.utc)
-        post_a = _make_post(
+        _make_post(
             session,
             "src",
             "a1",
@@ -297,9 +297,7 @@ class TestSmartFilterMetadataPreservation:
             score=99,
             published_at=now - timedelta(hours=1),
         )
-        post_b = _make_post(
-            session, "src", "b1", title="Rejected", score=5, published_at=now
-        )
+        _make_post(session, "src", "b1", title="Rejected", score=5, published_at=now)
 
         # Pre-create filter decisions
         session.add(
@@ -435,6 +433,7 @@ class TestRssGlueExtension:
         root = ElementTree.fromstring(rss_xml)
         item = root.find(".//item")
         ns = {"rssglue": RSSGLUE_NS}
+        assert item is not None
 
         # score is None so should not appear
         assert item.find("rssglue:score", namespaces=ns) is None
@@ -465,6 +464,7 @@ class TestRssGlueExtension:
         root = ElementTree.fromstring(rss_xml)
         item = root.find(".//item")
         ns = {"rssglue": RSSGLUE_NS}
+        assert item is not None
 
         assert item.find("rssglue:score", namespaces=ns) is None
         assert item.find("rssglue:source_feed_id", namespaces=ns) is None

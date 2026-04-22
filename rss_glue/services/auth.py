@@ -2,7 +2,7 @@
 
 import os
 import secrets
-from typing import Optional
+from typing import NoReturn, Optional
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -103,7 +103,7 @@ def _authenticate_via_api_key(request: Request, session: Session) -> Optional[Us
     return session.exec(select(User).limit(1)).first()
 
 
-def _redirect_to_auth(request: Request, session: Session):
+def _redirect_to_auth(request: Request, session: Session) -> NoReturn:
     """Raise appropriate redirect for unauthenticated requests."""
     if not has_any_users(session):
         raise HTTPException(

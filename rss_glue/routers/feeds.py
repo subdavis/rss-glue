@@ -2,6 +2,7 @@
 
 import math
 import os
+from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
@@ -66,7 +67,7 @@ def _compute_score_stats(feed: Feed, session: Session) -> dict | None:
     if len(scores) < 5:
         return None
 
-    def percentile(sorted_data: list, p: float) -> float:
+    def percentile(sorted_data: Sequence, p: float) -> float:
         k = (len(sorted_data) - 1) * p
         f = math.floor(k)
         c = math.ceil(k)
@@ -337,8 +338,8 @@ def _render_update_history(
         history_query = history_query.where(UpdateHistory.feed_id.in_(source_ids))  # type: ignore[union-attr]
 
     if new_only:
-        count_query = count_query.where(UpdateHistory.posts_added > 0)  # type: ignore[union-attr]
-        history_query = history_query.where(UpdateHistory.posts_added > 0)  # type: ignore[union-attr]
+        count_query = count_query.where(UpdateHistory.posts_added > 0)
+        history_query = history_query.where(UpdateHistory.posts_added > 0)
 
     total_count = session.exec(count_query).first() or 0
     total_pages = (total_count + records_per_page - 1) // records_per_page
