@@ -276,7 +276,7 @@ def posts_best_page(request: Request, session: Session = Depends(get_session)):
         LIMIT 100
     """)
 
-    rows = session.exec(query, params={"cutoff": cutoff}).all()  # type: ignore[call-arg]
+    rows = session.exec(query, params={"cutoff": cutoff}).all()
 
     # Batch-load the Post and Feed objects
     post_ids = [r[0] for r in rows]

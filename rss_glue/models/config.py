@@ -1,7 +1,5 @@
 """Pydantic models for JSON configuration validation."""
 
-from rss_glue.feeds.squarespace_events import SquarespaceEventsFeedHandler
-
 from rss_glue.feeds.merge import MergeFeedHandler
 from rss_glue.feeds.wordpress_mec_events import WordPressMecEventsFeedHandler
 from rss_glue.feeds.reddit import RedditFeedHandler
@@ -26,7 +24,6 @@ FeedConfig = Annotated[
         FacebookFeedHandler.Config,
         RedditFeedHandler.Config,
         WordPressMecEventsFeedHandler.Config,
-        SquarespaceEventsFeedHandler.Config,
         MergeFeedHandler.Config,
     ],
     Field(discriminator="type"),
