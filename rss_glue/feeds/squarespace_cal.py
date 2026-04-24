@@ -94,7 +94,7 @@ class SquarespaceCalFeedHandler(BaseFeedHandler):
                         "content": content,
                         "link": event_data["link"],
                         "author": None,
-                        "published_at": event_data["start_dt"],
+                        "published_at": event_data["published_at"],
                         "enclosures": enclosures,
                     }
                 )
@@ -126,8 +126,10 @@ class SquarespaceCalFeedHandler(BaseFeedHandler):
         # Dates: ms timestamps → UTC datetime
         start_ms = event.get("startDate")
         end_ms = event.get("endDate")
+        publish_ms = event.get("publishOn") or event.get("addedOn")
         start_dt = _ms_to_utc(start_ms) if start_ms else datetime.now(timezone.utc)
         end_dt = _ms_to_utc(end_ms) if end_ms else None
+        published_at = _ms_to_utc(publish_ms) if publish_ms else datetime.now(timezone.utc)
 
         # Location
         location_parts = []
@@ -166,6 +168,7 @@ class SquarespaceCalFeedHandler(BaseFeedHandler):
             "link": link,
             "start_dt": start_dt,
             "end_dt": end_dt,
+            "published_at": published_at,
             "site_tz": site_tz,
             "location": location,
             "map_link": map_link,
