@@ -129,7 +129,9 @@ class SquarespaceCalFeedHandler(BaseFeedHandler):
         publish_ms = event.get("publishOn") or event.get("addedOn")
         start_dt = _ms_to_utc(start_ms) if start_ms else datetime.now(timezone.utc)
         end_dt = _ms_to_utc(end_ms) if end_ms else None
-        published_at = _ms_to_utc(publish_ms) if publish_ms else datetime.now(timezone.utc)
+        published_at = (
+            _ms_to_utc(publish_ms) if publish_ms else datetime.now(timezone.utc)
+        )
 
         # Location
         location_parts = []
