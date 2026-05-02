@@ -1,8 +1,6 @@
 """Feed and update routes."""
 
-import math
 import os
-from typing import Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
@@ -50,39 +48,6 @@ def _resolve_merge_sources(merge_feed_id: str, session: Session) -> list[str]:
             result.append(child_id)
 
     return result
-
-
-def _compute_score_stats(feed: Feed, session: Session) -> dict | None:
-    """Compute box plot statistics (min, Q1, median, Q3, max) for a feed's scores."""
-    source_ids = get_source_feed_ids(feed, session)
-    scores = session.exec(
-        select(Post.score)
-        .where(
-            Post.feed_id.in_(source_ids),  # type: ignore[union-attr]
-            Post.score.is_not(None),  # type: ignore[union-attr]
-        )
-        .order_by(Post.score.asc())  # type: ignore[union-attr]
-    ).all()
-
-    if len(scores) < 5:
-        return None
-
-    def percentile(sorted_data: Sequence, p: float) -> float:
-        k = (len(sorted_data) - 1) * p
-        f = math.floor(k)
-        c = math.ceil(k)
-        if f == c:
-            return sorted_data[f]
-        return sorted_data[f] * (c - k) + sorted_data[c] * (k - f)
-
-    return {
-        "min": scores[0],
-        "q1": percentile(scores, 0.25),
-        "median": percentile(scores, 0.5),
-        "q3": percentile(scores, 0.75),
-        "max": scores[-1],
-        "count": len(scores),
-    }
 
 
 @router.post("/feed/{feed_id}/update")
@@ -209,9 +174,6 @@ def get_feed_html(
 
     next_update = get_next_update(feed, session)
 
-    # Compute box plot stats for scores if any exist
-    score_stats = _compute_score_stats(feed, session)
-
     return templates.TemplateResponse(
         "feed.html",
         {
@@ -220,7 +182,6 @@ def get_feed_html(
             "posts": posts,
             "message": message,
             "next_update": next_update,
-            "score_stats": score_stats,
         },
     )
 

@@ -1,56 +1,43 @@
 <h2>{{ feed.name }}</h2>
-<p class="feed-meta">
-    <strong>ID:</strong> {{ feed.id }} |
-    <strong>Type:</strong> {{ feed.type }} |
-    <strong>Limit:</strong> {{ feed.limit }} |
-    <strong>Status:</strong> {% if feed.enabled %}<span class="status-enabled">Enabled</span>{% else %}<span
-        class="status-disabled">Disabled</span>{% endif %}
-</p>
-<p class="feed-meta">
-    <strong>Last Update:</strong>
-    {% if feed.updated_at %}
-    <span data-utc-time="{{ feed.updated_at.isoformat() }}" data-format="relative"
-        title="{{ feed.updated_at | localtime('tooltip') }}">
-        {{ feed.updated_at | localtime("relative") }}
-    </span>
-    {% else %}Never{% endif %}
-    |
-    <strong>Next Update:</strong>
-    {% if next_update %}
-    <span data-utc-time="{{ next_update.isoformat() }}" data-format="relative"
-        title="{{ next_update | localtime('tooltip') }}">
-        {{ next_update | localtime("relative") }}
-    </span>
-    {% else %}Manual{% endif %}
-</p>
-{% if score_stats is defined and score_stats %}
-{% set s = score_stats %}
-{% set range = s.max - s.min if s.max != s.min else 1 %}
-{% set pad = 45 %}
-{% set w = 500 %}
-{% set plot_w = w - pad * 2 %}
-{% macro x(val) %}{{ pad + (val - s.min) / range * plot_w }}{% endmacro %}
-<svg class="boxplot" viewBox="0 0 {{ w }} 70" xmlns="http://www.w3.org/2000/svg">
-    <!-- Whisker line -->
-    <line x1="{{ x(s.min) }}" y1="28" x2="{{ x(s.max) }}" y2="28" stroke="#888" stroke-width="1"/>
-    <!-- Min cap -->
-    <line x1="{{ x(s.min) }}" y1="20" x2="{{ x(s.min) }}" y2="36" stroke="#888" stroke-width="1"/>
-    <!-- Max cap -->
-    <line x1="{{ x(s.max) }}" y1="20" x2="{{ x(s.max) }}" y2="36" stroke="#888" stroke-width="1"/>
-    <!-- IQR box -->
-    <rect x="{{ x(s.q1) }}" y="14" width="{{ (s.q3 - s.q1) / range * plot_w }}" height="28" fill="#e8e8e8" stroke="#888" stroke-width="1"/>
-    <!-- Median line -->
-    <line x1="{{ x(s.median) }}" y1="14" x2="{{ x(s.median) }}" y2="42" stroke="#333" stroke-width="2"/>
-    <!-- Labels -->
-    <text x="{{ x(s.min) }}" y="58" text-anchor="middle" font-size="11" fill="#666">{{ "%.0f"|format(s.min) }}</text>
-    <text x="{{ x(s.q1) }}" y="58" text-anchor="middle" font-size="11" fill="#666">{{ "%.0f"|format(s.q1) }}</text>
-    <text x="{{ x(s.median) }}" y="58" text-anchor="middle" font-size="11" font-weight="600" fill="#333">{{ "%.0f"|format(s.median) }}</text>
-    <text x="{{ x(s.q3) }}" y="58" text-anchor="middle" font-size="11" fill="#666">{{ "%.0f"|format(s.q3) }}</text>
-    <text x="{{ x(s.max) }}" y="58" text-anchor="middle" font-size="11" fill="#666">{{ "%.0f"|format(s.max) }}</text>
-    <!-- Title -->
-    <text x="3" y="32" font-size="11" fill="#999">scores</text>
-</svg>
-{% endif %}
+<table class="feed-meta-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Type</th>
+            <th>Limit</th>
+            <th>Status</th>
+            <th>Last Update</th>
+            <th>Next Update</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>{{ feed.id }}</td>
+            <td>{{ feed.type }}</td>
+            <td>{{ feed.limit }}</td>
+            <td>
+                {% if feed.enabled %}<span class="status-enabled">Enabled</span>{% else %}<span
+                    class="status-disabled">Disabled</span>{% endif %}
+            </td>
+            <td>
+                {% if feed.updated_at %}
+                <span data-utc-time="{{ feed.updated_at.isoformat() }}" data-format="relative"
+                    title="{{ feed.updated_at | localtime('tooltip') }}">
+                    {{ feed.updated_at | localtime("relative") }}
+                </span>
+                {% else %}Never{% endif %}
+            </td>
+            <td>
+                {% if next_update %}
+                <span data-utc-time="{{ next_update.isoformat() }}" data-format="relative"
+                    title="{{ next_update | localtime('tooltip') }}">
+                    {{ next_update | localtime("relative") }}
+                </span>
+                {% else %}Manual{% endif %}
+            </td>
+        </tr>
+    </tbody>
+</table>
 
 <div class="feed-actions">
     <a href="/feed/{{ feed.id }}/html">Posts</a>

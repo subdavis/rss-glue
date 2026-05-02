@@ -191,17 +191,6 @@ nav a:hover {
 }
 
 /* ============================================
-   Box Plot
-   ============================================ */
-.boxplot {
-    max-width: 500px;
-    width: 100%;
-    height: auto;
-    margin: var(--spacing-sm) 0;
-    font-family: var(--font-family);
-}
-
-/* ============================================
    Sub-navigation
    ============================================ */
 .sub-nav {
@@ -551,6 +540,29 @@ article blockquote p:last-child {
 .feed-meta {
     font-size: 0.9375em;
     margin-bottom: var(--spacing-md);
+}
+
+.feed-meta-table {
+    font-size: 0.9375em;
+    margin-bottom: var(--spacing-md);
+    width: auto;
+}
+
+.feed-meta-table th,
+.feed-meta-table td {
+    padding: 0.25em 0.75em;
+    text-align: left;
+    border: none;
+}
+
+.feed-meta-table th {
+    font-weight: 600;
+    color: var(--muted-color);
+    padding-bottom: 0.1em;
+}
+
+.feed-meta-table td {
+    padding-top: 0.1em;
 }
 
 .feed-actions {
