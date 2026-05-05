@@ -100,13 +100,13 @@ block content %}
 
 
 
-<h2>Change Password</h2>
-
-{% if password_error %}
-<pre class="error-box">Error: {{ password_error }}</pre>
-{% endif %}
-
 <form method="post" action="/config/password" class="form-stack">
+  <fieldset>
+  <legend>Change Password</legend>
+  {% if password_error %}
+  <pre class="error-box">Error: {{ password_error }}</pre>
+  {% endif %}
+
   <div class="form-group">
     <label> Current Password: </label>
     <input type="password" name="current_password" required />
@@ -123,9 +123,8 @@ block content %}
   </div>
 
   <button type="submit">Update Password</button>
+  </fieldset>
 </form>
-
-<hr />
 
 <a href="/auth/logout">Logout</a>
 

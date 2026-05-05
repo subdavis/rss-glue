@@ -1,5 +1,24 @@
-<h2>{{ feed.name }}</h2>
-<table class="feed-meta-table">
+
+<div style="display: flex; gap: var(--spacing-md); align-items: center; margin-bottom: var(--spacing-md); justify-content: space-between;">
+    <h2>{{ feed.name }}</h2>
+    {% if request.cookies.get('session') %}
+    <div style="display: flex; gap: var(--spacing-sm);">
+        <form action="/feed/{{ feed.id }}/update?force=true" method="post">
+            <button type="submit">Update</button>
+        </form>
+
+        <form action="/feed/{{ feed.id }}/toggle" method="post">
+            <button type="submit">{% if feed.enabled %}Disable{% else %}Enable{% endif %}</button>
+        </form>
+
+        <form action="/feed/{{ feed.id }}/reset" method="post"
+            onsubmit="return confirm('Reset feed? This will delete all posts and media.')">
+            <button type="submit" style="background-color: lightcoral;">Reset</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+<table>
     <thead>
         <tr>
             <th>ID</th>
@@ -45,22 +64,6 @@
     <a href="/feed/{{ feed.id }}/gallery">Gallery</a>
     <a href="/feed/{{ feed.id }}/rss">RSS</a>
     <a href="/api/posts?feed_id={{ feed.id }}">JSON</a>
-
-    {% if request.cookies.get('session') %}
-    <form action="/feed/{{ feed.id }}/update?force=true" method="post">
-        <button type="submit">Update</button>
-    </form>
-
-    <form action="/feed/{{ feed.id }}/toggle" method="post">
-        <button type="submit">{% if feed.enabled %}Disable{% else %}Enable{% endif %}</button>
-    </form>
-
-    <form action="/feed/{{ feed.id }}/reset" method="post"
-        onsubmit="return confirm('Reset feed? This will delete all posts and media.')">
-        <button type="submit">Reset</button>
-    </form>
-    {% endif %}
-
 </div>
 
 {% if message %}
