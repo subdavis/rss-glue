@@ -1,0 +1,30 @@
+{% include 'configs/base.html' %}
+
+<div class="form-group">
+  <label>Source Feed *</label>
+  <select name="source" required>
+    <option value="">— select a feed —</option>
+    {% for f in all_feeds %}
+    {% if f.id != (feed.id if feed else '') %}
+    <option value="{{ f.id }}" {% if form_values.source == f.id %}selected{% endif %}>
+      {{ f.name }} ({{ f.id }})
+    </option>
+    {% endif %}
+    {% endfor %}
+  </select>
+  <small>Posts from this feed are filtered by the AI prompt below.</small>
+  {% if errors.source %}<p class="field-error">{{ errors.source }}</p>{% endif %}
+</div>
+
+<div class="form-group">
+  <label>Filter Prompt *</label>
+  <textarea name="prompt" rows="5" required style="width: 100%">{{ form_values.prompt or '' }}</textarea>
+  <small>Describe what kinds of posts to keep. Requires an Anthropic API key in global settings.</small>
+  {% if errors.prompt %}<p class="field-error">{{ errors.prompt }}</p>{% endif %}
+</div>
+
+<div class="form-group">
+  <label>Model *</label>
+  <input type="text" name="model" value="{{ form_values.model or 'claude-haiku-4-5' }}" required />
+  {% if errors.model %}<p class="field-error">{{ errors.model }}</p>{% endif %}
+</div>

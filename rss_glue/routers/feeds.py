@@ -8,11 +8,14 @@ from sqlalchemy import text as sql_text
 from sqlmodel import Session, func, select
 
 from rss_glue.database import get_session
+from rss_glue.feeds import FeedRegistry
 from rss_glue.models.db import Feed, Post, UpdateHistory
 from rss_glue.models.user import User
 from rss_glue.services.auth import require_auth
 from rss_glue.services.background_worker import get_next_update
-from rss_glue.services.config_sync import get_current_config
+from rss_glue.services.config_sync import (
+    get_base_url,
+)
 from rss_glue.services.media_cache import MEDIA_DIR, expand_placeholders
 from rss_glue.services.rss_output import generate_rss
 from rss_glue.services.update import reset_feed, update_feed
@@ -35,7 +38,7 @@ def get_source_feed_ids(feed: Feed, session: Session) -> list[str]:
 
 def _resolve_merge_sources(merge_feed_id: str, session: Session) -> list[str]:
     """Recursively get all source feed IDs for a merge feed (using tags)."""
-    from rss_glue.feeds.merge import get_merge_source_ids
+    from rss_glue.handlers.merge import get_merge_source_ids
 
     child_ids = get_merge_source_ids(merge_feed_id, session)
 
@@ -135,8 +138,7 @@ def get_feed_rss(
 ):
     """Get RSS output for a feed."""
     try:
-        config = get_current_config(session)
-        base_url = config["base_url"]
+        base_url = get_base_url(session)
         rss_xml = generate_rss(feed_id, session, base_url)
         return Response(content=rss_xml, media_type="application/rss+xml")
     except ValueError as e:
@@ -155,10 +157,7 @@ def get_feed_html(
     if not feed:
         raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
 
-    from rss_glue.feeds.registry import FeedRegistry
-
-    config = get_current_config(session)
-    base_url = config["base_url"]
+    base_url = get_base_url(session)
 
     # Get handler and fetch posts using the standardized get_posts method
     handler = FeedRegistry.get_handler(feed.type)

@@ -3,7 +3,7 @@
 import hashlib
 from datetime import datetime, timezone
 
-from rss_glue.feeds.instagram import SCRAPE_API_BASE, InstagramFeedHandler
+from rss_glue.handlers.instagram import SCRAPE_API_BASE, InstagramFeedHandler
 from rss_glue.models.db import SystemConfig
 
 from tests.fixtures.instagram import INSTAGRAM_API_RESPONSE

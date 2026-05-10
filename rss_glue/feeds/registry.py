@@ -39,7 +39,20 @@ class PostDict(TypedDict, total=False):
 
 
 class BaseFeedHandler:
-    """Base class for feed handlers with default implementations."""
+    """Base class for feed handlers with default implementations.
+
+    ## Adding a new handler
+
+    1. Subclass BaseFeedHandler and decorate with `@FeedRegistry.register("type_name")`.
+    2. Define an inner `Config(FeedConfigBase)` with `type: Literal["type_name"]` and
+       any handler-specific fields.  Override `extra_config()` to list fields that go in
+       the Feed.config JSON column.
+    3. Implement `fetch(feed_id, config, session) -> list[dict]`.
+    4. Create `templates/configs/type_name.html` — include `configs/base.html` for shared
+       fields, then add handler-specific inputs.  The `feed_config.html` shell picks it up
+       automatically.
+    5. Register the Config in the `FeedConfig` union in `models/config.py`.
+    """
 
     class Config(FeedConfigBase):
         pass

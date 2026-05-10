@@ -1,0 +1,17 @@
+{% include 'configs/base.html' %}
+
+<div class="form-group">
+  <label>Calendar URL *</label>
+  <input type="url" name="url" value="{{ form_values.url or '' }}" required
+    placeholder="https://example.squarespace.com/events" />
+  {% if errors.url %}<p class="field-error">{{ errors.url }}</p>{% endif %}
+</div>
+
+<div class="form-group">
+  <label>
+    <input type="checkbox" name="include_past" value="true"
+      {% if form_values.include_past %}checked{% endif %} />
+    Include Past Events
+  </label>
+  {% if errors.include_past %}<p class="field-error">{{ errors.include_past }}</p>{% endif %}
+</div>

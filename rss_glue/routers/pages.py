@@ -1,6 +1,5 @@
 """HTML page routes."""
 
-import json
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Request
@@ -9,10 +8,9 @@ from sqlmodel import Session, func, select
 
 from rss_glue.database import get_session
 from rss_glue.models.db import Feed, Post
-from rss_glue.models.user import User
-from rss_glue.services.auth import get_or_create_api_key, require_admin_auth
+
 from rss_glue.services.background_worker import get_next_update
-from rss_glue.services.config_sync import get_current_config
+
 from rss_glue.templates import templates
 
 router = APIRouter(include_in_schema=False)
@@ -79,33 +77,6 @@ def index(
             "sort_by": sort_by,
             "sort_order": sort_order,
             "now": now,
-        },
-    )
-
-
-@router.get("/config")
-def config_page(
-    request: Request,
-    message: str | None = None,
-    session: Session = Depends(get_session),
-    user: User = Depends(require_admin_auth),
-):
-    """Config editor page. Requires session authentication (no API key)."""
-
-    config = get_current_config(session)
-    feeds_json = json.dumps(config["feeds"], indent=2)
-    api_key = get_or_create_api_key(session)
-
-    return templates.TemplateResponse(
-        "config.html",
-        {
-            "request": request,
-            "config": config,
-            "feeds_json": feeds_json,
-            "error": None,
-            "message": message,
-            "password_error": None,
-            "api_key": api_key,
         },
     )
 
