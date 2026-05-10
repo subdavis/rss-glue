@@ -3,10 +3,19 @@ block content %}
 <h2>Configuration</h2>
 
 {% if message %}
-<p><strong>{{ message }}</strong></p>
+<p style="background-color:lightgreen; padding:10px;"><strong>{{ message }}</strong></p>
 {% endif %} {% if error %}
 <pre class="error-box">Error: {{ error }}</pre>
 {% endif %}
+
+<fieldset>
+  <legend>Create New Feeds</legend>
+  <ul style="margin: 0;">
+    {% for t in feed_types %}
+    <li><a href="/new_feed/{{ t }}">{{ t }}</a></li>
+    {% endfor %}
+  </ul>
+</fieldset>
 
 <form method="post" action="/config" class="form-stack">
   <fieldset>
@@ -67,16 +76,6 @@ block content %}
     <button type="submit">Save Settings</button>
   </fieldset>
 </form>
-
-<fieldset>
-  <legend>Feeds</legend>
-  <h3>Add a new feed</h3>
-  <ul>
-    {% for t in feed_types %}
-    <li><a href="/new_feed/{{ t }}">{{ t }}</a></li>
-    {% endfor %}
-  </ul>
-</fieldset>
 
 <form method="post" action="/config/api-key/regenerate" style="margin-bottom: 1em;">
   <fieldset>

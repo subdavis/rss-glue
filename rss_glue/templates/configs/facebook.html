@@ -1,7 +1,7 @@
 {% include 'configs/base.html' %}
 
 <div class="form-group">
-  <label>Facebook Page URL</label>
+  <label>Facebook Page URL *</label>
   <input type="url" name="url" value="{{ form_values.url or '' }}" required
     placeholder="https://www.facebook.com/pagename" />
   <small>Requires a ScrapeCreators API key set in global settings.</small>

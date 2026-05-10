@@ -4,10 +4,9 @@ from rss_glue.handlers.smart_filter import SmartFilterFeedHandler
 from rss_glue.handlers.digest import DigestFeedHandler
 
 from sqlalchemy import text
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from rss_glue.feeds import FeedRegistry
-from rss_glue.models.config import AppConfig
 from rss_glue.models.db import Feed, FeedRelationship, FeedTag, SystemConfig, Tag
 from rss_glue.models.feed_config import FeedConfigBase
 
@@ -51,15 +50,8 @@ def get_base_url(session: Session) -> str:
 
 
 def save_system_config(key: str, value: str | None, session: Session) -> None:
-    """Helper to save or update a system config key-value pair."""
     if value is not None:
-        system_config = session.get(SystemConfig, key)
-        if not system_config:
-            system_config = SystemConfig(key=key, value=value)
-            session.add(system_config)
-        else:
-            system_config.value = value
-            session.add(system_config)
+        session.merge(SystemConfig(key=key, value=value))
 
 
 def save_feed(feed_config: FeedConfigBase, session: Session) -> Feed:
@@ -123,13 +115,15 @@ def save_feed(feed_config: FeedConfigBase, session: Session) -> Feed:
 
     if feed_config.tags:
         existing_tags = {t.name: t for t in session.exec(select(Tag)).all()}
+        new_tags = [Tag(name=n) for n in feed_config.tags if n not in existing_tags]
+        if new_tags:
+            for t in new_tags:
+                session.add(t)
+            session.flush()
+            for t in new_tags:
+                session.refresh(t)
+                existing_tags[t.name] = t
         for tag_name in feed_config.tags:
-            if tag_name not in existing_tags:
-                new_tag = Tag(name=tag_name)
-                session.add(new_tag)
-                session.flush()
-                session.refresh(new_tag)
-                existing_tags[tag_name] = new_tag
             session.add(
                 FeedTag(feed_id=feed_config.id, tag_id=existing_tags[tag_name].id)
             )
@@ -169,13 +163,7 @@ def upsert_feed(
 
     config_cls = handler_cls.Config
 
-    # Coerce empty strings → None for optional fields
-    optional_fields = {
-        "cache_media",
-        "cooldown_minutes",
-        "schedule",
-        "scrape_creators_key",
-    }
+    optional_fields = {"cache_media", "cooldown_minutes", "schedule"}
     coerced: dict = {}
     for key, val in form_data.items():
         if val == "" and key in optional_fields:
@@ -183,30 +171,24 @@ def upsert_feed(
         else:
             coerced[key] = val
 
-    # tags comes in as a comma-separated string from the text input
     raw_tags = coerced.get("tags", "")
     if isinstance(raw_tags, str):
         coerced["tags"] = [t.strip() for t in raw_tags.split(",") if t.strip()]
 
-    # include_tags (merge feed) also comes in comma-separated
     raw_include_tags = coerced.get("include_tags", "")
     if isinstance(raw_include_tags, str):
         coerced["include_tags"] = [
             t.strip() for t in raw_include_tags.split(",") if t.strip()
         ]
 
-    # cache_media is a tri-state select: "", "true", "false"
     if "cache_media" in coerced and coerced["cache_media"] in ("true", "false"):
         coerced["cache_media"] = coerced["cache_media"] == "true"
 
-    # enabled is a checkbox: absent when unchecked, "true" when checked
     coerced["enabled"] = coerced.get("enabled") == "true"
 
-    # On edit, lock id to the existing feed (don't allow id changes)
     if existing_feed_id is not None:
         coerced["id"] = existing_feed_id
 
-    # Cross-feed uniqueness: new feed must not duplicate an existing id
     if existing_feed_id is None:
         candidate_id = coerced.get("id", "")
         if session.get(Feed, candidate_id):
@@ -222,7 +204,6 @@ def upsert_feed(
             errors.setdefault(field, err["msg"])
         return None, errors
 
-    # Cross-feed reference checks for digest/smart_filter
     if isinstance(
         feed_config, (DigestFeedHandler.Config, SmartFilterFeedHandler.Config)
     ):
@@ -234,24 +215,25 @@ def upsert_feed(
     return feed, {}
 
 
-def sync_config_to_db(config: AppConfig, session: Session):
-    save_system_config("cache_media", str(config.cache_media).lower(), session)
-    save_system_config("scrape_creators_key", config.scrape_creators_key, session)
-    save_system_config("anthropic_api_key", config.anthropic_api_key, session)
-    save_system_config(
-        "default_cooldown_minutes", str(config.default_cooldown_minutes), session
-    )
-    save_system_config("base_url", config.base_url, session)
-    session.commit()
-
-
 def get_current_config(session: Session) -> dict:
-    """Reconstruct JSON config from database."""
-
+    """Reconstruct system config from database."""
+    keys = {
+        "cache_media",
+        "default_cooldown_minutes",
+        "base_url",
+        "scrape_creators_key",
+        "anthropic_api_key",
+    }
+    rows = {
+        c.key: c.value
+        for c in session.exec(
+            select(SystemConfig).where(col(SystemConfig.key).in_(keys))
+        ).all()
+    }
     return {
-        "cache_media": get_global_cache_media(session),
-        "default_cooldown_minutes": get_global_cooldown(session),
-        "base_url": get_base_url(session),
-        "scrape_creators_key": get_system_config_value(session, "scrape_creators_key"),
-        "anthropic_api_key": get_system_config_value(session, "anthropic_api_key"),
+        "cache_media": rows.get("cache_media") == "true",
+        "default_cooldown_minutes": int(rows.get("default_cooldown_minutes", "15")),
+        "base_url": rows.get("base_url", "http://localhost:8000"),
+        "scrape_creators_key": rows.get("scrape_creators_key"),
+        "anthropic_api_key": rows.get("anthropic_api_key"),
     }

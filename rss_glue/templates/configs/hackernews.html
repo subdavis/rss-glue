@@ -1,7 +1,7 @@
 {% include 'configs/base.html' %}
 
 <div class="form-group">
-  <label>Story Type</label>
+  <label>Story Type *</label>
   <select name="story_type">
     {% for opt in ['top', 'new', 'best'] %}
     <option value="{{ opt }}" {% if form_values.story_type == opt %}selected{% endif %}>{{ opt }}</option>

@@ -1,6 +1,6 @@
 {% if not feed %}
 <div class="form-group">
-  <label>Feed ID</label>
+  <label>Feed ID *</label>
   <input type="text" name="id" value="{{ form_values.id or '' }}" required pattern="[a-zA-Z0-9_-]+" />
   <small>Alphanumeric, hyphens and underscores only. Cannot be changed after creation.</small>
   {% if errors.id %}<p class="field-error">{{ errors.id }}</p>{% endif %}
@@ -8,14 +8,14 @@
 {% endif %}
 
 <div class="form-group">
-  <label>Name</label>
+  <label>Name *</label>
   <input type="text" name="name" value="{{ form_values.name or '' }}" required />
   {% if errors.name %}<p class="field-error">{{ errors.name }}</p>{% endif %}
 </div>
 
 <div class="form-group">
   <label>Limit</label>
-  <input type="number" name="limit" value="{{ form_values.limit or 50 }}" min="1" max="1000" />
+  <input type="number" name="limit" value="{{ form_values.limit or 50 }}" min="1" max="1000" size="20" />
   <small>Max posts to keep (1–1000).</small>
   {% if errors.limit %}<p class="field-error">{{ errors.limit }}</p>{% endif %}
 </div>
@@ -23,10 +23,11 @@
 <div class="form-group">
   <label>Fetch Interval (minutes)</label>
   <input type="number" name="cooldown_minutes"
+    size="20"
     value="{{ form_values.cooldown_minutes if form_values.cooldown_minutes is not none else '' }}"
     placeholder="{{ global_cooldown }} (global default)"
     min="0" max="10080" />
-  <small>Leave blank to use the global default ({{ global_cooldown }} min). Set 0 to disable cooldown.</small>
+  <small>Leave blank to use the global default. Set 0 to disable cooldown.</small>
   {% if errors.cooldown_minutes %}<p class="field-error">{{ errors.cooldown_minutes }}</p>{% endif %}
 </div>
 
@@ -34,7 +35,7 @@
   <label>Cron Schedule</label>
   <input type="text" name="schedule" value="{{ form_values.schedule or '' }}"
     placeholder="e.g. 0 8 * * * (daily at 8am)" />
-  <small>Optional. If set, used instead of fetch interval for timing. Interpreted in {{ display_timezone }}.</small>
+  <small>Optional. If set, used instead of fetch interval for timing. Interpreted in {{ display_timezone() }}</small>
   {% if errors.schedule %}<p class="field-error">{{ errors.schedule }}</p>{% endif %}
 </div>
 

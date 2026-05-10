@@ -1,7 +1,7 @@
 {% include 'configs/base.html' %}
 
 <div class="form-group">
-  <label>Feed URL</label>
+  <label>Feed URL *</label>
   <input type="url" name="url" value="{{ form_values.url or '' }}" required
     placeholder="https://example.com/feed.xml" />
   {% if errors.url %}<p class="field-error">{{ errors.url }}</p>{% endif %}

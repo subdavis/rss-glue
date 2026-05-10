@@ -1,7 +1,7 @@
 {% include 'configs/base.html' %}
 
 <div class="form-group">
-  <label>Calendar URL</label>
+  <label>Calendar URL *</label>
   <input type="url" name="url" value="{{ form_values.url or '' }}" required
     placeholder="https://example.squarespace.com/events" />
   {% if errors.url %}<p class="field-error">{{ errors.url }}</p>{% endif %}

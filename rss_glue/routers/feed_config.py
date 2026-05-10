@@ -1,4 +1,4 @@
-"""Feed and update routes."""
+"""Feed configuration routes."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -29,7 +29,12 @@ def _feed_config_context(
     """Build template context for the feed config/new form."""
     global_cooldown = get_global_cooldown(session)
     global_cache_media = get_global_cache_media(session)
-    all_feeds = list(session.exec(select(Feed)).all())
+    handler_cls = FeedRegistry.get_handler(feed_type)
+    all_feeds = (
+        list(session.exec(select(Feed)).all())
+        if "source" in handler_cls.Config.model_fields
+        else []
+    )
     return {
         "feed": feed,
         "feed_type": feed_type,
@@ -90,6 +95,23 @@ async def feed_config_save(
     return RedirectResponse(
         url=f"/feed/{feed_id}/config?message=Saved", status_code=303
     )
+
+
+@router.post("/feed/{feed_id}/delete")
+def feed_delete(
+    feed_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+    user: User = Depends(require_admin_auth),
+):
+    """Delete a feed and all associated data."""
+    feed = session.get(Feed, feed_id)
+    if not feed:
+        raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
+
+    session.delete(feed)
+    session.commit()
+    return RedirectResponse(url="/config?message=Feed+deleted", status_code=303)
 
 
 @router.get("/new_feed/{feed_type}")

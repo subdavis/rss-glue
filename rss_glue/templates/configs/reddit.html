@@ -1,7 +1,7 @@
 {% include 'configs/base.html' %}
 
 <div class="form-group">
-  <label>Subreddit</label>
+  <label>Subreddit *</label>
   <input type="text" name="subreddit" value="{{ form_values.subreddit or '' }}" required
     placeholder="programming" />
   <small>Name only, no r/ prefix.</small>
@@ -9,7 +9,7 @@
 </div>
 
 <div class="form-group">
-  <label>Listing Type</label>
+  <label>Listing Type *</label>
   <select name="listing_type">
     {% for opt in ['top', 'hot', 'new', 'rising'] %}
     <option value="{{ opt }}" {% if form_values.listing_type == opt %}selected{% endif %}>{{ opt }}</option>
@@ -19,7 +19,7 @@
 </div>
 
 <div class="form-group">
-  <label>Time Filter</label>
+  <label>Time Filter *</label>
   <select name="time_filter">
     {% for opt in ['hour', 'day', 'week', 'month', 'year', 'all'] %}
     <option value="{{ opt }}" {% if form_values.time_filter == opt %}selected{% endif %}>{{ opt }}</option>

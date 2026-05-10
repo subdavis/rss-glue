@@ -1,30 +1,30 @@
-{% extends "base.html" %}
-{% block title %}Feed Config{% endblock %}
-{% block content %}
-{% if feed %}
-    {% include "feed_header.html" %}
-{% endif %}
-
-<h2>Config</h2>
-
-{% if request.query_params.get('message') %}
+{% extends "base.html" %} {% block title %}Feed Config{% endblock %} {% block
+content %} {% if feed %} {% include "feed_header.html" %} {% endif %} {% if
+request.query_params.get('message') %}
 <p><strong>{{ request.query_params.get('message') }}</strong></p>
-{% endif %}
-
-{% if errors.__all__ %}
+{% endif %} {% if errors.__all__ %}
 <pre class="error-box">{{ errors.__all__ }}</pre>
 {% endif %}
 
 <form method="post" class="form-stack">
   <input type="hidden" name="type" value="{{ feed_type }}" />
 
+  <fieldset>
+    <legend>Feed settings</legend>
+    {% include 'configs/' + feed_type + '.html' %}
 
-  {% include 'configs/' + feed_type + '.html' %}
-
-  <div class="form-group">
-    <button type="submit">{% if feed %}Save changes{% else %}Create feed{% endif %}</button>
-    <a href="/config">Cancel</a>
-  </div>
+      <button type="submit">
+        {% if feed %}Save changes{% else %}Create feed{% endif %}
+      </button>
+      {% if not feed %}<a href="/config" style="margin-left: 12px">Cancel</a>{% endif %}
+  </fieldset>
 </form>
+
+{% if feed %}
+<h2>Danger Zone</h2>
+<form method="post" action="/feed/{{ feed.id }}/delete" onsubmit="return confirm('Delete this feed and all its data?')">
+  <button type="submit" class="button-danger">Delete feed</button>
+</form>
+{% endif %}
 
 {% endblock %}

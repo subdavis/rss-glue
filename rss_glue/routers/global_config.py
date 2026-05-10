@@ -6,18 +6,16 @@ from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
-from pydantic import ValidationError
 from sqlmodel import Session
 
 from rss_glue.database import get_session
-from rss_glue.models.config import AppConfig
 from rss_glue.models.user import User
 from rss_glue.services.auth import (
     get_or_create_api_key,
     regenerate_api_key,
     require_admin_auth,
 )
-from rss_glue.services.config_sync import get_current_config, sync_config_to_db
+from rss_glue.services.config_sync import get_current_config, save_system_config
 from rss_glue.templates import templates
 
 router = APIRouter(include_in_schema=False)
@@ -71,29 +69,15 @@ def save_config(
     session: Session = Depends(get_session),
     user: User = Depends(require_admin_auth),
 ):
-    """Save global settings and sync to database."""
-    if scrape_creators_key == "":
-        scrape_creators_key = None
-    if anthropic_api_key == "":
-        anthropic_api_key = None
-
-    # Reconstruct feeds from DB so we can re-validate the whole AppConfig
-    current = get_current_config(session)
-    config_dict = {
-        "cache_media": cache_media,
-        "scrape_creators_key": scrape_creators_key,
-        "anthropic_api_key": anthropic_api_key,
-        "default_cooldown_minutes": default_cooldown_minutes,
-        "base_url": base_url,
-        "feeds": current.get("feeds", []),
-    }
-
-    try:
-        app_config = AppConfig.model_validate(config_dict)
-    except ValidationError as e:
-        return _config_template(request, session, error=str(e))
-
-    sync_config_to_db(app_config, session)
+    """Save global settings."""
+    save_system_config("cache_media", str(cache_media).lower(), session)
+    save_system_config("scrape_creators_key", scrape_creators_key or None, session)
+    save_system_config("anthropic_api_key", anthropic_api_key or None, session)
+    save_system_config(
+        "default_cooldown_minutes", str(default_cooldown_minutes), session
+    )
+    save_system_config("base_url", base_url, session)
+    session.commit()
     return RedirectResponse(url="/config?message=Settings+saved", status_code=303)
 
 
