@@ -43,7 +43,7 @@ block content %}
     </div>
 
     <div class="form-group">
-      <label> Server Base Url: </label>
+      <label> Server Base URL: </label>
       <input
         type="url"
         name="base_url"
@@ -58,31 +58,28 @@ block content %}
         <input
           type="checkbox"
           name="cache_media"
-          {%
-          if
-          config.cache_media
-          %}checked{%
-          endif
-          %}
+          {% if config.cache_media %}checked{% endif %}
         />
         Cache Embedded Media (Global)
       </label>
     </div>
-  
 
-
-    <textarea name="feeds_json" rows="30" cols="80">{{ feeds_json }}</textarea>
-
-
-  <button type="submit">Save Configuration</button>
-
+    <button type="submit">Save Settings</button>
   </fieldset>
 </form>
 
+<fieldset>
+  <legend>Feeds</legend>
+  <h3>Add a new feed</h3>
+  <ul>
+    {% for t in feed_types %}
+    <li><a href="/new_feed/{{ t }}">{{ t }}</a></li>
+    {% endfor %}
+  </ul>
+</fieldset>
 
-  <form method="post" action="/config/api-key/regenerate" style="margin-bottom: 1em;">
-
-      <fieldset>
+<form method="post" action="/config/api-key/regenerate" style="margin-bottom: 1em;">
+  <fieldset>
     <legend>API Key</legend>
     <p><small>Use this key to access authenticated endpoints (e.g. <code>POST /update</code>) without a browser session.</small></p>
     <div class="form-group">
@@ -92,13 +89,9 @@ block content %}
     <div class="form-group">
       <small>Example: <code>curl -X POST {{ config.base_url or 'http://localhost:8000' }}/update -H "X-API-Key: {{ api_key }}"</code></small>
     </div>
-
     <button type="submit" onclick="return confirm('Regenerate API key? The old key will stop working.')">Regenerate API Key</button>
   </fieldset>
-    
-  </form>
-
-
+</form>
 
 <form method="post" action="/config/password" class="form-stack">
   <fieldset>

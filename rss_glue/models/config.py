@@ -1,17 +1,17 @@
 """Pydantic models for JSON configuration validation."""
 
-from rss_glue.feeds.squarespace_cal import SquarespaceCalFeedHandler
-from rss_glue.feeds.merge import MergeFeedHandler
-from rss_glue.feeds.wordpress_mec_events import WordPressMecEventsFeedHandler
-from rss_glue.feeds.reddit import RedditFeedHandler
-from rss_glue.feeds.facebook import FacebookFeedHandler
-from rss_glue.feeds.instagram import InstagramFeedHandler
-from rss_glue.feeds.hackernews import HackerNewsFeedHandler
-from rss_glue.feeds.rss import RssFeedHandler
+from rss_glue.handlers.squarespace_cal import SquarespaceCalFeedHandler
+from rss_glue.handlers.merge import MergeFeedHandler
+from rss_glue.handlers.wordpress_mec_events import WordPressMecEventsFeedHandler
+from rss_glue.handlers.reddit import RedditFeedHandler
+from rss_glue.handlers.facebook import FacebookFeedHandler
+from rss_glue.handlers.instagram import InstagramFeedHandler
+from rss_glue.handlers.hackernews import HackerNewsFeedHandler
+from rss_glue.handlers.rss import RssFeedHandler
 from typing import Annotated, Union
 
-from rss_glue.feeds.smart_filter import SmartFilterFeedHandler
-from rss_glue.feeds.digest import DigestFeedHandler
+from rss_glue.handlers.smart_filter import SmartFilterFeedHandler
+from rss_glue.handlers.digest import DigestFeedHandler
 
 from pydantic import BaseModel, Field, model_validator
 

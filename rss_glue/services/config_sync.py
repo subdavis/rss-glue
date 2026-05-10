@@ -1,7 +1,7 @@
 """JSON config to database synchronization."""
 
-from rss_glue.feeds.smart_filter import SmartFilterFeedHandler
-from rss_glue.feeds.digest import DigestFeedHandler
+from rss_glue.handlers.smart_filter import SmartFilterFeedHandler
+from rss_glue.handlers.digest import DigestFeedHandler
 
 from sqlalchemy import text
 from sqlmodel import Session, select
@@ -9,237 +9,249 @@ from sqlmodel import Session, select
 from rss_glue.feeds import FeedRegistry
 from rss_glue.models.config import AppConfig
 from rss_glue.models.db import Feed, FeedRelationship, FeedTag, SystemConfig, Tag
+from rss_glue.models.feed_config import FeedConfigBase
 
 
 def resolve_feed_cache_media(feed: Feed, session: Session) -> bool:
     """Resolve effective cache_media: per-feed override or global default."""
     if feed.cache_media is not None:
         return feed.cache_media
-    system_config = session.get(SystemConfig, "cache_media")
-    return system_config.value == "true" if system_config else False
+    return get_global_cache_media(session)
+
+
+def get_system_config_value(session: Session, key: str) -> str | None:
+    """Helper to get a system config value by key."""
+    system_config = session.get(SystemConfig, key)
+    return system_config.value if system_config else None
 
 
 def resolve_feed_cooldown(feed: Feed, session: Session) -> int:
     """Resolve effective cooldown_minutes: per-feed override or global default."""
     if feed.cooldown_minutes is not None:
         return feed.cooldown_minutes
+    return get_global_cooldown(session)
+
+
+def get_global_cooldown(session: Session) -> int:
+    """Return the global default cooldown_minutes setting."""
     system_config = session.get(SystemConfig, "default_cooldown_minutes")
     return int(system_config.value) if system_config else 15
 
 
-def sync_config_to_db(config: AppConfig, session: Session) -> dict:
-    """Synchronize JSON config to database.
+def get_global_cache_media(session: Session) -> bool:
+    """Return the global default cache_media setting."""
+    system_config = session.get(SystemConfig, "cache_media")
+    return system_config.value == "true" if system_config else False
 
-    Returns dict with sync stats:
-    - feeds_created: int
-    - feeds_updated: int
-    - feeds_deleted: int
-    - relationships_updated: int
+
+def get_base_url(session: Session) -> str:
+    """Return the global base_url setting."""
+    system_config = session.get(SystemConfig, "base_url")
+    return system_config.value if system_config else "http://localhost:8000"
+
+
+def save_system_config(key: str, value: str | None, session: Session) -> None:
+    """Helper to save or update a system config key-value pair."""
+    if value is not None:
+        system_config = session.get(SystemConfig, key)
+        if not system_config:
+            system_config = SystemConfig(key=key, value=value)
+            session.add(system_config)
+        else:
+            system_config.value = value
+            session.add(system_config)
+
+
+def save_feed(feed_config: FeedConfigBase, session: Session) -> Feed:
+    """Persist a single feed config to the database.
+
+    Creates or updates the Feed row, then rebuilds its FeedRelationship
+    (for digest/smart_filter) and FeedTag associations.
+    Returns the saved Feed object.
     """
-    stats = {
-        "feeds_created": 0,
-        "feeds_updated": 0,
-        "feeds_deleted": 0,
-        "relationships_updated": 0,
-    }
-
-    # Save global config
-    system_config_media = session.get(SystemConfig, "cache_media")
-    if not system_config_media:
-        system_config_media = SystemConfig(
-            key="cache_media", value=str(config.cache_media).lower()
+    existing = session.get(Feed, feed_config.id)
+    if existing:
+        existing.type = feed_config.type
+        existing.name = feed_config.name
+        existing.limit = feed_config.limit
+        existing.cache_media = feed_config.cache_media
+        existing.cooldown_minutes = feed_config.cooldown_minutes
+        existing.enabled = feed_config.enabled
+        existing.config = feed_config.extra_config()
+        db_feed = existing
+        session.add(db_feed)
+    else:
+        db_feed = Feed(
+            id=feed_config.id,
+            type=feed_config.type,
+            name=feed_config.name,
+            limit=feed_config.limit,
+            cache_media=feed_config.cache_media,
+            cooldown_minutes=feed_config.cooldown_minutes,
+            enabled=feed_config.enabled,
+            config=feed_config.extra_config(),
+            updated_at=None,
         )
-        session.add(system_config_media)
-    else:
-        system_config_media.value = str(config.cache_media).lower()
-        session.add(system_config_media)
+        session.add(db_feed)
 
-    # Save ScrapeCreators key
-    if config.scrape_creators_key:
-        system_config_key = session.get(SystemConfig, "scrape_creators_key")
-        if not system_config_key:
-            system_config_key = SystemConfig(
-                key="scrape_creators_key", value=config.scrape_creators_key
-            )
-            session.add(system_config_key)
-        else:
-            system_config_key.value = config.scrape_creators_key
-            session.add(system_config_key)
-    else:
-        # If None, remove it or leave it? Safer to remove if explicitly None,
-        # but user might leave it out of JSON to keep existing.
-        # However, AppConfig defaults it to None.
-        # Let's assume if it is in config it should be synced.
-        # But if it is None in input, maybe we should delete it?
-        # Actually, let's keep it simple: if provided, update. If not provided (None), do nothing (or delete?).
-        # Given this is a full config sync, we should probably match the state.
-        pass
+    session.flush()
 
-    # Save Anthropic API key
-    if config.anthropic_api_key:
-        system_config_anthropic = session.get(SystemConfig, "anthropic_api_key")
-        if not system_config_anthropic:
-            system_config_anthropic = SystemConfig(
-                key="anthropic_api_key", value=config.anthropic_api_key
-            )
-            session.add(system_config_anthropic)
-        else:
-            system_config_anthropic.value = config.anthropic_api_key
-            session.add(system_config_anthropic)
-
-    # Save default cooldown
-    system_config_cooldown = session.get(SystemConfig, "default_cooldown_minutes")
-    if not system_config_cooldown:
-        system_config_cooldown = SystemConfig(
-            key="default_cooldown_minutes", value=str(config.default_cooldown_minutes)
+    # Rebuild FeedRelationship for digest/smart_filter
+    for rel in session.exec(
+        select(FeedRelationship).where(
+            FeedRelationship.parent_feed_id == feed_config.id
         )
-        session.add(system_config_cooldown)
-    else:
-        system_config_cooldown.value = str(config.default_cooldown_minutes)
-        session.add(system_config_cooldown)
-
-    # Save base URL
-    system_config_base_url = session.get(SystemConfig, "base_url")
-    if not system_config_base_url:
-        system_config_base_url = SystemConfig(key="base_url", value=config.base_url)
-        session.add(system_config_base_url)
-    else:
-        system_config_base_url.value = config.base_url
-        session.add(system_config_base_url)
-
-    config_feed_ids = {feed.id for feed in config.feeds}
-
-    # Get existing feeds
-    existing_feeds = {f.id: f for f in session.exec(select(Feed)).all()}
-
-    # Delete feeds not in config
-    for feed_id, feed in existing_feeds.items():
-        if feed_id not in config_feed_ids:
-            session.delete(feed)
-            stats["feeds_deleted"] += 1
-
-    # Create/update feeds from config
-    for feed_config in config.feeds:
-        if feed_config.id in existing_feeds:
-            # Update existing
-            db_feed = existing_feeds[feed_config.id]
-            db_feed.type = feed_config.type
-            db_feed.name = feed_config.name
-            db_feed.limit = feed_config.limit
-            db_feed.cache_media = feed_config.cache_media
-            db_feed.cooldown_minutes = feed_config.cooldown_minutes
-            db_feed.enabled = feed_config.enabled
-            db_feed.config = feed_config.extra_config()
-
-            session.add(db_feed)
-            stats["feeds_updated"] += 1
-        else:
-            # Create new
-            db_feed = Feed(
-                id=feed_config.id,
-                type=feed_config.type,
-                name=feed_config.name,
-                limit=feed_config.limit,
-                cache_media=feed_config.cache_media,
-                cooldown_minutes=feed_config.cooldown_minutes,
-                enabled=feed_config.enabled,
-                config=feed_config.extra_config(),
-                updated_at=None,  # Will be set when first updated
-            )
-            session.add(db_feed)
-            stats["feeds_created"] += 1
-
-    session.commit()
-
-    # Clear all existing relationships and tags
-    for rel in session.exec(select(FeedRelationship)).all():
+    ).all():
         session.delete(rel)
-    session.exec(text("DELETE FROM feed_tag"))
-    session.commit()
 
-    # Create relationships for digest and smart_filter feeds (merge feeds use tags instead)
-    for feed_config in config.feeds:
-        if isinstance(
-            feed_config, (DigestFeedHandler.Config, SmartFilterFeedHandler.Config)
-        ):
-            rel = FeedRelationship(
+    if isinstance(
+        feed_config, (DigestFeedHandler.Config, SmartFilterFeedHandler.Config)
+    ):
+        session.add(
+            FeedRelationship(
                 parent_feed_id=feed_config.id,
                 child_feed_id=feed_config.source,
                 position=0,
             )
-            session.add(rel)
-            stats["relationships_updated"] += 1
+        )
 
-    # Sync tags
-    existing_tags = {t.name: t for t in session.exec(select(Tag)).all()}
-    for feed_config in config.feeds:
-        if feed_config.tags:
-            for tag_name in feed_config.tags:
-                if tag_name not in existing_tags:
-                    new_tag = Tag(name=tag_name)
-                    session.add(new_tag)
-                    session.flush()
-                    session.refresh(new_tag)
-                    existing_tags[tag_name] = new_tag
+    # Rebuild FeedTag associations
+    session.exec(
+        text("DELETE FROM feed_tag WHERE feed_id = :fid"),
+        params={"fid": feed_config.id},
+    )
 
-                tag_obj = existing_tags[tag_name]
-                # Check if link exists? No, we cleared all feed_tags
-                session.add(FeedTag(feed_id=feed_config.id, tag_id=tag_obj.id))
+    if feed_config.tags:
+        existing_tags = {t.name: t for t in session.exec(select(Tag)).all()}
+        for tag_name in feed_config.tags:
+            if tag_name not in existing_tags:
+                new_tag = Tag(name=tag_name)
+                session.add(new_tag)
+                session.flush()
+                session.refresh(new_tag)
+                existing_tags[tag_name] = new_tag
+            session.add(
+                FeedTag(feed_id=feed_config.id, tag_id=existing_tags[tag_name].id)
+            )
 
     session.commit()
-    return stats
+    session.refresh(db_feed)
+    return db_feed
+
+
+def upsert_feed(
+    form_data: dict,
+    session: Session,
+    *,
+    existing_feed_id: str | None = None,
+) -> tuple[Feed | None, dict[str, str]]:
+    """Validate form data and persist a feed (create or update).
+
+    Args:
+        form_data: Raw dict from the submitted form (all values are strings).
+        session: Database session.
+        existing_feed_id: Set when editing; prevents id changes from silently
+            creating a new feed instead of updating.
+
+    Returns:
+        (Feed, {}) on success, or (None, {field: error_message, ...}) on failure.
+
+    The caller is responsible for ensuring the feed type is present in form_data["type"].
+    Empty string values for Optional fields are coerced to None before validation.
+    """
+    from pydantic import ValidationError
+
+    feed_type = form_data.get("type", "")
+    try:
+        handler_cls = FeedRegistry.get_handler(feed_type)
+    except ValueError:
+        return None, {"type": f"Unknown feed type: {feed_type!r}"}
+
+    config_cls = handler_cls.Config
+
+    # Coerce empty strings → None for optional fields
+    optional_fields = {
+        "cache_media",
+        "cooldown_minutes",
+        "schedule",
+        "scrape_creators_key",
+    }
+    coerced: dict = {}
+    for key, val in form_data.items():
+        if val == "" and key in optional_fields:
+            coerced[key] = None
+        else:
+            coerced[key] = val
+
+    # tags comes in as a comma-separated string from the text input
+    raw_tags = coerced.get("tags", "")
+    if isinstance(raw_tags, str):
+        coerced["tags"] = [t.strip() for t in raw_tags.split(",") if t.strip()]
+
+    # include_tags (merge feed) also comes in comma-separated
+    raw_include_tags = coerced.get("include_tags", "")
+    if isinstance(raw_include_tags, str):
+        coerced["include_tags"] = [
+            t.strip() for t in raw_include_tags.split(",") if t.strip()
+        ]
+
+    # cache_media is a tri-state select: "", "true", "false"
+    if "cache_media" in coerced and coerced["cache_media"] in ("true", "false"):
+        coerced["cache_media"] = coerced["cache_media"] == "true"
+
+    # enabled is a checkbox: absent when unchecked, "true" when checked
+    coerced["enabled"] = coerced.get("enabled") == "true"
+
+    # On edit, lock id to the existing feed (don't allow id changes)
+    if existing_feed_id is not None:
+        coerced["id"] = existing_feed_id
+
+    # Cross-feed uniqueness: new feed must not duplicate an existing id
+    if existing_feed_id is None:
+        candidate_id = coerced.get("id", "")
+        if session.get(Feed, candidate_id):
+            return None, {"id": f"A feed with id '{candidate_id}' already exists."}
+
+    try:
+        feed_config = config_cls.model_validate(coerced)
+    except ValidationError as e:
+        errors: dict[str, str] = {}
+        for err in e.errors():
+            loc = err["loc"]
+            field = str(loc[-1]) if loc else "__all__"
+            errors.setdefault(field, err["msg"])
+        return None, errors
+
+    # Cross-feed reference checks for digest/smart_filter
+    if isinstance(
+        feed_config, (DigestFeedHandler.Config, SmartFilterFeedHandler.Config)
+    ):
+        source_id = feed_config.source
+        if not session.get(Feed, source_id):
+            return None, {"source": f"Source feed '{source_id}' does not exist."}
+
+    feed = save_feed(feed_config, session)
+    return feed, {}
+
+
+def sync_config_to_db(config: AppConfig, session: Session):
+    save_system_config("cache_media", str(config.cache_media).lower(), session)
+    save_system_config("scrape_creators_key", config.scrape_creators_key, session)
+    save_system_config("anthropic_api_key", config.anthropic_api_key, session)
+    save_system_config(
+        "default_cooldown_minutes", str(config.default_cooldown_minutes), session
+    )
+    save_system_config("base_url", config.base_url, session)
+    session.commit()
 
 
 def get_current_config(session: Session) -> dict:
     """Reconstruct JSON config from database."""
-    # Get global config
-    system_config_media = session.get(SystemConfig, "cache_media")
-    global_cache_media = (
-        system_config_media.value == "true" if system_config_media else False
-    )
 
-    system_config_key = session.get(SystemConfig, "scrape_creators_key")
-    scrape_creators_key = system_config_key.value if system_config_key else None
-
-    system_config_cooldown = session.get(SystemConfig, "default_cooldown_minutes")
-    default_cooldown_minutes = (
-        int(system_config_cooldown.value) if system_config_cooldown else 15
-    )
-
-    system_config_base_url = session.get(SystemConfig, "base_url")
-    base_url = (
-        system_config_base_url.value
-        if system_config_base_url
-        else "http://localhost:8000"
-    )
-
-    system_config_anthropic = session.get(SystemConfig, "anthropic_api_key")
-    anthropic_api_key = (
-        system_config_anthropic.value if system_config_anthropic else None
-    )
-
-    feeds = session.exec(select(Feed)).all()
-    config: dict = {
-        "cache_media": global_cache_media,
-        "default_cooldown_minutes": default_cooldown_minutes,
-        "base_url": base_url,
-        "feeds": [],
+    return {
+        "cache_media": get_global_cache_media(session),
+        "default_cooldown_minutes": get_global_cooldown(session),
+        "base_url": get_base_url(session),
+        "scrape_creators_key": get_system_config_value(session, "scrape_creators_key"),
+        "anthropic_api_key": get_system_config_value(session, "anthropic_api_key"),
     }
-
-    if scrape_creators_key:
-        config["scrape_creators_key"] = scrape_creators_key
-
-    if anthropic_api_key:
-        config["anthropic_api_key"] = anthropic_api_key
-
-    for feed in feeds:
-        feed_config_cls = FeedRegistry.get_handler(feed.type).Config
-        feed_dict = feed_config_cls.db_hydrate(
-            feed, session=session, **feed.config
-        ).model_dump(exclude_none=True)
-        if len(feed_dict.get("tags", [])) == 0:
-            del feed_dict["tags"]  # Don't include empty tags list in config
-
-        config["feeds"].append(feed_dict)
-
-    return config

@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from rss_glue.database import get_session
 from rss_glue.feeds.registry import FeedRegistry
 from rss_glue.models.db import Feed
-from rss_glue.services.config_sync import get_current_config
+from rss_glue.services.config_sync import get_base_url
 from rss_glue.services.media_cache import expand_placeholders
 
 router = APIRouter()
@@ -44,8 +44,7 @@ def list_posts(
     if not feed:
         raise HTTPException(status_code=404, detail=f"Feed '{feed_id}' not found")
 
-    config = get_current_config(session)
-    base_url = config["base_url"]
+    base_url = get_base_url(session)
 
     handler = FeedRegistry.get_handler(feed.type)
     posts = handler.get_posts(feed_id, limit, session, base_url)

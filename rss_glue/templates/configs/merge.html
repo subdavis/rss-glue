@@ -1,0 +1,9 @@
+{% include 'configs/base.html' %}
+
+<div class="form-group">
+  <label>Include Tags</label>
+  <input type="text" name="include_tags" value="{{ form_values.include_tags | join(', ') if form_values.include_tags else '' }}"
+    required placeholder="tag1, tag2" />
+  <small>Comma-separated tag names. Feeds tagged with any of these are merged together.</small>
+  {% if errors.include_tags %}<p class="field-error">{{ errors.include_tags }}</p>{% endif %}
+</div>

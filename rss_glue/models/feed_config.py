@@ -10,7 +10,30 @@ if TYPE_CHECKING:
 
 
 class FeedConfigBase(BaseModel):
-    """Base configuration for all feed types."""
+    """Base configuration for all feed types.
+
+    ## Extending for a new handler
+
+    Subclass this in your handler file and set `type` to a Literal matching the
+    handler's registered key.  Override `extra_config()` to return any fields that
+    need to be persisted in the Feed.config JSON column.  Override `db_hydrate()` if
+    the config requires a session lookup (e.g. FeedRelationship for digest/smart_filter).
+
+    ## Form rendering
+
+    Every handler Config subclass gets a paired Jinja2 partial at
+    `templates/configs/<type>.html`.  That partial should `{% include 'configs/base.html' %}`
+    (which renders the shared fields below) and then add its own handler-specific fields.
+    The shell template `templates/feed_config.html` dynamically includes the right partial
+    based on the feed type.
+
+    ## Global-overridable fields
+
+    `cooldown_minutes` and `cache_media` are tri-state: None means "use the global default."
+    The form renders the effective global value as a placeholder/label so users can see
+    what they're inheriting.  `upsert_feed()` in config_sync.py coerces empty form
+    strings back to None before validation.
+    """
 
     id: str = Field(..., min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
     name: str = Field(..., min_length=1)

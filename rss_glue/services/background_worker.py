@@ -36,7 +36,7 @@ def get_feed_dependencies(feed_id: str, session: Session) -> list[str]:
     Returns list of feed IDs that this feed depends on (children/sources).
     For merge feeds, uses tag-based resolution. For digest feeds, uses FeedRelationship.
     """
-    from rss_glue.feeds.merge import get_merge_source_ids
+    from rss_glue.handlers.merge import get_merge_source_ids
 
     feed = session.get(Feed, feed_id)
     if not feed:

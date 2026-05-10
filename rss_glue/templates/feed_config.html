@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Feed Config{% endblock %}
+{% block content %}
+{% if feed %}
+    {% include "feed_header.html" %}
+{% endif %}
+
+<h2>Config</h2>
+
+{% if request.query_params.get('message') %}
+<p><strong>{{ request.query_params.get('message') }}</strong></p>
+{% endif %}
+
+{% if errors.__all__ %}
+<pre class="error-box">{{ errors.__all__ }}</pre>
+{% endif %}
+
+<form method="post" class="form-stack">
+  <input type="hidden" name="type" value="{{ feed_type }}" />
+
+
+  {% include 'configs/' + feed_type + '.html' %}
+
+  <div class="form-group">
+    <button type="submit">{% if feed %}Save changes{% else %}Create feed{% endif %}</button>
+    <a href="/config">Cancel</a>
+  </div>
+</form>
+
+{% endblock %}

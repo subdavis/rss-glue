@@ -29,7 +29,7 @@ def topological_sort_feeds(session: Session) -> list[str]:
     For update order: source feeds must be updated before merge/digest feeds.
     Uses Kahn's algorithm.
     """
-    from rss_glue.feeds.merge import get_merge_source_ids
+    from rss_glue.handlers.merge import get_merge_source_ids
 
     # Get all feeds
     feeds = {f.id: f for f in session.exec(select(Feed)).all()}

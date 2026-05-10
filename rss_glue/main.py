@@ -13,7 +13,7 @@ import rss_glue.feeds  # noqa: F401
 # Import User model to register with SQLModel before table creation
 import rss_glue.models.user  # noqa: F401
 from rss_glue.database import create_db_and_tables
-from rss_glue.routers import api, auth, config, feeds, pages
+from rss_glue.routers import api, auth, global_config, feeds, feed_config, pages
 from rss_glue.services.background_worker import (
     start_background_worker,
     stop_background_worker,
@@ -42,8 +42,9 @@ app = FastAPI(title="RSS Glue v2", lifespan=lifespan)
 # Include routers
 app.include_router(pages.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(config.router, prefix="/config", tags=["config"])
+app.include_router(global_config.router, prefix="/config", tags=["config"])
 app.include_router(feeds.router, tags=["feeds"])
+app.include_router(feed_config.router, tags=["feeds"])
 app.include_router(api.router, prefix="/api", tags=["api"])
 
 # Mount static files (CSS, etc.)

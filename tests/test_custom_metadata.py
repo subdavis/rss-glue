@@ -16,15 +16,15 @@ from sqlmodel import Session, SQLModel, create_engine
 import pytest
 
 # Import feed handler modules so they register with FeedRegistry
-import rss_glue.feeds.merge  # noqa: F401
-import rss_glue.feeds.smart_filter  # noqa: F401
+import rss_glue.handlers.merge  # noqa: F401
+import rss_glue.handlers.smart_filter  # noqa: F401
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
 from rss_glue.feeds.rssglue_ext import (
     RSSGLUE_NS,
     RssGlueEntryExtension,
     RssGlueExtension,
 )
-from rss_glue.feeds.smart_filter import FilterDecision
+from rss_glue.handlers.smart_filter import FilterDecision
 from rss_glue.models.db import (
     Feed,
     FeedRelationship,

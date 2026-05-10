@@ -1,0 +1,17 @@
+{% include 'configs/base.html' %}
+
+<div class="form-group">
+  <label>Source Feed</label>
+  <select name="source" required>
+    <option value="">— select a feed —</option>
+    {% for f in all_feeds %}
+    {% if f.id != (feed.id if feed else '') %}
+    <option value="{{ f.id }}" {% if form_values.source == f.id %}selected{% endif %}>
+      {{ f.name }} ({{ f.id }})
+    </option>
+    {% endif %}
+    {% endfor %}
+  </select>
+  <small>The feed whose posts are rolled up into digest issues.</small>
+  {% if errors.source %}<p class="field-error">{{ errors.source }}</p>{% endif %}
+</div>
