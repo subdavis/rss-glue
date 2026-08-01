@@ -223,6 +223,13 @@ def get_current_config(session: Session) -> dict:
         "base_url",
         "scrape_creators_key",
         "anthropic_api_key",
+        "imap_host",
+        "imap_port",
+        "imap_user",
+        "imap_password",
+        "imap_folder",
+        "imap_lookback_days",
+        "imap_max_message_bytes",
     }
     rows = {
         c.key: c.value
@@ -236,4 +243,13 @@ def get_current_config(session: Session) -> dict:
         "base_url": rows.get("base_url", "http://localhost:8000"),
         "scrape_creators_key": rows.get("scrape_creators_key"),
         "anthropic_api_key": rows.get("anthropic_api_key"),
+        "imap_host": rows.get("imap_host"),
+        "imap_port": int(rows.get("imap_port", "993")),
+        "imap_user": rows.get("imap_user"),
+        "imap_password": rows.get("imap_password"),
+        "imap_folder": rows.get("imap_folder", "INBOX"),
+        "imap_lookback_days": int(rows.get("imap_lookback_days", "7")),
+        "imap_max_message_bytes": int(
+            rows.get("imap_max_message_bytes", str(2 * 1024 * 1024))
+        ),
     }

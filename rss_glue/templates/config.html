@@ -75,6 +75,70 @@ block content %}
 
     <button type="submit">Save Settings</button>
   </fieldset>
+
+  <fieldset>
+    <legend>IMAP Inbox (for Email feeds)</legend>
+    <p>
+      <small>
+        One mailbox backs every email feed. Point plus-addressed mail (or a
+        catch-all) at it, then give each feed its own address.
+      </small>
+    </p>
+
+    <div class="form-group">
+      <label>IMAP Host:</label>
+      <input type="text" name="imap_host" value="{{ config.imap_host or '' }}"
+        placeholder="imap.gmail.com" />
+      <small>Leave blank to disable email feeds.</small>
+    </div>
+
+    <div class="form-group">
+      <label>IMAP Port:</label>
+      <input type="number" name="imap_port" value="{{ config.imap_port or 993 }}" min="1" max="65535" />
+      <small>993 for implicit TLS.</small>
+    </div>
+
+    <div class="form-group">
+      <label>Username:</label>
+      <input type="text" name="imap_user" value="{{ config.imap_user or '' }}"
+        placeholder="you@example.com" />
+    </div>
+
+    <div class="form-group">
+      <label>Password:</label>
+      <input type="password" name="imap_password" placeholder="{% if config.imap_password %}(unchanged){% else %}app password{% endif %}" />
+      <small>Use a provider app password. Leave blank to keep the current one.</small>
+    </div>
+
+    <div class="form-group">
+      <label>Folder:</label>
+      <input type="text" name="imap_folder" value="{{ config.imap_folder or 'INBOX' }}" />
+      <small>A dedicated folder fed by a provider-side filter scans much faster than INBOX.</small>
+    </div>
+
+    <div class="form-group">
+      <label>Lookback (days):</label>
+      <input type="number" name="imap_lookback_days" value="{{ config.imap_lookback_days or 7 }}" min="1" max="365" />
+      <small>Each poll scans this window. Older mail never appears, even after a feed reset.</small>
+    </div>
+
+    <div class="form-group">
+      <label>Max Message Size (bytes):</label>
+      <input type="number" name="imap_max_message_bytes"
+        value="{{ config.imap_max_message_bytes or 2097152 }}" min="1024" />
+      <small>Larger messages are skipped instead of downloaded.</small>
+    </div>
+
+    <button type="submit">Save Settings</button>
+  </fieldset>
+</form>
+
+<form method="post" action="/config/imap/test" style="margin-bottom: 1em;">
+  <fieldset>
+    <legend>Test IMAP Connection</legend>
+    <p><small>Logs in with the saved settings and lists the folders it can see. Save first.</small></p>
+    <button type="submit">Test Connection</button>
+  </fieldset>
 </form>
 
 <form method="post" action="/config/api-key/regenerate" style="margin-bottom: 1em;">

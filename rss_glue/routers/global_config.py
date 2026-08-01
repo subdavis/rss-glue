@@ -2,6 +2,7 @@
 
 from rss_glue.feeds import FeedRegistry
 
+import logging
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -17,6 +18,8 @@ from rss_glue.services.auth import (
 )
 from rss_glue.services.config_sync import get_current_config, save_system_config
 from rss_glue.templates import templates
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(include_in_schema=False)
 
@@ -66,6 +69,13 @@ def save_config(
     anthropic_api_key: str | None = Form(None),
     default_cooldown_minutes: int = Form(15),
     base_url: str = Form("http://localhost:8000"),
+    imap_host: str = Form(""),
+    imap_port: int = Form(993),
+    imap_user: str = Form(""),
+    imap_password: str | None = Form(None),
+    imap_folder: str = Form("INBOX"),
+    imap_lookback_days: int = Form(7),
+    imap_max_message_bytes: int = Form(2 * 1024 * 1024),
     session: Session = Depends(get_session),
     user: User = Depends(require_admin_auth),
 ):
@@ -77,8 +87,34 @@ def save_config(
         "default_cooldown_minutes", str(default_cooldown_minutes), session
     )
     save_system_config("base_url", base_url, session)
+    save_system_config("imap_host", imap_host.strip(), session)
+    save_system_config("imap_port", str(imap_port), session)
+    save_system_config("imap_user", imap_user.strip(), session)
+    # Blank password means "leave it alone", so the form can round-trip safely.
+    save_system_config("imap_password", imap_password or None, session)
+    save_system_config("imap_folder", imap_folder.strip() or "INBOX", session)
+    save_system_config("imap_lookback_days", str(imap_lookback_days), session)
+    save_system_config("imap_max_message_bytes", str(imap_max_message_bytes), session)
     session.commit()
     return RedirectResponse(url="/config?message=Settings+saved", status_code=303)
+
+
+@router.post("/imap/test")
+def test_imap_connection(
+    session: Session = Depends(get_session),
+    user: User = Depends(require_admin_auth),
+):
+    """Connect to the configured inbox and report what we can see."""
+    from rss_glue.services import imap_inbox
+
+    try:
+        message = imap_inbox.test_connection(session)
+    except Exception as e:
+        logger.exception("IMAP test connection failed")
+        message = f"IMAP test failed: {type(e).__name__}: {e}"
+    return RedirectResponse(
+        url=f"/config?{urlencode({'message': message})}", status_code=303
+    )
 
 
 @router.post("/password")

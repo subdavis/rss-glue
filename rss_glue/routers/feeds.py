@@ -185,6 +185,38 @@ def get_feed_html(
     )
 
 
+@router.get("/post/{feed_id}/{external_id}")
+def get_post_permalink(
+    feed_id: str,
+    external_id: str,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    """Single-post page. Unauthenticated, matching /feed/{id}/rss."""
+    post = session.exec(
+        select(Post).where(Post.feed_id == feed_id, Post.external_id == external_id)
+    ).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    base_url = get_base_url(session)
+    response = templates.TemplateResponse(
+        "post.html",
+        {
+            "request": request,
+            "post": post,
+            "feed": session.get(Feed, feed_id),
+            "content": expand_placeholders(post.content or "", base_url),
+        },
+    )
+    # This is the one page that renders third-party HTML bodies.
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; img-src * data:; media-src *; style-src 'self'"
+    )
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
+
+
 @router.get("/media/{hash_prefix}/{filename}")
 def serve_cached_media(hash_prefix: str, filename: str):
     """Serve cached media files.

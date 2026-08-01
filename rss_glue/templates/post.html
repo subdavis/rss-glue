@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} - RSS Glue{% endblock %}
+{% block content %}
+
+<article>
+    <h2>{{ post.title }}</h2>
+    <div class="post-meta">
+        {% if feed %}<a href="/feed/{{ feed.id }}/html">{{ feed.name }}</a> ·{% endif %}
+        <span data-utc-time="{{ post.published_at.isoformat() }}" data-format="relative" title="{{ post.published_at | localtime('tooltip') }}">
+            {{ post.published_at | localtime("relative") }}
+        </span>
+        {% if post.author %}· {{ post.author }}{% endif %}
+    </div>
+    {% if content %}
+    <div>{{ content | safe }}</div>
+    {% else %}
+    <p>No content.</p>
+    {% endif %}
+</article>
+
+{% endblock %}

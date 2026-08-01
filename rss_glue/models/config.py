@@ -7,6 +7,7 @@ from rss_glue.handlers.reddit import RedditFeedHandler
 from rss_glue.handlers.facebook import FacebookFeedHandler
 from rss_glue.handlers.instagram import InstagramFeedHandler
 from rss_glue.handlers.hackernews import HackerNewsFeedHandler
+from rss_glue.handlers.imap_email import EmailFeedHandler
 from rss_glue.handlers.rss import RssFeedHandler
 from typing import Annotated, Union
 
@@ -20,6 +21,7 @@ FeedConfig = Annotated[
         SmartFilterFeedHandler.Config,
         DigestFeedHandler.Config,
         RssFeedHandler.Config,
+        EmailFeedHandler.Config,
         HackerNewsFeedHandler.Config,
         InstagramFeedHandler.Config,
         FacebookFeedHandler.Config,

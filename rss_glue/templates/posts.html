@@ -14,7 +14,7 @@
 {% if posts_data %}
 {% for item in posts_data %}
 <div>
-    <h4><a href="{{ item.post.link }}">{{ item.post.title }}</a></h4>
+    <h4><a href="{{ item.post.link | weburl }}">{{ item.post.title }}</a></h4>
     <div class="post-meta">
         <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
         · <span data-utc-time="{{ item.post.published_at.isoformat() }}" data-format="relative" title="{{ item.post.published_at | localtime('tooltip') }}">{{ item.post.published_at | localtime("relative") }}</span>

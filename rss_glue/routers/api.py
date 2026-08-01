@@ -53,7 +53,7 @@ def list_posts(
         {
             "id": post["id"],
             "title": post["title"],
-            "link": post["link"],
+            "link": expand_placeholders(post["link"], base_url),
             "author": post.get("author"),
             "published_at": post["published_at"].isoformat(),
             "content": expand_placeholders(post["content"], base_url)

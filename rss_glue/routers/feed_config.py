@@ -43,6 +43,7 @@ def _feed_config_context(
         "global_cooldown": global_cooldown,
         "global_cache_media": global_cache_media,
         "all_feeds": all_feeds,
+        **handler_cls.config_form_context(session),
     }
 
 

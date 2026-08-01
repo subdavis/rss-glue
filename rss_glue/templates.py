@@ -39,8 +39,18 @@ def localtime_filter(dt: datetime | None, format_name: str = "default") -> str:
     return format_datetime(dt, format_name)
 
 
-# Register custom filter
+def weburl_filter(url: str | None) -> str:
+    """Resolve a stored __BASE_URL__ link to a same-origin relative URL.
+
+    HTML pages are served from the same origin, so the placeholder just drops out.
+    RSS and the JSON API need absolute URLs and use `expand_placeholders` instead.
+    """
+    return (url or "").replace("__BASE_URL__", "")
+
+
+# Register custom filters
 templates.env.filters["localtime"] = localtime_filter
+templates.env.filters["weburl"] = weburl_filter
 
 # Add display_timezone as a global variable for templates
 templates.env.globals["display_timezone"] = get_display_timezone

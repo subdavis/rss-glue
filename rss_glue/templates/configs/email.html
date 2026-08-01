@@ -1,0 +1,40 @@
+{% include 'configs/base.html' %}
+
+<div class="form-group">
+  <label>Email Address *</label>
+  <input type="email" id="email-address" name="address" value="{{ form_values.address or '' }}" required
+    placeholder="you+newsletter@example.com" />
+  <small>
+    {% if imap_user %}
+    Mail delivered to this address in <code>{{ imap_user }}</code> becomes posts.
+    Use plus-addressing (or a catch-all) so each feed gets its own address.
+    {% else %}
+    No IMAP inbox configured yet — set host, user and password in
+    <a href="/config">Config</a> first.
+    {% endif %}
+  </small>
+  {% if errors.address %}<p class="field-error">{{ errors.address }}</p>{% endif %}
+</div>
+
+{% if imap_user and not feed %}
+<script>
+  // Prefill the address from the feed id until the user types their own.
+  (function () {
+    var inbox = {{ imap_user | tojson }};
+    var idInput = document.querySelector('input[name="id"]');
+    var addrInput = document.getElementById('email-address');
+    var at = inbox.indexOf('@');
+    if (!idInput || !addrInput || at < 1) return;
+
+    var local = inbox.slice(0, at).split('+')[0];
+    var domain = inbox.slice(at);
+    var touched = addrInput.value !== '';
+
+    addrInput.addEventListener('input', function () { touched = true; });
+    idInput.addEventListener('input', function () {
+      if (touched) return;
+      addrInput.value = idInput.value ? local + '+' + idInput.value + domain : '';
+    });
+  })();
+</script>
+{% endif %}
