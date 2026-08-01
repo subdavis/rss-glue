@@ -8,7 +8,7 @@
 {% if posts %}
 {% for post in posts %}
 <article>
-    <h4><a href="{{ post.link }}">{{ post.title }}</a></h4>
+    <h4><a href="{{ post.link | weburl }}">{{ post.title }}</a></h4>
     <p>
         <strong>Published:</strong>
         <span data-utc-time="{{ post.published_at.isoformat() }}" data-format="relative" title="{{ post.published_at | localtime('tooltip') }}">

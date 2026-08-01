@@ -38,7 +38,7 @@ def generate_rss(feed_id: str, session: Session, base_url: str) -> str:
     for post in posts:
         entry = fg.add_entry()
         entry.title(post["title"])
-        entry.link(href=post["link"])
+        entry.link(href=expand_placeholders(post["link"], base_url))
         entry.guid(post["id"], permalink=False)
 
         if post.get("content"):

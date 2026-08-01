@@ -65,6 +65,14 @@ class BaseFeedHandler:
         raise NotImplementedError("Subclass must implement fetch()")
 
     @staticmethod
+    def config_form_context(session: Session) -> dict:
+        """Extra template context for this handler's config form partial.
+
+        Keeps handler-specific lookups out of the shared form context.
+        """
+        return {}
+
+    @staticmethod
     def get_posts(
         feed_id: str,
         limit: int,

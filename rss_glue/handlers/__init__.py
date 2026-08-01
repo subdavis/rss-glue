@@ -3,6 +3,7 @@
 from rss_glue.handlers import digest as digest
 from rss_glue.handlers import facebook as facebook
 from rss_glue.handlers import hackernews as hackernews
+from rss_glue.handlers import imap_email as imap_email
 from rss_glue.handlers import instagram as instagram
 from rss_glue.handlers import merge as merge
 from rss_glue.handlers import reddit as reddit
