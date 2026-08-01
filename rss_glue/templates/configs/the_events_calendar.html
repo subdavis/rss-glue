@@ -1,0 +1,9 @@
+{% include 'configs/base.html' %}
+
+<div class="form-group">
+  <label>API Base URL *</label>
+  <input type="url" name="base_url" value="{{ form_values.base_url or '' }}" required
+    placeholder="https://example.com/wp-json/tribe/events/v1" />
+  <small>The Events Calendar REST namespace URL (ends with <code>tribe/events/v1</code>).</small>
+  {% if errors.base_url %}<p class="field-error">{{ errors.base_url }}</p>{% endif %}
+</div>

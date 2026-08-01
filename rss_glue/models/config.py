@@ -9,11 +9,11 @@ from rss_glue.handlers.instagram import InstagramFeedHandler
 from rss_glue.handlers.hackernews import HackerNewsFeedHandler
 from rss_glue.handlers.imap_email import EmailFeedHandler
 from rss_glue.handlers.rss import RssFeedHandler
-from typing import Annotated, Union
-
 from rss_glue.handlers.smart_filter import SmartFilterFeedHandler
 from rss_glue.handlers.digest import DigestFeedHandler
+from rss_glue.handlers.the_events_calendar import TheEventsCalendarFeedHandler
 
+from typing import Annotated, Union
 from pydantic import BaseModel, Field, model_validator
 
 FeedConfig = Annotated[
@@ -28,6 +28,7 @@ FeedConfig = Annotated[
         RedditFeedHandler.Config,
         WordPressMecEventsFeedHandler.Config,
         SquarespaceCalFeedHandler.Config,
+        TheEventsCalendarFeedHandler.Config,
         MergeFeedHandler.Config,
     ],
     Field(discriminator="type"),
