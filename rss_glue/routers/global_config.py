@@ -76,6 +76,7 @@ def save_config(
     imap_folder: str = Form("INBOX"),
     imap_lookback_days: int = Form(7),
     imap_max_message_bytes: int = Form(2 * 1024 * 1024),
+    reddit_session_token: str | None = Form(None),
     session: Session = Depends(get_session),
     user: User = Depends(require_admin_auth),
 ):
@@ -95,6 +96,7 @@ def save_config(
     save_system_config("imap_folder", imap_folder.strip() or "INBOX", session)
     save_system_config("imap_lookback_days", str(imap_lookback_days), session)
     save_system_config("imap_max_message_bytes", str(imap_max_message_bytes), session)
+    save_system_config("reddit_session_token", reddit_session_token or None, session)
     session.commit()
     return RedirectResponse(url="/config?message=Settings+saved", status_code=303)
 

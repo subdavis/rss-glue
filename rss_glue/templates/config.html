@@ -77,6 +77,29 @@ block content %}
   </fieldset>
 
   <fieldset>
+    <legend>Reddit</legend>
+    <p>
+      <small>
+        Reddit blocks unauthenticated <code>.json</code> requests. Paste the
+        <code>reddit_session</code> cookie from a logged-in browser session
+        (DevTools → Application → Cookies → reddit.com).
+      </small>
+    </p>
+
+    <div class="form-group">
+      <label>Reddit Session Token:</label>
+      <input
+        type="password"
+        name="reddit_session_token"
+        placeholder="{% if config.reddit_session_token %}(unchanged){% else %}reddit_session cookie value{% endif %}"
+      />
+      <small>Leave blank to keep the current token.</small>
+    </div>
+
+    <button type="submit">Save Settings</button>
+  </fieldset>
+
+  <fieldset>
     <legend>IMAP Inbox (for Email feeds)</legend>
     <p>
       <small>

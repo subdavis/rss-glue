@@ -60,6 +60,24 @@
 
 <div class="form-group">
   <label>
+    <input type="checkbox" name="strip_tags_enabled" value="true"
+      {% if form_values.strip_tags_enabled %}checked{% endif %} />
+    Strip HTML tags from post content
+  </label>
+  <small>Unwraps the tags below, keeping inner text. Useful for email newsletters with table layouts.</small>
+  {% if errors.strip_tags_enabled %}<p class="field-error">{{ errors.strip_tags_enabled }}</p>{% endif %}
+</div>
+
+<div class="form-group">
+  <label>Tags to strip</label>
+  <input type="text" name="strip_tags" value="{{ form_values.strip_tags or '' }}"
+    placeholder="table, tr, td, tbody, thead" />
+  <small>Comma-separated HTML tag names. Applied when stripping is enabled.</small>
+  {% if errors.strip_tags %}<p class="field-error">{{ errors.strip_tags }}</p>{% endif %}
+</div>
+
+<div class="form-group">
+  <label>
     <input type="checkbox" name="enabled" value="true"
       {% if form_values.enabled is not defined or form_values.enabled %}checked{% endif %} />
     Enabled

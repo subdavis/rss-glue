@@ -10,6 +10,7 @@ from typing import Optional
 from urllib.parse import urljoin, urlparse
 
 import nh3
+from bs4 import BeautifulSoup
 
 import httpx
 from sqlmodel import Session, select
@@ -119,6 +120,20 @@ ALLOWED_ATTRIBUTES = {
     "ol": {"start", "type"},
     "details": {"open"},
 }
+
+
+def strip_html_tags(content: str | None, tags: list[str]) -> str | None:
+    """Unwrap HTML tags, preserving their inner content."""
+    if not content or not tags:
+        return content
+    names = {tag.lower() for tag in tags if tag}
+    if not names:
+        return content
+    soup = BeautifulSoup(content, "html.parser")
+    for tag_name in names:
+        for tag in soup.find_all(tag_name):
+            tag.unwrap()
+    return str(soup)
 
 
 def sanitize_html(content: str | None) -> str | None:

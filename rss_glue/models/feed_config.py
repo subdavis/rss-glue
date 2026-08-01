@@ -8,6 +8,19 @@ from rss_glue.models.db import Feed
 if TYPE_CHECKING:
     from sqlmodel import Session
 
+DEFAULT_STRIP_TAGS = [
+    "table",
+    "tbody",
+    "thead",
+    "tfoot",
+    "tr",
+    "th",
+    "td",
+    "caption",
+    "colgroup",
+    "col",
+]
+
 
 class FeedConfigBase(BaseModel):
     """Base configuration for all feed types.
@@ -63,6 +76,14 @@ class FeedConfigBase(BaseModel):
         default_factory=list,
         description="List of tags for categorizing and grouping feeds.",
     )
+    strip_tags_enabled: bool = Field(
+        default=False,
+        description="Remove configured HTML tags from post content, keeping inner text.",
+    )
+    strip_tags: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_STRIP_TAGS),
+        description="HTML tag names to unwrap when strip_tags_enabled is true.",
+    )
 
     @field_validator("schedule")
     @classmethod
@@ -83,6 +104,8 @@ class FeedConfigBase(BaseModel):
             cooldown_minutes=None,
             enabled=True,
             tags=["tag1", "tag2"],
+            strip_tags_enabled=False,
+            strip_tags=list(DEFAULT_STRIP_TAGS),
             **kwargs,
         ).model_dump()
 
@@ -108,5 +131,8 @@ class FeedConfigBase(BaseModel):
 
         if self.schedule is not None:
             config_dict["schedule"] = self.schedule
+
+        config_dict["strip_tags_enabled"] = self.strip_tags_enabled
+        config_dict["strip_tags"] = self.strip_tags
 
         return config_dict

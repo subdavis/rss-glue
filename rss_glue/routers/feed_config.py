@@ -9,6 +9,7 @@ from rss_glue.feeds import FeedRegistry
 from rss_glue.models.db import Feed
 from rss_glue.models.user import User
 from rss_glue.services.auth import require_admin_auth
+from rss_glue.models.feed_config import DEFAULT_STRIP_TAGS
 from rss_glue.services.config_sync import (
     get_global_cache_media,
     get_global_cooldown,
@@ -62,8 +63,9 @@ def feed_config_page(
     handler_cls = FeedRegistry.get_handler(feed.type)
     hydrated = handler_cls.Config.db_hydrate(feed, session=session, **feed.config)
     form_values = hydrated.model_dump(exclude_none=False)
-    # Normalize tags for the text input
+    # Normalize list fields for text inputs
     form_values["tags"] = ", ".join(form_values.get("tags") or [])
+    form_values["strip_tags"] = ", ".join(form_values.get("strip_tags") or [])
 
     ctx = _feed_config_context(feed.type, session, feed=feed, form_values=form_values)
     return templates.TemplateResponse("feed_config.html", {"request": request, **ctx})
@@ -128,7 +130,14 @@ def feed_new_page(
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Unknown feed type: {feed_type!r}")
 
-    ctx = _feed_config_context(feed_type, session, form_values={"type": feed_type})
+    ctx = _feed_config_context(
+        feed_type,
+        session,
+        form_values={
+            "type": feed_type,
+            "strip_tags": ", ".join(DEFAULT_STRIP_TAGS),
+        },
+    )
     return templates.TemplateResponse("feed_config.html", {"request": request, **ctx})
 
 

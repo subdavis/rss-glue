@@ -1,6 +1,7 @@
 """Reddit feed handler."""
 
 import html
+import logging
 from datetime import datetime, timezone
 from typing import Any, Literal
 
@@ -10,8 +11,11 @@ from sqlmodel import Session
 
 from rss_glue.feeds.http_client import create_client
 from rss_glue.feeds.registry import BaseFeedHandler, FeedRegistry
+from rss_glue.models.db import SystemConfig
 from rss_glue.models.feed_config import FeedConfigBase
 from rss_glue.templates import templates
+
+logger = logging.getLogger(__name__)
 
 
 def deep_get(d: dict | None, *keys) -> Any:
@@ -53,15 +57,23 @@ class RedditFeedHandler(BaseFeedHandler):
         limit = config.get("limit", 20)
 
         url = f"https://www.reddit.com/r/{subreddit}/{listing_type}.json"
-        params = {"limit": limit}
+        params = {"limit": limit, "raw_json": 1}
         if listing_type == "top":
             params["t"] = time_filter
 
-        # Use robust HTTP client with Reddit-specific User-Agent
+        session_token_entry = session.get(SystemConfig, "reddit_session_token")
+        session_token = session_token_entry.value if session_token_entry else None
+        cookies = {"reddit_session": session_token} if session_token else None
+        if not session_token:
+            logger.warning(
+                f"Reddit feed '{feed_id}': No reddit_session_token configured; "
+                "unauthenticated .json requests may be blocked"
+            )
+
         with create_client(
             extra_headers={"User-Agent": "rss-glue/2.0.0 (Feed Aggregator)"}
         ) as client:
-            response = client.get(url, params=params)
+            response = client.get(url, params=params, cookies=cookies)
             response.raise_for_status()
             data = response.json()
 

@@ -181,6 +181,14 @@ def upsert_feed(
             t.strip() for t in raw_include_tags.split(",") if t.strip()
         ]
 
+    raw_strip_tags = coerced.get("strip_tags", "")
+    if isinstance(raw_strip_tags, str):
+        coerced["strip_tags"] = [
+            t.strip().lower() for t in raw_strip_tags.split(",") if t.strip()
+        ]
+
+    coerced["strip_tags_enabled"] = coerced.get("strip_tags_enabled") == "true"
+
     if "cache_media" in coerced and coerced["cache_media"] in ("true", "false"):
         coerced["cache_media"] = coerced["cache_media"] == "true"
 
@@ -230,6 +238,7 @@ def get_current_config(session: Session) -> dict:
         "imap_folder",
         "imap_lookback_days",
         "imap_max_message_bytes",
+        "reddit_session_token",
     }
     rows = {
         c.key: c.value
@@ -252,4 +261,5 @@ def get_current_config(session: Session) -> dict:
         "imap_max_message_bytes": int(
             rows.get("imap_max_message_bytes", str(2 * 1024 * 1024))
         ),
+        "reddit_session_token": rows.get("reddit_session_token"),
     }

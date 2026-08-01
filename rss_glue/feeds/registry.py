@@ -9,6 +9,8 @@ from croniter import croniter
 from sqlmodel import Session, select
 
 from rss_glue.models.db import MediaCache, Post
+from rss_glue.models.feed_config import DEFAULT_STRIP_TAGS
+from rss_glue.services.media_cache import sanitize_html, strip_html_tags
 from rss_glue.services.timezone import get_display_timezone
 
 if TYPE_CHECKING:
@@ -63,6 +65,15 @@ class BaseFeedHandler:
     ) -> list[dict] | None | int:
         """Fetch posts from the feed source. Must be overridden."""
         raise NotImplementedError("Subclass must implement fetch()")
+
+    @staticmethod
+    def process_post_content(content: str | None, config: dict[str, Any]) -> str | None:
+        """Sanitize HTML and optionally unwrap configured tags."""
+        content = sanitize_html(content)
+        if config.get("strip_tags_enabled"):
+            tags = config.get("strip_tags") or DEFAULT_STRIP_TAGS
+            content = strip_html_tags(content, tags)
+        return content
 
     @staticmethod
     def config_form_context(session: Session) -> dict:
