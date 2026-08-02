@@ -42,19 +42,8 @@ def index(
         feed = item["feed"]
         if sort_by == "name":
             return feed.name.lower()
-        elif sort_by == "type":
-            return feed.type
-        elif sort_by == "limit":
-            return feed.limit
         elif sort_by == "status":
             return feed.enabled
-        elif sort_by == "updated_at":
-            # Handle None values by putting them at the end
-            return feed.updated_at or (
-                datetime.min.replace(tzinfo=timezone.utc)
-                if sort_order == "asc"
-                else datetime.max.replace(tzinfo=timezone.utc)
-            )
         elif sort_by == "next_update":
             # Handle None values by putting them at the end
             return item["next_update"] or (

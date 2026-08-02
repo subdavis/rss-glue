@@ -1,69 +1,56 @@
 {% extends "base.html" %}
 {% block title %}Feeds - RSS Glue{% endblock %}
+{% macro sort_th(column, label) %}
+{% set active = sort_by == column %}
+{% set order = 'desc' if active and sort_order == 'asc' else 'asc' %}
+<th><a href="/?sort_by={{ column }}&sort_order={{ order }}">{{ label }}{% if active %} {% if sort_order == 'asc' %}&#x2191;{% else %}&#x2193;{% endif %}{% endif %}</a></th>
+{% endmacro %}
 {% block content %}
-<h2>Configured Feeds</h2>
-
-<div class="feed-toolbar">
-    <span>{{ feed_schedules|length }} feed(s)</span>
-    <span class="feed-toolbar-sort">
-        <select onchange="window.location='/?sort_by='+this.value+'&sort_order={{ sort_order }}'">
-            <option value="name"{% if sort_by == 'name' %} selected{% endif %}>Name</option>
-            <option value="type"{% if sort_by == 'type' %} selected{% endif %}>Type</option>
-            <option value="updated_at"{% if sort_by == 'updated_at' %} selected{% endif %}>Last Updated</option>
-            <option value="next_update"{% if sort_by == 'next_update' %} selected{% endif %}>Next Update</option>
-            <option value="status"{% if sort_by == 'status' %} selected{% endif %}>Status</option>
-            <option value="limit"{% if sort_by == 'limit' %} selected{% endif %}>Limit</option>
-        </select>
-        <a href="/?sort_by={{ sort_by }}&sort_order={% if sort_order == 'asc' %}desc{% else %}asc{% endif %}">{% if sort_order == 'asc' %}&#x2191;{% else %}&#x2193;{% endif %}</a>
-    </span>
-</div>
+<h2>Feeds ({{ feed_schedules|length }})</h2>
 
 {% if feed_schedules %}
-{% for item in feed_schedules %}
-{% set is_overdue = item.feed.enabled and item.next_update and item.next_update < now %}
-<div class="feed-card{% if not item.feed.enabled %} feed-card--disabled{% elif is_overdue %} feed-card--overdue{% endif %}">
-    <span class="feed-card-status">
-        {% if not item.feed.enabled %}
-        <span class="badge badge--disabled" title="Disabled">&#x2715;</span>
-        {% elif is_overdue %}
-        <span class="badge badge--overdue" title="Overdue">&#x25cf;</span>
-        {% else %}
-        <span class="badge badge--ok" title="Enabled">&#x2713;</span>
-        {% endif %}
-    </span>
-    <div class="feed-card-body">
-        <div class="feed-card-line1">
-            <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
-            <span class="badge badge--type">{{ item.feed.type }}</span>
-        </div>
-        <div class="feed-card-line2">
-            <span>
-                {% if is_overdue or not item.feed.enabled %}
-                Updated
-                {% if item.feed.updated_at %}
-                <span data-utc-time="{{ item.feed.updated_at.isoformat() }}" data-format="relative" title="{{ item.feed.updated_at | localtime('tooltip') }}">{{ item.feed.updated_at | localtime("relative") }}</span>
+<table>
+    <thead>
+        <tr>
+            {{ sort_th('status', 'Status') }}
+            {{ sort_th('name', 'Name') }}
+            {{ sort_th('next_update', 'Next Update') }}
+            <th>Tags</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in feed_schedules %}
+        {% set is_overdue = item.feed.enabled and item.next_update and item.next_update < now %}
+        <tr class="{% if not item.feed.enabled %}disabled{% elif is_overdue %}overdue{% endif %}">
+            <td style="text-align: center;">
+                {% if not item.feed.enabled %}
+                <span class="status-icon badge--disabled" title="Disabled">&#x2715;</span>
+                {% elif is_overdue %}
+                <span class="status-icon badge--overdue" title="Overdue">&#x25cf;</span>
                 {% else %}
-                never
+                <span class="status-icon badge--ok" title="Enabled">&#x2713;</span>
                 {% endif %}
-                {% else %}
-                Next update
+            </td>
+            <td>
+                <a href="/feed/{{ item.feed.id }}/html">{{ item.feed.name }}</a>
+                <span class="badge badge--type">{{ item.feed.type }}</span>
+            </td>
+            <td>
                 {% if item.next_update %}
                 <span data-utc-time="{{ item.next_update.isoformat() }}" data-format="relative" title="{{ item.next_update | localtime('tooltip') }}">{{ item.next_update | localtime("relative") }}</span>
                 {% else %}
                 -
                 {% endif %}
-                {% endif %}
-                · Limit {{ item.feed.limit }}
-            </span>
-            {% if item.feed.tags %}
-            <span class="feed-card-tags">
+            </td>
+            <td>
+                {% if item.feed.tags %}
                 {% for tag in item.feed.tags %}<span class="badge badge--tag">{{ tag.name }}</span>{% endfor %}
-            </span>
-            {% endif %}
-        </div>
-    </div>
-</div>
-{% endfor %}
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
 <p>No feeds configured. <a href="/config">Add some feeds</a>.</p>
 {% endif %}
