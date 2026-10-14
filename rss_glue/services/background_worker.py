@@ -136,11 +136,8 @@ async def run_update_cycle(shutdown_event: asyncio.Event) -> int:
                     break
 
                 try:
-                    # Not forced: update_feed() re-checks each feed's own
-                    # schedule, so a dependency pulled in by a due digest is
-                    # only re-fetched if it is itself due. Forcing here cost
-                    # one extra metered API call per source per digest run.
-                    history = update_feed(feed_id, session)
+                    # update_feed() will skip disabled feeds
+                    history = update_feed(feed_id, session, force=True)
                     if history:
                         updated_count += 1
                         if history.status == "success":
