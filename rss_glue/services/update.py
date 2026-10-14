@@ -1,7 +1,7 @@
 """Feed update orchestration with topological sort."""
 
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlmodel import Session, select
@@ -93,11 +93,14 @@ def update_feed(
     if feed.type == "merge":
         return None
 
-    # Check if update is due (skip if not forced and next_update is in the future)
+    # Check if update is due (skip if not forced and next_update is in the future).
+    # The 1s slack matches the worker's due-check: it may wake a hair early.
+    # next_update of None means manual-only, which an explicit call may update.
     if not force:
         handler = FeedRegistry.get_handler(feed.type)
         next_update = handler.next_update(feed, session)
-        if next_update is not None and datetime.now(timezone.utc) < next_update:
+        now = datetime.now(timezone.utc) + timedelta(seconds=1)
+        if next_update is not None and now < next_update:
             return None
 
     # Create update history record

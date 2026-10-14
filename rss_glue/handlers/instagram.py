@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Literal
 
@@ -18,6 +19,48 @@ from rss_glue.templates import templates
 logger = logging.getLogger(__name__)
 
 SCRAPE_API_BASE = "https://api.scrapecreators.com/v2/instagram/user/posts"
+
+
+def _published_at(item: dict) -> datetime | None:
+    """Post time, trying every shape the API has returned, else None.
+
+    The "XIGPolaris*" response shape (current as of 2026-10) dropped taken_at
+    and nulls created_at, but the date survives in accessibility_caption:
+    "Photo by Some Name on September 07, 2026."
+
+    There is deliberately no "now" fallback - a fabricated date silently
+    reorders the feed and cannot be corrected later, because stored posts are
+    never re-dated. The caller fails the fetch instead.
+    """
+    if taken_at := item.get("taken_at"):
+        return datetime.fromtimestamp(taken_at, tz=timezone.utc)
+    if created_at := item.get("created_at"):
+        try:
+            return datetime.fromisoformat(
+                str(created_at).replace("Z", "+00:00")
+            ).astimezone(timezone.utc)
+        except ValueError:
+            pass
+    if match := re.search(
+        r" on (\w+ \d{1,2}, \d{4})\.", item.get("accessibility_caption") or ""
+    ):
+        try:
+            # Noon UTC: a date-only value must land on the right day in any
+            # display timezone.
+            return datetime.strptime(match.group(1), "%B %d, %Y").replace(
+                hour=12, tzinfo=timezone.utc
+            )
+        except ValueError:
+            pass
+    return None
+
+
+def _image_url(media: dict) -> str | None:
+    """Best image for a post or a carousel child, across response shapes."""
+    candidates = (media.get("image_versions2") or {}).get("candidates") or []
+    if candidates:
+        return candidates[0].get("url")
+    return media.get("display_uri")
 
 
 @FeedRegistry.register("instagram")
@@ -83,18 +126,34 @@ class InstagramFeedHandler(BaseFeedHandler):
         items = items[:limit]
 
         for item in items:
-            # ID
-            pk = item.get("id") or item.get("pk")
-            if not pk:
-                continue
-            external_id = hashlib.sha256(str(pk).encode()).hexdigest()[:16]
+            # Anything missing below is upstream breakage, and every degraded
+            # value we could substitute writes permanent garbage into the DB:
+            # a different id seed re-posts the whole feed as duplicates, and a
+            # fabricated date cannot be corrected on a later fetch. Fail the
+            # whole fetch instead - update_feed() records the error and disables
+            # the feed, which is noisy but recoverable.
 
-            # Timestamp - use timezone-aware datetime
-            taken_at = item.get("taken_at")
-            if taken_at:
-                published_at = datetime.fromtimestamp(taken_at, tz=timezone.utc)
-            else:
-                published_at = datetime.now(timezone.utc)
+            # ID - derived from the media pk and user pk rather than item["id"],
+            # whose format the API has changed under us (it was "{pk}_{user_pk}",
+            # now "POLARIS_{pk}").
+            pk = item.get("pk") or item.get("id")
+            user = item.get("user") or {}
+            user_pk = user.get("pk")
+            if not pk or not user_pk:
+                raise ValueError(
+                    f"Instagram feed '{feed_id}': item has no pk/user.pk, "
+                    f"cannot build a stable id - keys: {sorted(item)}"
+                )
+            external_id = hashlib.sha256(f"{pk}_{user_pk}".encode()).hexdigest()[:16]
+
+            # Timestamp
+            published_at = _published_at(item)
+            if published_at is None:
+                raise ValueError(
+                    f"Instagram feed '{feed_id}': post {pk} has no usable date "
+                    f"(taken_at, created_at, accessibility_caption all unusable) "
+                    f"- keys: {sorted(item)}"
+                )
 
             # Link
             code = item.get("code")
@@ -111,9 +170,10 @@ class InstagramFeedHandler(BaseFeedHandler):
                 caption_text.split("\n")[0][:100] if caption_text else "Instagram Post"
             )
 
-            # Engagement metrics
-            like_count = item.get("like_count", 0)
-            comment_count = item.get("comment_count", 0)
+            # Engagement metrics - None (not 0) when the API omits them, so an
+            # existing post's score is not clobbered on re-fetch
+            like_count = item.get("like_count")
+            comment_count = item.get("comment_count")
 
             # Music info extraction (from v1)
             music_info = None
@@ -127,36 +187,25 @@ class InstagramFeedHandler(BaseFeedHandler):
                         elif music_title:
                             music_info = Markup("{}").format(music_title)
 
-            # Images/Video - collect data for template
-            carousel_images = []
-            is_video = False
-            video_poster = None
-            single_image = None
-
-            if carousel_media := item.get("carousel_media"):
-                for media in carousel_media:
-                    if image_versions := media.get("image_versions2", {}).get(
-                        "candidates"
-                    ):
-                        img_url = image_versions[0].get("url")
-                        if img_url:
-                            carousel_images.append(img_url)
-            elif item.get("media_type") == 2 and item.get("video_versions"):
-                # Video - add poster image
-                is_video = True
-                if image_versions := item.get("image_versions2", {}).get("candidates"):
-                    video_poster = image_versions[0].get("url")
-            elif image_versions := item.get("image_versions2", {}).get("candidates"):
-                single_image = image_versions[0].get("url")
+            # Images - carousel children when the API gives them, else the one
+            # image it does give (image_versions2 candidate or display_uri)
+            children = item.get("carousel_media") or [item]
+            images = [url for media in children if (url := _image_url(media))]
+            is_video = bool(item.get("video_versions") or item.get("video_url"))
+            carousel_count = item.get("carousel_media_count") or len(images)
+            if not images and not is_video:
+                raise ValueError(
+                    f"Instagram feed '{feed_id}': post {pk} has no image or "
+                    f"video media - keys: {sorted(item)}"
+                )
 
             # Render content using Jinja template
             content_template = templates.env.get_template("feeds/instagram.html")
             content = content_template.render(
                 caption_text=caption_text,
-                carousel_images=carousel_images,
+                images=images,
                 is_video=is_video,
-                video_poster=video_poster,
-                single_image=single_image,
+                carousel_count=carousel_count,
                 link=link,
                 like_count=like_count,
                 comment_count=comment_count,
@@ -164,7 +213,6 @@ class InstagramFeedHandler(BaseFeedHandler):
             )
 
             # Author
-            user = item.get("user", {})
             author = f"@{user.get('username', username)}"
 
             posts.append(
@@ -175,7 +223,7 @@ class InstagramFeedHandler(BaseFeedHandler):
                     "link": link,
                     "author": author,
                     "published_at": published_at,
-                    "score": float(like_count),  # Use like count as score
+                    "score": float(like_count) if like_count is not None else None,
                 }
             )
 

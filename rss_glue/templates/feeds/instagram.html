@@ -1,17 +1,22 @@
 {# Instagram post content template #}
 {% if caption_text %}<p>{{ caption_text }}</p>{% endif %}
 
-{% for img_url in carousel_images %}
+{% for img_url in images %}
 <p><img src="{{ img_url }}" /></p>
 {% endfor %}
 
-{% if is_video %}
-<p><a href="{{ link }}">Watch Video</a></p>
-{% if video_poster %}<p><img src="{{ video_poster }}" alt="Video thumbnail" /></p>{% endif %}
-{% elif single_image %}
-<p><img src="{{ single_image }}" /></p>
+{% if is_video %}<p><a href="{{ link }}">Watch Video</a></p>{% endif %}
+
+{% if carousel_count > images | length %}
+<p><small>📷 1 of {{ carousel_count }} images — <a href="{{ link }}">see the rest</a></small></p>
 {% endif %}
 
-<p><small>❤️ {{ "{:,}".format(like_count) }} likes | 💬 {{ "{:,}".format(comment_count) }} comments</small></p>
+{% if like_count is not none or comment_count is not none %}
+<p><small>
+  {%- if like_count is not none %}❤️ {{ "{:,}".format(like_count) }} likes{% endif %}
+  {%- if like_count is not none and comment_count is not none %} | {% endif %}
+  {%- if comment_count is not none %}💬 {{ "{:,}".format(comment_count) }} comments{% endif %}
+</small></p>
+{% endif %}
 
 {% if music_info %}<p><small>🎵 {{ music_info }}</small></p>{% endif %}

@@ -1,0 +1,397 @@
+{
+  "success": true,
+  "credits_charged": 1,
+  "next_max_id": "AQHT6WARgcl0T6qf8giHyfxCdE1d6KVf09UlHdZJpNOfAJVQ6qU49nqBYauMyRpdFV7KJVISJhj61tqf6-hKBSkTxw",
+  "user": {
+    "pk": "3063119636",
+    "aigm_account_label_info": null,
+    "friendship_status": null,
+    "gating": null,
+    "fbid_v2": "17841403109102889",
+    "is_memorialized": false,
+    "is_private": false,
+    "has_story_archive": null,
+    "is_coppa_enforced": null,
+    "supervision_info": null,
+    "is_regulated_c18": false,
+    "regulated_news_in_locations": [],
+    "bio_links": [
+      {
+        "image_url": "",
+        "is_pinned": false,
+        "link_id": "17933937690009592",
+        "link_type": "external",
+        "lynx_url": "https://l.instagram.com/?u=https%3A%2F%2Fdiscord.gg%2FWY9KYPXXEb&e=AUA2rXeRENHGV_U2zGe3s9BiTiF5HKbdlpGDhsDuco9HzT8OxIGOwF_XQaDbOO-UmNOfVmbBR9hEzBUfWOJhXVhv8_CilszHVuW7Jm-onMQd0ICJpuuMLhA8vHqBVMnM5fdrdh777ZHZfP2DCNG0_m4KOCc",
+        "media_accent_color_hex": "",
+        "media_type": "none",
+        "title": "Discord Server",
+        "url": "https://discord.gg/WY9KYPXXEb",
+        "creation_source": "NONE"
+      },
+      {
+        "image_url": "",
+        "is_pinned": false,
+        "link_id": "18369479266134549",
+        "link_type": "external",
+        "lynx_url": "https://l.instagram.com/?u=https%3A%2F%2Fgreaserag.org%2Fevents%2F&e=AUA4zepB6wOC_fxH4xJBkoPAI2A48lZEc_dovTkzMMJ4Y3uUtaWEBhbOycVm0dsshMwzfScJ-Wl7gzCPIDncGsfiPOWHxJyk7R0NK8q_WkskVOq1NkmCjDWGlrUO9S3vKK9NOUL9ReCLrSKIVo2_vIPtoLY",
+        "media_accent_color_hex": "",
+        "media_type": "none",
+        "title": "Grease Rag Website",
+        "url": "https://greaserag.org/events/",
+        "creation_source": "NONE"
+      },
+      {
+        "image_url": "",
+        "is_pinned": false,
+        "link_id": "18545152702004328",
+        "link_type": "external",
+        "lynx_url": "https://l.instagram.com/?u=https%3A%2F%2Fgreaserag.org%2Fwinter-skill-share-2025-recap%2F&e=AUDdId7lZ9KxUH9VBlbGhDQ-qzfSKZ8nlZe881qLWZbG_P_RlGq2mjGpa-CBD-oLNa5uwedxH5adHdlCzYRsJ4NG3WKaAZqO38u3dLZdgOpMjnVLl5wCOsJG6vAgIANKZZAOTrp3my5g3TyY7xIIcf_9B7o",
+        "media_accent_color_hex": "",
+        "media_type": "none",
+        "title": "Winter Skill Share Recap 2025",
+        "url": "https://greaserag.org/winter-skill-share-2025-recap/",
+        "creation_source": "NONE"
+      }
+    ],
+    "linked_fb_info": null,
+    "meta_verified_benefits_info": {
+      "active_meta_verified_benefits": []
+    },
+    "text_post_app_badge_label": null,
+    "show_text_post_app_badge": false,
+    "username": "greaseragbikes",
+    "live_broadcast_visibility": null,
+    "live_broadcast_id": null,
+    "profile_pic_url": "https://scontent-atl3-2.cdninstagram.com/v/t51.2885-19/13715141_137356970030876_1859950597_a.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=111&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=z7wJ1B0znTcQ7kNvwGKqkzW&_nc_oc=AdqI_eSjwaqs78LCaKclanWgwXmLd-RdzDlklEd3aIdjBVcl8AyO8RFGbTNArQOP87M&_nc_zt=24&_nc_ht=scontent-atl3-2.cdninstagram.com&_nc_ss=78a8c&oh=00_AQOIbRhKinny3C74hCC2tadFQQi08w2RIUn82eT0qc2VKA&oe=6AD4C416",
+    "hd_profile_pic_url_info": {
+      "url": "https://scontent-atl3-2.cdninstagram.com/v/t51.2885-19/13715141_137356970030876_1859950597_a.jpg?_nc_cat=111&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=z7wJ1B0znTcQ7kNvwGKqkzW&_nc_oc=AdqI_eSjwaqs78LCaKclanWgwXmLd-RdzDlklEd3aIdjBVcl8AyO8RFGbTNArQOP87M&_nc_zt=24&_nc_ht=scontent-atl3-2.cdninstagram.com&_nc_ss=78a8c&oh=00_AQNO36_q8N0XQibE5EoPGpqhsC2A8i-c8amWW1Sj1dSnhw&oe=6AD4C416"
+    },
+    "is_unpublished": false,
+    "latest_reel_media": null,
+    "has_profile_pic": null,
+    "profile_pic_genai_tool_info": [],
+    "biography": "FTW: Femme/Trans/Women, Non-binary, 2-spirit\nOn Dakota & Ojibwe Land",
+    "full_name": "Official Grease Rag",
+    "is_verified": false,
+    "show_account_transparency_details": true,
+    "account_type": 1,
+    "follower_count": 2220,
+    "mutual_followers_count": null,
+    "profile_context_links_with_user_ids": null,
+    "profile_context_facepile_users": null,
+    "address_street": null,
+    "city_name": null,
+    "is_business": false,
+    "zip": null,
+    "biography_with_entities": {
+      "entities": []
+    },
+    "category": null,
+    "should_show_category": null,
+    "is_ring_creator": null,
+    "show_ring_award": null,
+    "ring_creator_metadata": null,
+    "account_badges": [],
+    "ai_agent_type": null,
+    "external_lynx_url": "https://l.instagram.com/?u=https%3A%2F%2Fdiscord.gg%2FWY9KYPXXEb&e=AUDf1n7BfSsO3IURLXLcNrG-5KBh9GJSsstnOJb0bcngAaIUQM45wuRKhKiqYaCNWo4y9yaiSCermDo-y8fY20rTN0RhDwugx1p7RHxDm3Hi2wL8aWizlvtNG_NeGLEk0eZXz4UPc5YUv-5hl7W2YsNaBpA",
+    "external_url": "https://discord.gg/WY9KYPXXEb",
+    "pronouns": [],
+    "transparency_label": null,
+    "transparency_product": null,
+    "hide_creator_marketplace_badge": false,
+    "id": "3063119636",
+    "has_chaining": null,
+    "remove_message_entrypoint": null,
+    "is_embeds_disabled": true,
+    "is_cannes": false,
+    "is_professional_account": null,
+    "following_count": 581,
+    "media_count": null,
+    "total_clips_count": null,
+    "has_longform_media": false,
+    "latest_besties_reel_media": null,
+    "reel_media_seen_timestamp": null
+  },
+  "status": "ok",
+  "num_results": 12,
+  "more_available": true,
+  "items": [
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3981012179661573630",
+      "code": "Dc_ZXwvO03-",
+      "accessibility_caption": "Photo by Official Grease Rag on September 07, 2026. May be an image of text that says '17th Grease Rag Winter Skill Share & Gear Swap planning meeting! Wed Wed9/9 9/9 at 6pT on Discord chat \u1265\u1241\u1218\u12cd'.",
+      "caption": {
+        "text": "Let's start planning for one of the most loved events held by Grease Rag, the Winter Skill Share and Gear Swap! Everyone is welcome to join the planning and creation of the event, no prior winter biking experience required. We will be meeting on Discord video chat at 6pm on Wed 9/9. Reminder, this event is by and for FTWNB folks only. \n\nDiscord invite link is in our IG bio, otherwise if this is not an option, send us an IG message to get connected.\n\nWe will be discussing location, how we want to do the skill share format, and what folks want out of the WSS this year. Check out our past winter biking blog posts on our website, greaserag.org, for what has been done in the past.\n\nHope to see you there!"
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/799676079_18487389547103637_383157591215052813_n.jpg?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=101&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=5NaD1OYNTFgQ7kNvwF-Z4Ea&_nc_oc=AdoNp6k3iAVExeBzptyhMS9FkRv4nYMF1ONkAZBsjj5QVMi_zsoWkTI6IF70Tn0ke3Y&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQMk9-O9653Tw8PBi7_pW0WP3-7G7F09EFk8jAi5YuE-zA&oe=6AD4B79A",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3981012179661573630",
+      "url": "https://www.instagram.com/p/Dc_ZXwvO03-/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3909333108498372556",
+      "code": "DZAvb_ouBfM",
+      "accessibility_caption": "Photo by Official Grease Rag on May 31, 2026.",
+      "caption": {
+        "text": "EDIT RIDE IS AT 3PM START TIME DUE TO RAIN \n\nJoin Grease Rag for a casual bike ride starting at Brackett Park, looping around Greenway, Lakes, Minnehaha Creek, and West River Parkway and back to the park. 3pm meet up time, roll out by 3:15/3:30pm on Sunday 5/31\nFTW only ride.\n\nSuggested items to bring:\nWater, snacks, bike lock, something blue, lights, light rain gear in case\n\nContact Karla H with questions or comment in the grease-rag-events channel on our Discord (link in bio)."
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/711709563_18467865325103637_7103453185380266696_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=101&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=hyGQO1vUAXcQ7kNvwE3kvIQ&_nc_oc=AdokS6nD5BvAjuN8IGs0sjsK5Q5VZrWTw8jni_pmBh5Z953yAd84xrGDJDReMW9BQRA&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQOW4cgF45x6Vqhm1GuUAD9u07pXg4SIIxepshBnP9AveQ&oe=6AD4BC5E",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3909333108498372556",
+      "url": "https://www.instagram.com/p/DZAvb_ouBfM/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3908484834103364464",
+      "code": "DY9uj-iu4tw",
+      "accessibility_caption": "Photo by Official Grease Rag on May 30, 2026.",
+      "caption": {
+        "text": "EDIT RIDE IS AT 3PM START TIME DUE TO RAIN \n\nJoin Grease Rag for a casual bike ride starting at Brackett Park, looping around Greenway, Lakes, Minnehaha Creek, and West River Parkway and back to the park. 3pm meet up time, roll out by 3:15/3:30pm on Sunday 5/31\nFTW only ride.\n\nSuggested items to bring:\nWater, snacks, bike lock, beach items (if we stop for a lake dip or you want to take a lake dip post ride), something blue\n\nContact Karla H with questions or comment in the grease-rag-events channel on our Discord (link in bio)."
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/712409497_18467618041103637_1449598503926529729_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=108&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=yhK_e-KqrlcQ7kNvwHTIMzU&_nc_oc=AdrBS9yeInM5Stbw7Es_R2_CGKoXQBi1vzM5HsAAJrR6gYoPIltn_qiZqzrSOPYLdag&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQM8MjiweZAZcfhUM6PruMBoUkEJ7q9ncOG6YpJf0_4lng&oe=6AD4BD82",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3908484834103364464",
+      "url": "https://www.instagram.com/p/DY9uj-iu4tw/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3874482939304507889",
+      "code": "DXE7bSVjnnx",
+      "accessibility_caption": "Photo by Official Grease Rag on April 13, 2026.",
+      "caption": {
+        "text": "Meet up 5:30 pm, ROLL OUT 5:45 pm.\n\nLet's support an immigrant business on Lake St, check out some new-ish reopened bike trails, and enjoy spring!\n\nMeet at the north end of Minneapolis Sculpture Garden, near Dunwoody Blvd. The route is an 8-mile loop. We\u2019ll visit Pineda Tacos Plus, one of many Lake St restaurants recovering from the invasion of ICE, so come hungry if you like tacos!\n\nWe will be on protected bike lanes and trails, with a short stretch of side street. The pace will be about 8-10 miles per hour so we can have conversation, and we will stay together. No one will be left behind. \n\nBring a lock, some taco money (optional), and bike lights.\n\nThis ride is open to all FTW bike riders! Invite your friends! It is organized by Karla H and Elisha L. Please send Karla a DM or comment in the #grease-rag-events channel if there is anything we can do to make this event more accessible to you. If you are not on the Discord, DM us so we can connect you to the folks if you have questions."
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/669849526_18459259576103637_6577457624121405079_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=101&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=iK2wggrIG3kQ7kNvwFjAkl4&_nc_oc=AdqsO9bbpMFmCMtOlftlDtmqlzbhWHWQm8lNtTXhzI4jODmsmiifQsvELDmxYOT03T8&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQNfFi7twgdN7cBo7CErObL9AimRUUJ71JonmOjOBctMrw&oe=6AD4C183",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3874482939304507889",
+      "url": "https://www.instagram.com/p/DXE7bSVjnnx/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3783271241441219008",
+      "code": "DSA4SZDDhHA",
+      "accessibility_caption": "Photo by Official Grease Rag on December 08, 2025.",
+      "caption": {
+        "text": "Grease Rag Bikes Sewing Meetup! Sunday, December 14 from noon-2pm at Sumner Library, Large Meeting Room 3, 611 Van White Memorial Blvd, Minneapolis. \n\n*FTW ONLY: open to all femme, transgender, nonbinary, and women riders - anyone who doesn't benefit from cis male privilege.\n\nThis is a casual meetup and skillshare! We have the skills to help you adjust the sizing of your pants, or start making a \u201cfeed bag/stem bag\u201d. (Like the one from Learn MYOG). We have fleece fabric, scrap rain gear, and various other sewing supplies to share. If you missed the winter craft party or you really love the handmade items from the gear swap, we will have those patterns/supplies as well.\n\nDo you have a skill you\u2019d like to learn? A skill you\u2019d like to share? Would you like to borrow a sewing machine or other supplies to learn a new skill? What else could we do to make this event work for you? Let us know!\n\nThings to bring if you are able: Sewing supplies such as: sewing machine, serger, cutting mats, fabric scissors, rotary cutters, pins, needles, thread, extensions cords, yarn, knitting needles, crochet hooks, mending supplies, fabric, etc.\n\nMasks will be optional at this event. Please feel free to reach out to us if you have any questions or concerns!\n\n@dogs.and.dykes.and.bikes is your contact for any questions!"
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/590409847_18436677139103637_6213742081802335240_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=103&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=fZtzAL1PZeYQ7kNvwFDo64f&_nc_oc=AdpQ3hslJO2WY3ZBo09k6qy9u_hzqL5Y8hEoKOJa18v96Q8Lf7V_d668opNupPNmG14&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQO2Kea09E4QFzRu16UrZRX9WJPHJ5rzWSyK7kKSv3H1Vg&oe=6AD4B507",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3783271241441219008",
+      "url": "https://www.instagram.com/p/DSA4SZDDhHA/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3755086317014148666",
+      "code": "DQcvxwqjuY6",
+      "accessibility_caption": "Photo by Official Grease Rag on October 30, 2025.",
+      "caption": {
+        "text": "Join us for Grease Rag\u2019s 16th Annual Winter Skill Share & Gear Swap!\u00a0\n\nWe\u2019ll learn, connect, and share our collective knowledge on the basics of winter biking, supporting and empowering a community of FTW people to enjoy a safe and fun winter riding season.\n\nDate: Saturday, November 1st\nTime: 10:00 AM to 3:00 PM\u00a0\nLocation: Minneapolis Central Library, Pohlad Hall, 300 Nicollet Mall, Minneapolis\n\nThe afternoon will feature skill shares on the basics of winter biking, in a safer space. This year\u2019s schedule:\n\n10 am Welcome\n10:15 am Routing and Safety\n11:15 am Winter Bike Maintenance\n(Lunch break at noon)\n12:30 pm What to Wear\n1:30 pm Gear Swap\n*Self-Care will be interactive between sessions and we will provide resources on this topic.\u00a0\n\nThis event is open to all FTW (femme, trans nonbinary, two-spirit and women) riders! If you are a cis man who benefits from cis-male privilege, please respect this space and do not attend this event.\n\nThis event is NEWBIE and BEGINNER FRIENDLY! Come with questions and leave feeling more confident and ready to take on Minnesota\u2019s most interesting season.\n\nMasks are required in the presentation space. The smaller classroom has snacks; if you are not actively eating or drinking, please keep masks on during the event. The library does not require masks. Please stay home if you have a positive test or feel any symptoms.\n\nThis event is FREE. We want to keep things as accessible as possible to FTW, so this event, like all of our events, are volunteer-organized and run.\n\nWe run on DONATIONS of labor and goods. If you would like to donate your labor (volunteer) or goods (gear swap, snack table), please contact us at greaseragmpls at gmail\n\nThe gear swap will include goods donated by community members like you! We accept gear for all biking seasons. \n\nThe skill shares are meant to share the basics with you. We encourage you to engage with our social media, make real-life connections with people at the skill share, and to attend open shops if you wish to learn more.\n\nCheck the link in our profile for more info \u2744\ufe0f"
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/573124713_18430548451103637_6727784812052987671_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=103&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=PC9L99iO4GoQ7kNvwH3NM-o&_nc_oc=Adrqi9pW2dwfgVO2D_G-CEGdrM3ir-F9VtA36_6JOJw2wvm1GZN2PF__LdmNOY_8JNs&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQOAhKm6K_tvMh6d-YntFUhoNP1dt1c6aktW7Q6dSYSD9g&oe=6AD4C9B4",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3755086317014148666",
+      "url": "https://www.instagram.com/p/DQcvxwqjuY6/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3750537327576766479",
+      "code": "DQMldQHDlgP",
+      "accessibility_caption": "Photo by Official Grease Rag on October 24, 2025.",
+      "caption": {
+        "text": "Join Grease Rag for a full moon ride on 11/5! Perfect way to practice those skills and test out gear from the Winter Skill Share and Gear Swap on 11/1 \u2744\ufe0f \n\nMeet up 6:30 pm at Gold Medal Park, ROLL OUT at 6:40 pm. It\u2019s chilly, so we won\u2019t stand around for long.\n\nWe will meet at Gold Medal Park, near the intersection of 10th Ave. S and S 2nd St. The route will likely be about 7-8 miles. If most people want to, we can stop at a coffee shop and warm up about \u00be of the way through the ride. We'll then return to our starting point. We will mostly be on bike paths, with a few stretches of low-traffic side streets.\n\nThe pace will be about 8-10 miles per hour so we can have conversation, and we will stay together. No one will be left behind.\n\nThis ride is open to all FTW bike riders! Invite your friends! It is organized by Karla H. (she/her). Comment in the #grease-rag-events channel or DM Karla on Discord if there is anything she can do to make this event more accessible to you or if you have questions.\n\nBring water, a lock, warm layers, and bike lights. Let the organizer know if you need to borrow any of these."
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/565547519_18429329104103637_2211891620459838133_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=110&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=jMuem_CdLmIQ7kNvwGsLdSJ&_nc_oc=Adprj81aK4-N3mKWDjQjNbcSpFN4SSoeQXa_k9Rn--VBwV5919QIfJsBsv1S8mB4ee8&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQOZBOyxpsp_q6hIqGoZrFsq1-EjlSAuzlsYIqYfIEQhwQ&oe=6AD4D25B",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3750537327576766479",
+      "url": "https://www.instagram.com/p/DQMldQHDlgP/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3745540381774635068",
+      "code": "DP61SHrjuA8",
+      "accessibility_caption": "Photo by Official Grease Rag on October 17, 2025.",
+      "caption": {
+        "text": "Help us make free warm items for our upcoming Winter Skill Share\u2019s gear swap!  You are also welcome to make warm things for yourself. We have sewing patterns, fleece fabric, and some supplies to share. No crafting experience is needed.\n\nWhen/Where:\n\nSaturday, October 25 from 12:30-4:30pm. You can stay for part or all of the event.\n\nHosmer Library, Room L02. 347 E 36th St, Minneapolis\n\nPlease bring if you can:\n\nA face mask, sewing machine, cutting mats, fabric scissors, rotary cutters, pins, needles, thread, extensions cords, etc.. \n\nWe will provide some snacks. Food and covered beverages are allowed in this room of the library.\n\nIf you are on Discord, please send Sarah Francis a Discord message with any questions, or post in the Grease Rag events channel. If you are not on Discord, please send any questions to the Grease Rag email address (greaseragmpls@gmail.com).\n\nHELP NEEDED:\n\nWe need 2 people to help set up and 2 people who can stay to help clean up. We need at least 3 people to bring sewing machines. Comment in the Grease Rag events channel if you can bring a sewing machine, or if you have one we could borrow for the day. If you are not on Discord, please send an email to us (greaseragmpls@gmail.com).\n\nMasks are required. Spare N95 masks will be available. Please stay home if you have any flu or cold symptoms.\n\nBlog Post link in our bio to share about the craft party."
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/566222469_18427763104103637_1864386909504126270_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=111&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=LxRPzNdQlN0Q7kNvwGoIOR6&_nc_oc=AdrCDbeJk2eQAhRhUsXQ_jXx8K5SkAsDIrCP6osIRQTKZPQb9SGeXsqgLCyhNZc1iOc&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQOGk1oId7nKJs1T70YX7mmYe67Tz67kr2MUGIv7yPtVIg&oe=6AD4C27B",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3745540381774635068",
+      "url": "https://www.instagram.com/p/DP61SHrjuA8/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3739188289258522488",
+      "code": "DPkQ_Ahjgd4",
+      "accessibility_caption": "Photo by Official Grease Rag on October 08, 2025.",
+      "caption": {
+        "text": "Join us for Grease Rag\u2019s 16th Annual Winter Skill Share & Gear Swap!\u00a0\n\nWe\u2019ll learn, connect, and share our collective knowledge on the basics of winter biking, supporting and empowering a community of FTW people to enjoy a safe and fun winter riding season.\n\nDate: Saturday, November 1st\nTime: 10:00 AM to 3:00 PM\u00a0\nLocation: Minneapolis Central Library, Pohlad Hall, 300 Nicollet Mall, Minneapolis\n\nThe afternoon will feature skill shares on the basics of winter biking, in a safer space. This year\u2019s schedule:\n\n10 am Welcome\n10:15 am Routing and Safety\n11:15 am Winter Bike Maintenance\n(Lunch break at noon)\n12:30 pm What to Wear\n1:30 pm Gear Swap\n*Self-Care will be interactive between sessions and we will provide resources on this topic.\u00a0\n\nThis event is open to all FTW (femme, trans nonbinary, two-spirit and women) riders! If you are a cis man who benefits from cis-male privilege, please respect this space and do not attend this event.\n\nThis event is NEWBIE and BEGINNER FRIENDLY! Come with questions and leave feeling more confident and ready to take on Minnesota\u2019s most interesting season.\n\nMasks are required in the presentation space. The smaller classroom has snacks; if you are not actively eating or drinking, please keep masks on during the event. The library does not require masks. Please stay home if you have a positive test or feel any symptoms.\n\nThis event is FREE. We want to keep things as accessible as possible to FTW, so this event, like all of our events, are volunteer-organized and run.\n\nWe run on DONATIONS of labor and goods. If you would like to donate your labor (volunteer) or goods (gear swap, snack table), please contact us at greaseragmpls at gmail\n\nThe gear swap will include goods donated by community members like you! We accept gear for all biking seasons. \n\nThe skill shares are meant to share the basics with you. We encourage you to engage with our social media, make real-life connections with people at the skill share, and to attend open shops if you wish to learn more.\n\nCheck the link in our profile for more info \u2744\ufe0f"
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/559522854_18425944993103637_9118976693794375143_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=102&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=eQDN9nvGoV0Q7kNvwHK1f4M&_nc_oc=Adp72Irksg5KLg3FryPVSUEn3GDeBk0OgbEtXgPUh2TqJDZZA6RiT_2Tr--svmzkW-Y&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQPnk07MkJEEFBMakwWmh6eihzCF1Vy7ofMJuqvrglfo6g&oe=6AD4D89A",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3739188289258522488",
+      "url": "https://www.instagram.com/p/DPkQ_Ahjgd4/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3729760012995563672",
+      "code": "DPCxPiADpCY",
+      "accessibility_caption": "Photo by Official Grease Rag on September 25, 2025.",
+      "caption": {
+        "text": "**October Full Moon Ride \u2013 Harvest Moon / Supermoon**\nMonday, October 6, 2025 at 5:45pm \u2013 rollout at 6:00\nBRING LIGHTS!\n~12 miles, casual pace (10-12 mph)\nStart & end on the Greenway @ Soo Line Community Garden (between Garfield Ave & Harriet Ave). Route is almost entirely bike trails. Prepare for some hills!\nStop @ Utepils Brewing beer garden about halfway (outdoors, beer & NA drinks, restrooms).\nOptional stop @ Cedar Lake Point Beach for moongazing \u2013 weather dependent.\n\nContact elishasha on Discord (link in bio) with questions etc. \n\nReminder our full moon rides are for FTW identified folks only (Femme, transgender, woman, non-binary, two spirited, agender, genderqueer... Just not for if you identify as a cismale who benefits from cismale privilege in society)."
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/554426646_18423678628103637_7913338347643522832_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=100&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=2kUhKY4cDiwQ7kNvwF5hM1I&_nc_oc=Adoku3GA275nBZluaLJd-E_9Qu_QrPaD9n_8xgyi41dmTa2gzOS9gwrDTCtIuZ10xyw&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQNKcgQ0PyDSRFGSYI3otbuOCYTixATxi2JwaYA1N78KkQ&oe=6AD4AC44",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3729760012995563672",
+      "url": "https://www.instagram.com/p/DPCxPiADpCY/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisCarouselMedia",
+      "__isXIGPolarisMedia": "XIGPolarisCarouselMedia",
+      "pk": "3725174160701194132",
+      "code": "DOyeimPDv-U",
+      "accessibility_caption": "Photo by Official Grease Rag on September 19, 2025.",
+      "caption": {
+        "text": "Grease Rag's 16th annual Winter Skill Share and Gear Swap is being held on Sat 11/1 at the Mpls central library in downtown mpls (time slot 9a-5p) - we are seeking volunteers to help run this event. No prior WSS attendance needed/no prior winter biking needed. We have resources and folks that are able to help you out as a volunteer. We need volunteers leading up to the event and day of event, so if you can only help before or day of, we have something for everyone! \nNOTE: This event is for and run by FTW identified folks only (femme, transgender, woman, non-binary, two-spirited...). If you are a cisman who benefits from cismale privilege in society, please do not attend or volunteer for a role. If you would like to aid, you can share the event, and can donate to the gear swap to help folks have access to gear that may not be able to otherwise.\n\nSend an email to greaseragmpls@gmail.com or follow our Discord invite link in bio to join the WSS thread discussion to reach out about volunteering. \n\n***If you want to present on a topic, you can reach out now as well.\n***If you have items to donate to the gear, you are welcome to reach out now but please be patient until we have an official gear swap coordinator to reach out about pick up/drop off.\n\nThank you and happy biking!"
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/550678377_18422661943103637_2611674243588519742_n.heic?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=103&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiQ0FST1VTRUxfSVRFTS5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=KOK6FVGFtD0Q7kNvwGttPtR&_nc_oc=Adokt1DrrcEuAfQL040wkqDO5uW5dxZiRQiNqXKLNLDaf7qoQoj4vmCh6zRdGFgPgPk&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQMxD-DZv74n_ObXzhSv3Nc6XCnkKwGIrFTk7g-FmRDmQg&oe=6AD4AEAA",
+      "media_type": 8,
+      "product_type": "carousel_container",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "carousel_media_count": 9,
+      "id": "POLARIS_3725174160701194132",
+      "url": "https://www.instagram.com/p/DOyeimPDv-U/",
+      "created_at": null,
+      "video_url": null
+    },
+    {
+      "__typename": "XIGPolarisImageMedia",
+      "__isXIGPolarisMedia": "XIGPolarisImageMedia",
+      "pk": "3698540819478099079",
+      "code": "DNT20eURjSH",
+      "accessibility_caption": "Photo by Official Grease Rag on August 13, 2025.",
+      "caption": {
+        "text": "Please join us for an alley cat that's all about taking your sweet time and smelling the roses! This is more of a choose-your-own-pleasure-adventure sort of alley cat. It is NOT about speed. It is about dilly dallying. \n\nThe event is on Sunday 9/7 and will start at 11am at the Song of Hiawatha Garden at Minnehaha Falls. Participants will receive the manifest there. There will be a slow finish party at a TBD lake to celebrate starting at 1pm. \n\nPlease come dilly and dally with us!:) All sorts of whimsical bike and people costumes welcomed.\n\nTotal miles will depend and are customizable! Please bring a pen and optionally, a book to read/a journal/a towel/something to swim in.\n\nIf you would like to volunteer for helping with the alleycat, email ilsehogangriffin@gmail.com"
+      },
+      "seo_canonical_url": null,
+      "display_uri": "https://scontent-xxc1-1.cdninstagram.com/v/t51.82787-15/623488992_17978443934984892_2682618606525142202_n.jpg?stp=dst-jpg_e35_s640x640_tt6&_nc_cat=100&ccb=7-5&_nc_sid=18de74&efg=eyJlZmdfdGFnIjoiRkVFRC5iZXN0X2ltYWdlX3VybGdlbi5DMyJ9&_nc_ohc=B8LclU2ibmEQ7kNvwHQbi18&_nc_oc=AdokRdb3b8Dskfnwyb46mGm_3q2_oaIYKkndIMaajmH7JQGObGMWeFFDLSqyML3LgJU&_nc_zt=23&_nc_ht=scontent-xxc1-1.cdninstagram.com&_nc_gid=SFetoAJKcVO85iUC969aMQ&_nc_ss=78a8c&oh=00_AQM0L0NBoXm2nAVMi7vzstuW_N3umN2E41JU2wDHcwAd5A&oe=6AD4AF59",
+      "media_type": 1,
+      "product_type": "feed",
+      "user": {
+        "pk": "3063119636",
+        "username": "greaseragbikes",
+        "id": "17841403109102889"
+      },
+      "id": "POLARIS_3698540819478099079",
+      "url": "https://www.instagram.com/p/DNT20eURjSH/",
+      "created_at": null,
+      "video_url": null
+    }
+  ]
+}
