@@ -16,7 +16,7 @@ from datetime import date, datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import getaddresses, parsedate_to_datetime
 from typing import NamedTuple
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit
 
 from bs4 import BeautifulSoup
 from imapclient import IMAPClient
@@ -254,8 +254,32 @@ def _text_to_html(text: str) -> str:
     return "".join(paragraphs)
 
 
-def _clean_html(markup: str) -> str:
-    """Drop inline `cid:` images (we don't render attachments) and tracking pixels."""
+def _decoded(s: str) -> str:
+    """Lowercased, repeatedly URL-decoded: click trackers nest the real target."""
+    for _ in range(3):
+        s = unquote(s)
+    return s.lower()
+
+
+def _unsubscribe_keys(msg: EmailMessage) -> list[str]:
+    """`List-Unsubscribe` targets as host+path (or mailto address) to find in body links.
+
+    Not full URLs: Mailchimp's header and body links differ in query params.
+    Not tokens: Mailchimp puts the subscriber id on every tracked link.
+    """
+    keys = []
+    for url in re.findall(r"<([^>]+)>", str(msg.get("list-unsubscribe") or "")):
+        parts = urlsplit(_decoded(url.strip()))
+        if parts.scheme == "mailto" and parts.path:
+            keys.append(parts.path)
+        elif parts.netloc and parts.path.strip("/"):
+            keys.append(parts.netloc + parts.path)
+    return keys
+
+
+def _clean_html(markup: str, unsubscribe_keys: list[str]) -> str:
+    """Drop inline `cid:` images (we don't render attachments), tracking pixels
+    and links matching the message's `List-Unsubscribe` header."""
     soup = BeautifulSoup(markup, "html.parser")
     for img in soup.find_all("img"):
         src = str(img.get("src") or "").strip().lower()
@@ -265,6 +289,10 @@ def _clean_html(markup: str) -> str:
             or str(img.get("height") or "") in ("0", "1")
         ):
             img.decompose()
+    for a in soup.find_all("a"):
+        href = _decoded(str(a.get("href") or ""))
+        if any(key in href for key in unsubscribe_keys):
+            a.decompose()
     return str(soup)
 
 
@@ -272,21 +300,14 @@ def redact_recipient(markup: str, address: str) -> str:
     """Remove links personalized to `address` and blank the address itself.
 
     Posts are public; a one-click unsubscribe link (or the address, which some
-    providers accept as a login) lets anyone manage the subscription.  Links are
-    matched after repeated URL-decoding because click trackers nest the target.
+    providers accept as a login) lets anyone manage the subscription.
     """
-
-    def decoded(s: str) -> str:
-        for _ in range(3):
-            s = unquote(s)
-        return s.lower()
-
     address = address.strip().lower()
-    if not address or address not in decoded(markup):
+    if not address or address not in _decoded(markup):
         return markup
     soup = BeautifulSoup(markup, "html.parser")
     for a in soup.find_all("a"):
-        if address in decoded(str(a.get("href") or "")):
+        if address in _decoded(str(a.get("href") or "")):
             a.decompose()
     return re.sub(re.escape(address), "[redacted]", str(soup), flags=re.IGNORECASE)
 
@@ -309,7 +330,7 @@ def _body_html(msg: EmailMessage) -> str:
     if not isinstance(text, str):
         return ""
     if body.get_content_subtype() == "html":
-        return _clean_html(text)
+        return _clean_html(text, _unsubscribe_keys(msg))
     return _text_to_html(text)
 
 
