@@ -16,6 +16,7 @@ from datetime import date, datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import getaddresses, parsedate_to_datetime
 from typing import NamedTuple
+from urllib.parse import unquote
 
 from bs4 import BeautifulSoup
 from imapclient import IMAPClient
@@ -265,6 +266,29 @@ def _clean_html(markup: str) -> str:
         ):
             img.decompose()
     return str(soup)
+
+
+def redact_recipient(markup: str, address: str) -> str:
+    """Remove links personalized to `address` and blank the address itself.
+
+    Posts are public; a one-click unsubscribe link (or the address, which some
+    providers accept as a login) lets anyone manage the subscription.  Links are
+    matched after repeated URL-decoding because click trackers nest the target.
+    """
+
+    def decoded(s: str) -> str:
+        for _ in range(3):
+            s = unquote(s)
+        return s.lower()
+
+    address = address.strip().lower()
+    if not address or address not in decoded(markup):
+        return markup
+    soup = BeautifulSoup(markup, "html.parser")
+    for a in soup.find_all("a"):
+        if address in decoded(str(a.get("href") or "")):
+            a.decompose()
+    return re.sub(re.escape(address), "[redacted]", str(soup), flags=re.IGNORECASE)
 
 
 def _body_html(msg: EmailMessage) -> str:

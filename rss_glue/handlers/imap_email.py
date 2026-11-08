@@ -15,6 +15,7 @@ from rss_glue.services.imap_inbox import (
     fetch_message,
     get_imap_settings,
     message_to_post,
+    redact_recipient,
     scan_window,
 )
 
@@ -36,6 +37,11 @@ class EmailFeedHandler(BaseFeedHandler):
     def config_form_context(session: Session) -> dict:
         settings = get_imap_settings(session)
         return {"imap_user": settings.user if settings else None}
+
+    @staticmethod
+    def process_post_content(content: str | None, config: dict[str, Any]) -> str | None:
+        content = BaseFeedHandler.process_post_content(content, config)
+        return redact_recipient(content, config["address"]) if content else content
 
     @staticmethod
     def fetch(feed_id: str, config: dict[str, Any], session: Session) -> list[dict]:
