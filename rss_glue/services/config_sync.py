@@ -239,6 +239,8 @@ def get_current_config(session: Session) -> dict:
         "imap_lookback_days",
         "imap_max_message_bytes",
         "reddit_session_token",
+        "umami_url",
+        "umami_website_id",
     }
     rows = {
         c.key: c.value
@@ -262,4 +264,6 @@ def get_current_config(session: Session) -> dict:
             rows.get("imap_max_message_bytes", str(2 * 1024 * 1024))
         ),
         "reddit_session_token": rows.get("reddit_session_token"),
+        "umami_url": rows.get("umami_url"),
+        "umami_website_id": rows.get("umami_website_id"),
     }
