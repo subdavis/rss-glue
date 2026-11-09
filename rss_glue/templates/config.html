@@ -100,6 +100,30 @@ block content %}
   </fieldset>
 
   <fieldset>
+    <legend>Umami Analytics</legend>
+    <p>
+      <small>
+        Every request (RSS, JSON API, HTML pages) is reported server-side, so
+        feed readers show up too. Leave either field blank to disable.
+      </small>
+    </p>
+
+    <div class="form-group">
+      <label>Umami URL:</label>
+      <input type="url" name="umami_url" value="{{ config.umami_url or '' }}"
+        placeholder="https://umami.example.com" />
+    </div>
+
+    <div class="form-group">
+      <label>Website ID:</label>
+      <input type="text" name="umami_website_id" value="{{ config.umami_website_id or '' }}"
+        placeholder="00000000-0000-0000-0000-000000000000" />
+    </div>
+
+    <button type="submit">Save Settings</button>
+  </fieldset>
+
+  <fieldset>
     <legend>IMAP Inbox (for Email feeds)</legend>
     <p>
       <small>

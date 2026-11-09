@@ -14,6 +14,7 @@ import rss_glue.feeds  # noqa: F401
 import rss_glue.models.user  # noqa: F401
 from rss_glue.database import create_db_and_tables
 from rss_glue.routers import api, auth, global_config, feeds, feed_config, pages
+from rss_glue.services import umami
 from rss_glue.services.background_worker import (
     start_background_worker,
     stop_background_worker,
@@ -38,6 +39,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="RSS Glue v2", lifespan=lifespan)
+app.middleware("http")(umami.track)
 
 # Include routers
 app.include_router(pages.router)

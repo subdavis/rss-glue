@@ -77,6 +77,8 @@ def save_config(
     imap_lookback_days: int = Form(7),
     imap_max_message_bytes: int = Form(2 * 1024 * 1024),
     reddit_session_token: str | None = Form(None),
+    umami_url: str = Form(""),
+    umami_website_id: str = Form(""),
     session: Session = Depends(get_session),
     user: User = Depends(require_admin_auth),
 ):
@@ -97,6 +99,8 @@ def save_config(
     save_system_config("imap_lookback_days", str(imap_lookback_days), session)
     save_system_config("imap_max_message_bytes", str(imap_max_message_bytes), session)
     save_system_config("reddit_session_token", reddit_session_token or None, session)
+    save_system_config("umami_url", umami_url.strip(), session)
+    save_system_config("umami_website_id", umami_website_id.strip(), session)
     session.commit()
     return RedirectResponse(url="/config?message=Settings+saved", status_code=303)
 
